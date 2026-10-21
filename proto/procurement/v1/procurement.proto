@@ -1,0 +1,128 @@
+syntax = "proto3";
+
+package procurement.v1;
+
+option go_package = "drayya-core/gen/procurement/v1;procurementv1";
+
+service ProcurementService {
+  rpc ListPurchaseOrders(ListPurchaseOrdersRequest) returns (ListPurchaseOrdersResponse);
+  rpc CreatePurchaseOrder(CreatePurchaseOrderRequest) returns (CreatePurchaseOrderResponse);
+  rpc ReceiveGoods(ReceiveGoodsRequest) returns (ReceiveGoodsResponse);
+  rpc ListGoodsReceived(ListGoodsReceivedRequest) returns (ListGoodsReceivedResponse);
+  rpc VerifyThreeWayMatch(VerifyThreeWayMatchRequest) returns (VerifyThreeWayMatchResponse);
+  rpc CheckLowStockAlerts(CheckLowStockAlertsRequest) returns (CheckLowStockAlertsResponse);
+}
+
+message PurchaseOrderItemProto {
+  string product_id = 1;
+  string item_description = 2;
+  double quantity = 3;
+  string unit_price = 4;
+  string total_amount = 5;
+}
+
+message PurchaseOrderProto {
+  string id = 1;
+  string tenant_id = 2;
+  string po_number = 3; // PO-YYYY-XXXX
+  string supplier_id = 4;
+  string supplier_name = 5;
+  repeated PurchaseOrderItemProto items = 6;
+  string total_amount = 7;
+  string status = 8; // DRAFT, ISSUED, PARTIALLY_RECEIVED, FULLY_RECEIVED, CANCELLED
+  string created_at = 9;
+}
+
+message GoodsReceivedItemProto {
+  string product_id = 1;
+  double quantity_received = 2;
+  string batch_number = 3;
+  string expiry_date = 4;
+}
+
+message GoodsReceivedNoteProto {
+  string id = 1;
+  string tenant_id = 2;
+  string grn_number = 3; // GRN-YYYY-XXXX
+  string po_id = 4;
+  string po_number = 5;
+  string supplier_name = 6;
+  repeated GoodsReceivedItemProto items = 7;
+  string received_by = 8;
+  string received_at = 9;
+}
+
+message ThreeWayMatchResultProto {
+  string po_number = 1;
+  string grn_number = 2;
+  string bill_number = 3;
+  bool is_matched = 4;
+  string quantity_status = 5; // MATCHED, VARIANCE_DETECTED
+  string price_status = 6;    // MATCHED, VARIANCE_DETECTED
+  string variance_amount = 7;
+  string notes = 8;
+}
+
+message LowStockAlertProto {
+  string product_id = 1;
+  string sku = 2;
+  string product_name = 3;
+  double current_stock = 4;
+  double safety_threshold = 5;
+  double reorder_quantity = 6;
+  string preferred_supplier = 7;
+  string estimated_cost = 8;
+}
+
+message ListPurchaseOrdersRequest {
+  string status = 1;
+}
+
+message ListPurchaseOrdersResponse {
+  repeated PurchaseOrderProto purchase_orders = 1;
+}
+
+message CreatePurchaseOrderRequest {
+  string supplier_id = 1;
+  string supplier_name = 2;
+  repeated PurchaseOrderItemProto items = 3;
+}
+
+message CreatePurchaseOrderResponse {
+  PurchaseOrderProto purchase_order = 1;
+}
+
+message ReceiveGoodsRequest {
+  string po_id = 1;
+  repeated GoodsReceivedItemProto items = 2;
+}
+
+message ReceiveGoodsResponse {
+  GoodsReceivedNoteProto grn = 1;
+}
+
+message ListGoodsReceivedRequest {
+  string po_id = 1;
+}
+
+message ListGoodsReceivedResponse {
+  repeated GoodsReceivedNoteProto grns = 1;
+}
+
+message VerifyThreeWayMatchRequest {
+  string po_id = 1;
+  string grn_id = 2;
+  string bill_id = 3;
+  string billed_amount = 4;
+  double billed_quantity = 5;
+}
+
+message VerifyThreeWayMatchResponse {
+  ThreeWayMatchResultProto result = 1;
+}
+
+message CheckLowStockAlertsRequest {}
+
+message CheckLowStockAlertsResponse {
+  repeated LowStockAlertProto alerts = 1;
+}

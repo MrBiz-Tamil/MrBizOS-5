@@ -1,14 +1,20 @@
 package grpcserver
 
 import (
+	"drayya-core/gen/banking/v1/bankingv1connect"
 	"drayya-core/gen/healthcare/v1/healthcarev1connect"
+	"drayya-core/gen/hrms/v1/hrmsv1connect"
 	"drayya-core/gen/iam/v1/iamv1connect"
+	"drayya-core/gen/procurement/v1/procurementv1connect"
 	"drayya-core/gen/realestate/v1/realestatev1connect"
 	"drayya-core/gen/travel/v1/travelv1connect"
 	"drayya-core/gen/workflow/v1/workflowv1connect"
 
+	"drayya-core/internal/grpcservices/banking"
 	"drayya-core/internal/grpcservices/healthcare"
+	"drayya-core/internal/grpcservices/hrms"
 	"drayya-core/internal/grpcservices/iam"
+	"drayya-core/internal/grpcservices/procurement"
 	"drayya-core/internal/grpcservices/realestate"
 	"drayya-core/internal/grpcservices/travel"
 	"drayya-core/internal/grpcservices/workflow"
@@ -42,4 +48,19 @@ func (s *Server) RegisterAllServices() {
 	wfSvc := workflow.NewServer(s.db)
 	wfPath, wfHandler := workflowv1connect.NewWorkflowServiceHandler(wfSvc, opt)
 	s.mux.Handle(wfPath, wfHandler)
+
+	// 6. Procurement & 3-Way Matching Service
+	procSvc := procurement.NewServer(s.db)
+	procPath, procHandler := procurementv1connect.NewProcurementServiceHandler(procSvc, opt)
+	s.mux.Handle(procPath, procHandler)
+
+	// 7. Banking & Automated Reconciliation Service
+	bankSvc := banking.NewServer(s.db)
+	bankPath, bankHandler := bankingv1connect.NewBankingServiceHandler(bankSvc, opt)
+	s.mux.Handle(bankPath, bankHandler)
+
+	// 8. HRMS & Automated Payroll Service
+	hrmsSvc := hrms.NewServer(s.db)
+	hrmsPath, hrmsHandler := hrmsv1connect.NewHRMSServiceHandler(hrmsSvc, opt)
+	s.mux.Handle(hrmsPath, hrmsHandler)
 }

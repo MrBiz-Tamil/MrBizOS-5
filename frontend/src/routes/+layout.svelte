@@ -221,9 +221,21 @@
 			<!-- Navigation Links -->
 			<nav style="padding: 0.5rem 0.75rem 1.25rem 0.75rem; display: flex; flex-direction: column; gap: 0.25rem; flex: 1; overflow-y: auto;">
 				<div style="font-size: 0.6875rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.25rem 0.5rem 0.25rem 0.5rem;">
-					Group Business OS
+					Enterprise ERP Suite (Odoo/SAP Killer)
 				</div>
 
+				<a href="/procurement" class="nav-item" class:active={currentPath.startsWith('/procurement')}>
+					<span class="nav-icon">📦</span> Procurement & 3-Way Match
+				</a>
+				<a href="/accounting/reconciliation" class="nav-item" class:active={currentPath.startsWith('/accounting/reconciliation')}>
+					<span class="nav-icon">🏦</span> Bank Auto-Reconciliation
+				</a>
+				<a href="/hrms" class="nav-item" class:active={currentPath.startsWith('/hrms')}>
+					<span class="nav-icon">👥</span> HRMS & 1-Click Payroll
+				</a>
+				<a href="/workflow" class="nav-item" class:active={currentPath.startsWith('/workflow')}>
+					<span class="nav-icon">🤖</span> AI Autonomous Missions
+				</a>
 				<a href="/healthcare" class="nav-item" class:active={currentPath.startsWith('/healthcare')}>
 					<span class="nav-icon">🏥</span> Smart Healthcare Hub
 				</a>
@@ -232,9 +244,6 @@
 				</a>
 				<a href="/realestate" class="nav-item" class:active={currentPath.startsWith('/realestate')}>
 					<span class="nav-icon">🏢</span> Real Estate Deals
-				</a>
-				<a href="/workflow" class="nav-item" class:active={currentPath.startsWith('/workflow')}>
-					<span class="nav-icon">🤖</span> AI Missions & Approvals
 				</a>
 
 				<div style="font-size: 0.6875rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; padding: 0.75rem 0.5rem 0.25rem 0.5rem;">

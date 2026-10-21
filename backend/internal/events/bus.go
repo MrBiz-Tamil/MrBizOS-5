@@ -36,6 +36,12 @@ const (
 	EventTicketCreated        EventType = "ticket.created"
 	EventTicketStatusUpdated  EventType = "ticket.status.updated"
 	EventTicketAssigned       EventType = "ticket.assigned"
+	// ERP Autonomous Events
+	EventStockLow             EventType = "stock.low"
+	EventInvoiceOverdue       EventType = "invoice.overdue"
+	EventPOApprovalNeeded     EventType = "procurement.po.approval_needed"
+	EventBankDiscrepancy      EventType = "banking.discrepancy"
+	EventPayrollDue           EventType = "hrms.payroll.due"
 )
 
 // DomainEvent is the envelope for every event on the stream.

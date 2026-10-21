@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package banking.v1;
+
+option go_package = "drayya-core/gen/banking/v1;bankingv1";
+
+service BankingService {
+  rpc ImportBankStatement(ImportBankStatementRequest) returns (ImportBankStatementResponse);
+  rpc ListBankTransactions(ListBankTransactionsRequest) returns (ListBankTransactionsResponse);
+  rpc RunAutoReconciliation(RunAutoReconciliationRequest) returns (RunAutoReconciliationResponse);
+  rpc ManualMatchTransaction(ManualMatchTransactionRequest) returns (ManualMatchTransactionResponse);
+  rpc GetReconciliationSummary(GetReconciliationSummaryRequest) returns (GetReconciliationSummaryResponse);
+}
+
+message BankTransactionProto {
+  string id = 1;
+  string tenant_id = 2;
+  string bank_account_id = 3;
+  string transaction_date = 4;
+  string description = 5;
+  string reference_number = 6;
+  string debit_amount = 7;
+  string credit_amount = 8;
+  string balance = 9;
+  string status = 10; // UNRECONCILED, AUTO_MATCHED, MANUALLY_MATCHED
+  string matched_invoice_id = 11;
+  string matched_bill_id = 12;
+}
+
+message ImportBankStatementRequest {
+  string bank_account_id = 1;
+  string statement_csv_content = 2;
+}
+
+message ImportBankStatementResponse {
+  int32 total_parsed = 1;
+  int32 successfully_imported = 2;
+  repeated BankTransactionProto transactions = 3;
+}
+
+message ListBankTransactionsRequest {
+  string bank_account_id = 1;
+  string status = 2;
+}
+
+message ListBankTransactionsResponse {
+  repeated BankTransactionProto transactions = 1;
+}
+
+message RunAutoReconciliationRequest {
+  string bank_account_id = 1;
+}
+
+message RunAutoReconciliationResponse {
+  int32 total_processed = 1;
+  int32 auto_matched_count = 2;
+  int32 remaining_unreconciled = 3;
+  string total_reconciled_volume = 4;
+}
+
+message ManualMatchTransactionRequest {
+  string transaction_id = 1;
+  string target_type = 2; // INVOICE, BILL
+  string target_id = 3;
+}
+
+message ManualMatchTransactionResponse {
+  bool success = 1;
+  string message = 2;
+  BankTransactionProto transaction = 3;
+}
+
+message GetReconciliationSummaryRequest {
+  string bank_account_id = 1;
+}
+
+message GetReconciliationSummaryResponse {
+  string bank_statement_balance = 1;
+  string general_ledger_balance = 2;
+  string unreconciled_variance = 3;
+  int32 unreconciled_count = 4;
+}

@@ -82,3 +82,31 @@ export const workflowGrpc = {
 	approveAction: (req: any) => callRpc('workflow.v1.WorkflowService', 'ApproveAction', req),
 	rejectAction: (req: any) => callRpc('workflow.v1.WorkflowService', 'RejectAction', req),
 };
+
+// 5. Procurement & 3-Way Matching Client
+export const procurementGrpc = {
+	listPurchaseOrders: (params = {}) => callRpc('procurement.v1.ProcurementService', 'ListPurchaseOrders', params),
+	createPurchaseOrder: (req: any) => callRpc('procurement.v1.ProcurementService', 'CreatePurchaseOrder', req),
+	receiveGoods: (req: any) => callRpc('procurement.v1.ProcurementService', 'ReceiveGoods', req),
+	listGoodsReceived: (params = {}) => callRpc('procurement.v1.ProcurementService', 'ListGoodsReceived', params),
+	verifyThreeWayMatch: (req: any) => callRpc('procurement.v1.ProcurementService', 'VerifyThreeWayMatch', req),
+	checkLowStockAlerts: (params = {}) => callRpc('procurement.v1.ProcurementService', 'CheckLowStockAlerts', params),
+};
+
+// 6. Banking & Automated Reconciliation Client
+export const bankingGrpc = {
+	importBankStatement: (req: any) => callRpc('banking.v1.BankingService', 'ImportBankStatement', req),
+	listBankTransactions: (params = {}) => callRpc('banking.v1.BankingService', 'ListBankTransactions', params),
+	runAutoReconciliation: (params = {}) => callRpc('banking.v1.BankingService', 'RunAutoReconciliation', params),
+	manualMatchTransaction: (req: any) => callRpc('banking.v1.BankingService', 'ManualMatchTransaction', req),
+	getReconciliationSummary: (params = {}) => callRpc('banking.v1.BankingService', 'GetReconciliationSummary', params),
+};
+
+// 7. HRMS & Automated Payroll Client
+export const hrmsGrpc = {
+	listEmployees: (params = {}) => callRpc('hrms.v1.HRMSService', 'ListEmployees', params),
+	createEmployee: (req: any) => callRpc('hrms.v1.HRMSService', 'CreateEmployee', req),
+	updateSalaryStructure: (req: any) => callRpc('hrms.v1.HRMSService', 'UpdateSalaryStructure', req),
+	runMonthlyPayroll: (req: any) => callRpc('hrms.v1.HRMSService', 'RunMonthlyPayroll', req),
+	listPayslips: (params = {}) => callRpc('hrms.v1.HRMSService', 'ListPayslips', params),
+};
