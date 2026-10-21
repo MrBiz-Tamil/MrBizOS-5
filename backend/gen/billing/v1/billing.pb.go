@@ -1842,6 +1842,378 @@ func (x *GenerateInvoicePDFResponse) GetFilename() string {
 	return ""
 }
 
+type RecordPaymentRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	TenantId        string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	InvoiceId       string                 `protobuf:"bytes,2,opt,name=invoice_id,json=invoiceId,proto3" json:"invoice_id,omitempty"`
+	AmountPaid      string                 `protobuf:"bytes,3,opt,name=amount_paid,json=amountPaid,proto3" json:"amount_paid,omitempty"`
+	PaymentMode     string                 `protobuf:"bytes,4,opt,name=payment_mode,json=paymentMode,proto3" json:"payment_mode,omitempty"` // CASH, UPI, CARD, NETBANKING, CHEQUE
+	ReferenceNumber string                 `protobuf:"bytes,5,opt,name=reference_number,json=referenceNumber,proto3" json:"reference_number,omitempty"`
+	PaymentDate     string                 `protobuf:"bytes,6,opt,name=payment_date,json=paymentDate,proto3" json:"payment_date,omitempty"`
+	Notes           string                 `protobuf:"bytes,7,opt,name=notes,proto3" json:"notes,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *RecordPaymentRequest) Reset() {
+	*x = RecordPaymentRequest{}
+	mi := &file_billing_v1_billing_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecordPaymentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecordPaymentRequest) ProtoMessage() {}
+
+func (x *RecordPaymentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_billing_v1_billing_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecordPaymentRequest.ProtoReflect.Descriptor instead.
+func (*RecordPaymentRequest) Descriptor() ([]byte, []int) {
+	return file_billing_v1_billing_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *RecordPaymentRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *RecordPaymentRequest) GetInvoiceId() string {
+	if x != nil {
+		return x.InvoiceId
+	}
+	return ""
+}
+
+func (x *RecordPaymentRequest) GetAmountPaid() string {
+	if x != nil {
+		return x.AmountPaid
+	}
+	return ""
+}
+
+func (x *RecordPaymentRequest) GetPaymentMode() string {
+	if x != nil {
+		return x.PaymentMode
+	}
+	return ""
+}
+
+func (x *RecordPaymentRequest) GetReferenceNumber() string {
+	if x != nil {
+		return x.ReferenceNumber
+	}
+	return ""
+}
+
+func (x *RecordPaymentRequest) GetPaymentDate() string {
+	if x != nil {
+		return x.PaymentDate
+	}
+	return ""
+}
+
+func (x *RecordPaymentRequest) GetNotes() string {
+	if x != nil {
+		return x.Notes
+	}
+	return ""
+}
+
+type RecordPaymentResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Invoice       *InvoiceProto          `protobuf:"bytes,1,opt,name=invoice,proto3" json:"invoice,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RecordPaymentResponse) Reset() {
+	*x = RecordPaymentResponse{}
+	mi := &file_billing_v1_billing_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecordPaymentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecordPaymentResponse) ProtoMessage() {}
+
+func (x *RecordPaymentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_billing_v1_billing_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecordPaymentResponse.ProtoReflect.Descriptor instead.
+func (*RecordPaymentResponse) Descriptor() ([]byte, []int) {
+	return file_billing_v1_billing_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *RecordPaymentResponse) GetInvoice() *InvoiceProto {
+	if x != nil {
+		return x.Invoice
+	}
+	return nil
+}
+
+func (x *RecordPaymentResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+type CustomerReceivableProto struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	CustomerId          string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	CustomerName        string                 `protobuf:"bytes,2,opt,name=customer_name,json=customerName,proto3" json:"customer_name,omitempty"`
+	Phone               string                 `protobuf:"bytes,3,opt,name=phone,proto3" json:"phone,omitempty"`
+	TotalBilled         string                 `protobuf:"bytes,4,opt,name=total_billed,json=totalBilled,proto3" json:"total_billed,omitempty"`
+	TotalPaid           string                 `protobuf:"bytes,5,opt,name=total_paid,json=totalPaid,proto3" json:"total_paid,omitempty"`
+	BalanceDue          string                 `protobuf:"bytes,6,opt,name=balance_due,json=balanceDue,proto3" json:"balance_due,omitempty"`
+	UnpaidInvoicesCount int32                  `protobuf:"varint,7,opt,name=unpaid_invoices_count,json=unpaidInvoicesCount,proto3" json:"unpaid_invoices_count,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *CustomerReceivableProto) Reset() {
+	*x = CustomerReceivableProto{}
+	mi := &file_billing_v1_billing_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CustomerReceivableProto) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CustomerReceivableProto) ProtoMessage() {}
+
+func (x *CustomerReceivableProto) ProtoReflect() protoreflect.Message {
+	mi := &file_billing_v1_billing_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CustomerReceivableProto.ProtoReflect.Descriptor instead.
+func (*CustomerReceivableProto) Descriptor() ([]byte, []int) {
+	return file_billing_v1_billing_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *CustomerReceivableProto) GetCustomerId() string {
+	if x != nil {
+		return x.CustomerId
+	}
+	return ""
+}
+
+func (x *CustomerReceivableProto) GetCustomerName() string {
+	if x != nil {
+		return x.CustomerName
+	}
+	return ""
+}
+
+func (x *CustomerReceivableProto) GetPhone() string {
+	if x != nil {
+		return x.Phone
+	}
+	return ""
+}
+
+func (x *CustomerReceivableProto) GetTotalBilled() string {
+	if x != nil {
+		return x.TotalBilled
+	}
+	return ""
+}
+
+func (x *CustomerReceivableProto) GetTotalPaid() string {
+	if x != nil {
+		return x.TotalPaid
+	}
+	return ""
+}
+
+func (x *CustomerReceivableProto) GetBalanceDue() string {
+	if x != nil {
+		return x.BalanceDue
+	}
+	return ""
+}
+
+func (x *CustomerReceivableProto) GetUnpaidInvoicesCount() int32 {
+	if x != nil {
+		return x.UnpaidInvoicesCount
+	}
+	return 0
+}
+
+type GetBillingSummaryRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetBillingSummaryRequest) Reset() {
+	*x = GetBillingSummaryRequest{}
+	mi := &file_billing_v1_billing_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetBillingSummaryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetBillingSummaryRequest) ProtoMessage() {}
+
+func (x *GetBillingSummaryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_billing_v1_billing_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetBillingSummaryRequest.ProtoReflect.Descriptor instead.
+func (*GetBillingSummaryRequest) Descriptor() ([]byte, []int) {
+	return file_billing_v1_billing_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *GetBillingSummaryRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+type GetBillingSummaryResponse struct {
+	state               protoimpl.MessageState     `protogen:"open.v1"`
+	TodaySales          string                     `protobuf:"bytes,1,opt,name=today_sales,json=todaySales,proto3" json:"today_sales,omitempty"`
+	MonthSales          string                     `protobuf:"bytes,2,opt,name=month_sales,json=monthSales,proto3" json:"month_sales,omitempty"`
+	TotalOutstanding    string                     `protobuf:"bytes,3,opt,name=total_outstanding,json=totalOutstanding,proto3" json:"total_outstanding,omitempty"`
+	TotalInvoicesCount  int32                      `protobuf:"varint,4,opt,name=total_invoices_count,json=totalInvoicesCount,proto3" json:"total_invoices_count,omitempty"`
+	PaidInvoicesCount   int32                      `protobuf:"varint,5,opt,name=paid_invoices_count,json=paidInvoicesCount,proto3" json:"paid_invoices_count,omitempty"`
+	UnpaidInvoicesCount int32                      `protobuf:"varint,6,opt,name=unpaid_invoices_count,json=unpaidInvoicesCount,proto3" json:"unpaid_invoices_count,omitempty"`
+	TopReceivables      []*CustomerReceivableProto `protobuf:"bytes,7,rep,name=top_receivables,json=topReceivables,proto3" json:"top_receivables,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *GetBillingSummaryResponse) Reset() {
+	*x = GetBillingSummaryResponse{}
+	mi := &file_billing_v1_billing_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetBillingSummaryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetBillingSummaryResponse) ProtoMessage() {}
+
+func (x *GetBillingSummaryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_billing_v1_billing_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetBillingSummaryResponse.ProtoReflect.Descriptor instead.
+func (*GetBillingSummaryResponse) Descriptor() ([]byte, []int) {
+	return file_billing_v1_billing_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *GetBillingSummaryResponse) GetTodaySales() string {
+	if x != nil {
+		return x.TodaySales
+	}
+	return ""
+}
+
+func (x *GetBillingSummaryResponse) GetMonthSales() string {
+	if x != nil {
+		return x.MonthSales
+	}
+	return ""
+}
+
+func (x *GetBillingSummaryResponse) GetTotalOutstanding() string {
+	if x != nil {
+		return x.TotalOutstanding
+	}
+	return ""
+}
+
+func (x *GetBillingSummaryResponse) GetTotalInvoicesCount() int32 {
+	if x != nil {
+		return x.TotalInvoicesCount
+	}
+	return 0
+}
+
+func (x *GetBillingSummaryResponse) GetPaidInvoicesCount() int32 {
+	if x != nil {
+		return x.PaidInvoicesCount
+	}
+	return 0
+}
+
+func (x *GetBillingSummaryResponse) GetUnpaidInvoicesCount() int32 {
+	if x != nil {
+		return x.UnpaidInvoicesCount
+	}
+	return 0
+}
+
+func (x *GetBillingSummaryResponse) GetTopReceivables() []*CustomerReceivableProto {
+	if x != nil {
+		return x.TopReceivables
+	}
+	return nil
+}
+
 var File_billing_v1_billing_proto protoreflect.FileDescriptor
 
 const file_billing_v1_billing_proto_rawDesc = "" +
@@ -2058,7 +2430,43 @@ const file_billing_v1_billing_proto_rawDesc = "" +
 	"paper_size\x18\x05 \x01(\tR\tpaperSize\"U\n" +
 	"\x1aGenerateInvoicePDFResponse\x12\x1b\n" +
 	"\tpdf_bytes\x18\x01 \x01(\fR\bpdfBytes\x12\x1a\n" +
-	"\bfilename\x18\x02 \x01(\tR\bfilename2\x9d\x04\n" +
+	"\bfilename\x18\x02 \x01(\tR\bfilename\"\xfa\x01\n" +
+	"\x14RecordPaymentRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1d\n" +
+	"\n" +
+	"invoice_id\x18\x02 \x01(\tR\tinvoiceId\x12\x1f\n" +
+	"\vamount_paid\x18\x03 \x01(\tR\n" +
+	"amountPaid\x12!\n" +
+	"\fpayment_mode\x18\x04 \x01(\tR\vpaymentMode\x12)\n" +
+	"\x10reference_number\x18\x05 \x01(\tR\x0freferenceNumber\x12!\n" +
+	"\fpayment_date\x18\x06 \x01(\tR\vpaymentDate\x12\x14\n" +
+	"\x05notes\x18\a \x01(\tR\x05notes\"e\n" +
+	"\x15RecordPaymentResponse\x122\n" +
+	"\ainvoice\x18\x01 \x01(\v2\x18.billing.v1.InvoiceProtoR\ainvoice\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"\x8c\x02\n" +
+	"\x17CustomerReceivableProto\x12\x1f\n" +
+	"\vcustomer_id\x18\x01 \x01(\tR\n" +
+	"customerId\x12#\n" +
+	"\rcustomer_name\x18\x02 \x01(\tR\fcustomerName\x12\x14\n" +
+	"\x05phone\x18\x03 \x01(\tR\x05phone\x12!\n" +
+	"\ftotal_billed\x18\x04 \x01(\tR\vtotalBilled\x12\x1d\n" +
+	"\n" +
+	"total_paid\x18\x05 \x01(\tR\ttotalPaid\x12\x1f\n" +
+	"\vbalance_due\x18\x06 \x01(\tR\n" +
+	"balanceDue\x122\n" +
+	"\x15unpaid_invoices_count\x18\a \x01(\x05R\x13unpaidInvoicesCount\"7\n" +
+	"\x18GetBillingSummaryRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\"\xee\x02\n" +
+	"\x19GetBillingSummaryResponse\x12\x1f\n" +
+	"\vtoday_sales\x18\x01 \x01(\tR\n" +
+	"todaySales\x12\x1f\n" +
+	"\vmonth_sales\x18\x02 \x01(\tR\n" +
+	"monthSales\x12+\n" +
+	"\x11total_outstanding\x18\x03 \x01(\tR\x10totalOutstanding\x120\n" +
+	"\x14total_invoices_count\x18\x04 \x01(\x05R\x12totalInvoicesCount\x12.\n" +
+	"\x13paid_invoices_count\x18\x05 \x01(\x05R\x11paidInvoicesCount\x122\n" +
+	"\x15unpaid_invoices_count\x18\x06 \x01(\x05R\x13unpaidInvoicesCount\x12L\n" +
+	"\x0ftop_receivables\x18\a \x03(\v2#.billing.v1.CustomerReceivableProtoR\x0etopReceivables2\xd5\x05\n" +
 	"\x0eBillingService\x12Q\n" +
 	"\fListInvoices\x12\x1f.billing.v1.ListInvoicesRequest\x1a .billing.v1.ListInvoicesResponse\x12K\n" +
 	"\n" +
@@ -2066,7 +2474,9 @@ const file_billing_v1_billing_proto_rawDesc = "" +
 	"\rCreateInvoice\x12 .billing.v1.CreateInvoiceRequest\x1a!.billing.v1.CreateInvoiceResponse\x12T\n" +
 	"\rCancelInvoice\x12 .billing.v1.CancelInvoiceRequest\x1a!.billing.v1.CancelInvoiceResponse\x12Z\n" +
 	"\x0fUpdateLogistics\x12\".billing.v1.UpdateLogisticsRequest\x1a#.billing.v1.UpdateLogisticsResponse\x12c\n" +
-	"\x12GenerateInvoicePDF\x12%.billing.v1.GenerateInvoicePDFRequest\x1a&.billing.v1.GenerateInvoicePDFResponseB&Z$drayya-core/gen/billing/v1;billingv1b\x06proto3"
+	"\x12GenerateInvoicePDF\x12%.billing.v1.GenerateInvoicePDFRequest\x1a&.billing.v1.GenerateInvoicePDFResponse\x12T\n" +
+	"\rRecordPayment\x12 .billing.v1.RecordPaymentRequest\x1a!.billing.v1.RecordPaymentResponse\x12`\n" +
+	"\x11GetBillingSummary\x12$.billing.v1.GetBillingSummaryRequest\x1a%.billing.v1.GetBillingSummaryResponseB&Z$drayya-core/gen/billing/v1;billingv1b\x06proto3"
 
 var (
 	file_billing_v1_billing_proto_rawDescOnce sync.Once
@@ -2080,7 +2490,7 @@ func file_billing_v1_billing_proto_rawDescGZIP() []byte {
 	return file_billing_v1_billing_proto_rawDescData
 }
 
-var file_billing_v1_billing_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_billing_v1_billing_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_billing_v1_billing_proto_goTypes = []any{
 	(*InvoiceItemProto)(nil),            // 0: billing.v1.InvoiceItemProto
 	(*InvoiceProto)(nil),                // 1: billing.v1.InvoiceProto
@@ -2097,6 +2507,11 @@ var file_billing_v1_billing_proto_goTypes = []any{
 	(*UpdateLogisticsResponse)(nil),     // 12: billing.v1.UpdateLogisticsResponse
 	(*GenerateInvoicePDFRequest)(nil),   // 13: billing.v1.GenerateInvoicePDFRequest
 	(*GenerateInvoicePDFResponse)(nil),  // 14: billing.v1.GenerateInvoicePDFResponse
+	(*RecordPaymentRequest)(nil),        // 15: billing.v1.RecordPaymentRequest
+	(*RecordPaymentResponse)(nil),       // 16: billing.v1.RecordPaymentResponse
+	(*CustomerReceivableProto)(nil),     // 17: billing.v1.CustomerReceivableProto
+	(*GetBillingSummaryRequest)(nil),    // 18: billing.v1.GetBillingSummaryRequest
+	(*GetBillingSummaryResponse)(nil),   // 19: billing.v1.GetBillingSummaryResponse
 }
 var file_billing_v1_billing_proto_depIdxs = []int32{
 	0,  // 0: billing.v1.InvoiceProto.items:type_name -> billing.v1.InvoiceItemProto
@@ -2105,23 +2520,29 @@ var file_billing_v1_billing_proto_depIdxs = []int32{
 	6,  // 3: billing.v1.CreateInvoiceRequest.items:type_name -> billing.v1.CreateInvoiceItemInputProto
 	1,  // 4: billing.v1.CreateInvoiceResponse.invoice:type_name -> billing.v1.InvoiceProto
 	1,  // 5: billing.v1.UpdateLogisticsResponse.invoice:type_name -> billing.v1.InvoiceProto
-	2,  // 6: billing.v1.BillingService.ListInvoices:input_type -> billing.v1.ListInvoicesRequest
-	4,  // 7: billing.v1.BillingService.GetInvoice:input_type -> billing.v1.GetInvoiceRequest
-	7,  // 8: billing.v1.BillingService.CreateInvoice:input_type -> billing.v1.CreateInvoiceRequest
-	9,  // 9: billing.v1.BillingService.CancelInvoice:input_type -> billing.v1.CancelInvoiceRequest
-	11, // 10: billing.v1.BillingService.UpdateLogistics:input_type -> billing.v1.UpdateLogisticsRequest
-	13, // 11: billing.v1.BillingService.GenerateInvoicePDF:input_type -> billing.v1.GenerateInvoicePDFRequest
-	3,  // 12: billing.v1.BillingService.ListInvoices:output_type -> billing.v1.ListInvoicesResponse
-	5,  // 13: billing.v1.BillingService.GetInvoice:output_type -> billing.v1.GetInvoiceResponse
-	8,  // 14: billing.v1.BillingService.CreateInvoice:output_type -> billing.v1.CreateInvoiceResponse
-	10, // 15: billing.v1.BillingService.CancelInvoice:output_type -> billing.v1.CancelInvoiceResponse
-	12, // 16: billing.v1.BillingService.UpdateLogistics:output_type -> billing.v1.UpdateLogisticsResponse
-	14, // 17: billing.v1.BillingService.GenerateInvoicePDF:output_type -> billing.v1.GenerateInvoicePDFResponse
-	12, // [12:18] is the sub-list for method output_type
-	6,  // [6:12] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	1,  // 6: billing.v1.RecordPaymentResponse.invoice:type_name -> billing.v1.InvoiceProto
+	17, // 7: billing.v1.GetBillingSummaryResponse.top_receivables:type_name -> billing.v1.CustomerReceivableProto
+	2,  // 8: billing.v1.BillingService.ListInvoices:input_type -> billing.v1.ListInvoicesRequest
+	4,  // 9: billing.v1.BillingService.GetInvoice:input_type -> billing.v1.GetInvoiceRequest
+	7,  // 10: billing.v1.BillingService.CreateInvoice:input_type -> billing.v1.CreateInvoiceRequest
+	9,  // 11: billing.v1.BillingService.CancelInvoice:input_type -> billing.v1.CancelInvoiceRequest
+	11, // 12: billing.v1.BillingService.UpdateLogistics:input_type -> billing.v1.UpdateLogisticsRequest
+	13, // 13: billing.v1.BillingService.GenerateInvoicePDF:input_type -> billing.v1.GenerateInvoicePDFRequest
+	15, // 14: billing.v1.BillingService.RecordPayment:input_type -> billing.v1.RecordPaymentRequest
+	18, // 15: billing.v1.BillingService.GetBillingSummary:input_type -> billing.v1.GetBillingSummaryRequest
+	3,  // 16: billing.v1.BillingService.ListInvoices:output_type -> billing.v1.ListInvoicesResponse
+	5,  // 17: billing.v1.BillingService.GetInvoice:output_type -> billing.v1.GetInvoiceResponse
+	8,  // 18: billing.v1.BillingService.CreateInvoice:output_type -> billing.v1.CreateInvoiceResponse
+	10, // 19: billing.v1.BillingService.CancelInvoice:output_type -> billing.v1.CancelInvoiceResponse
+	12, // 20: billing.v1.BillingService.UpdateLogistics:output_type -> billing.v1.UpdateLogisticsResponse
+	14, // 21: billing.v1.BillingService.GenerateInvoicePDF:output_type -> billing.v1.GenerateInvoicePDFResponse
+	16, // 22: billing.v1.BillingService.RecordPayment:output_type -> billing.v1.RecordPaymentResponse
+	19, // 23: billing.v1.BillingService.GetBillingSummary:output_type -> billing.v1.GetBillingSummaryResponse
+	16, // [16:24] is the sub-list for method output_type
+	8,  // [8:16] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_billing_v1_billing_proto_init() }
@@ -2135,7 +2556,7 @@ func file_billing_v1_billing_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_billing_v1_billing_proto_rawDesc), len(file_billing_v1_billing_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -186,5 +186,17 @@ export const consultingGrpc = {
 	listSOWContracts: (params = {}) => callRpc('consulting.v1.ConsultingService', 'ListSOWContracts', params),
 };
 
+// 15. Fast Billing, Invoicing & GST Client
+export const billingGrpc = {
+	listInvoices: (params = {}) => callRpc('billing.v1.BillingService', 'ListInvoices', params),
+	getInvoice: (req: any) => callRpc('billing.v1.BillingService', 'GetInvoice', req),
+	createInvoice: (req: any) => callRpc('billing.v1.BillingService', 'CreateInvoice', req),
+	cancelInvoice: (req: any) => callRpc('billing.v1.BillingService', 'CancelInvoice', req),
+	updateLogistics: (req: any) => callRpc('billing.v1.BillingService', 'UpdateLogistics', req),
+	generateInvoicePDF: (req: any) => callRpc('billing.v1.BillingService', 'GenerateInvoicePDF', req),
+	recordPayment: (req: any) => callRpc('billing.v1.BillingService', 'RecordPayment', req),
+	getBillingSummary: (params = {}) => callRpc('billing.v1.BillingService', 'GetBillingSummary', params),
+};
+
 
 

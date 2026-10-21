@@ -25,6 +25,8 @@ const (
 	BillingService_CancelInvoice_FullMethodName      = "/billing.v1.BillingService/CancelInvoice"
 	BillingService_UpdateLogistics_FullMethodName    = "/billing.v1.BillingService/UpdateLogistics"
 	BillingService_GenerateInvoicePDF_FullMethodName = "/billing.v1.BillingService/GenerateInvoicePDF"
+	BillingService_RecordPayment_FullMethodName      = "/billing.v1.BillingService/RecordPayment"
+	BillingService_GetBillingSummary_FullMethodName  = "/billing.v1.BillingService/GetBillingSummary"
 )
 
 // BillingServiceClient is the client API for BillingService service.
@@ -37,6 +39,8 @@ type BillingServiceClient interface {
 	CancelInvoice(ctx context.Context, in *CancelInvoiceRequest, opts ...grpc.CallOption) (*CancelInvoiceResponse, error)
 	UpdateLogistics(ctx context.Context, in *UpdateLogisticsRequest, opts ...grpc.CallOption) (*UpdateLogisticsResponse, error)
 	GenerateInvoicePDF(ctx context.Context, in *GenerateInvoicePDFRequest, opts ...grpc.CallOption) (*GenerateInvoicePDFResponse, error)
+	RecordPayment(ctx context.Context, in *RecordPaymentRequest, opts ...grpc.CallOption) (*RecordPaymentResponse, error)
+	GetBillingSummary(ctx context.Context, in *GetBillingSummaryRequest, opts ...grpc.CallOption) (*GetBillingSummaryResponse, error)
 }
 
 type billingServiceClient struct {
@@ -107,6 +111,26 @@ func (c *billingServiceClient) GenerateInvoicePDF(ctx context.Context, in *Gener
 	return out, nil
 }
 
+func (c *billingServiceClient) RecordPayment(ctx context.Context, in *RecordPaymentRequest, opts ...grpc.CallOption) (*RecordPaymentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RecordPaymentResponse)
+	err := c.cc.Invoke(ctx, BillingService_RecordPayment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) GetBillingSummary(ctx context.Context, in *GetBillingSummaryRequest, opts ...grpc.CallOption) (*GetBillingSummaryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetBillingSummaryResponse)
+	err := c.cc.Invoke(ctx, BillingService_GetBillingSummary_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BillingServiceServer is the server API for BillingService service.
 // All implementations must embed UnimplementedBillingServiceServer
 // for forward compatibility.
@@ -117,6 +141,8 @@ type BillingServiceServer interface {
 	CancelInvoice(context.Context, *CancelInvoiceRequest) (*CancelInvoiceResponse, error)
 	UpdateLogistics(context.Context, *UpdateLogisticsRequest) (*UpdateLogisticsResponse, error)
 	GenerateInvoicePDF(context.Context, *GenerateInvoicePDFRequest) (*GenerateInvoicePDFResponse, error)
+	RecordPayment(context.Context, *RecordPaymentRequest) (*RecordPaymentResponse, error)
+	GetBillingSummary(context.Context, *GetBillingSummaryRequest) (*GetBillingSummaryResponse, error)
 	mustEmbedUnimplementedBillingServiceServer()
 }
 
@@ -144,6 +170,12 @@ func (UnimplementedBillingServiceServer) UpdateLogistics(context.Context, *Updat
 }
 func (UnimplementedBillingServiceServer) GenerateInvoicePDF(context.Context, *GenerateInvoicePDFRequest) (*GenerateInvoicePDFResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GenerateInvoicePDF not implemented")
+}
+func (UnimplementedBillingServiceServer) RecordPayment(context.Context, *RecordPaymentRequest) (*RecordPaymentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RecordPayment not implemented")
+}
+func (UnimplementedBillingServiceServer) GetBillingSummary(context.Context, *GetBillingSummaryRequest) (*GetBillingSummaryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetBillingSummary not implemented")
 }
 func (UnimplementedBillingServiceServer) mustEmbedUnimplementedBillingServiceServer() {}
 func (UnimplementedBillingServiceServer) testEmbeddedByValue()                        {}
@@ -274,6 +306,42 @@ func _BillingService_GenerateInvoicePDF_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BillingService_RecordPayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RecordPaymentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).RecordPayment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BillingService_RecordPayment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).RecordPayment(ctx, req.(*RecordPaymentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_GetBillingSummary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetBillingSummaryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).GetBillingSummary(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BillingService_GetBillingSummary_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).GetBillingSummary(ctx, req.(*GetBillingSummaryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // BillingService_ServiceDesc is the grpc.ServiceDesc for BillingService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -304,6 +372,14 @@ var BillingService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GenerateInvoicePDF",
 			Handler:    _BillingService_GenerateInvoicePDF_Handler,
+		},
+		{
+			MethodName: "RecordPayment",
+			Handler:    _BillingService_RecordPayment_Handler,
+		},
+		{
+			MethodName: "GetBillingSummary",
+			Handler:    _BillingService_GetBillingSummary_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

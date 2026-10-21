@@ -2,6 +2,7 @@ package grpcserver
 
 import (
 	"drayya-core/gen/banking/v1/bankingv1connect"
+	"drayya-core/gen/billing/v1/billingv1connect"
 	"drayya-core/gen/bpo/v1/bpov1connect"
 	"drayya-core/gen/consulting/v1/consultingv1connect"
 	"drayya-core/gen/ecommerce/v1/ecommercev1connect"
@@ -18,6 +19,7 @@ import (
 	"drayya-core/gen/workflow/v1/workflowv1connect"
 
 	"drayya-core/internal/grpcservices/banking"
+	"drayya-core/internal/grpcservices/billing"
 	"drayya-core/internal/grpcservices/bpo"
 	"drayya-core/internal/grpcservices/consulting"
 	"drayya-core/internal/grpcservices/ecommerce"
@@ -112,4 +114,9 @@ func (s *Server) RegisterAllServices() {
 	consultSvc := consulting.NewService(s.db)
 	consultPath, consultHandler := consultingv1connect.NewConsultingServiceHandler(consultSvc, opt)
 	s.mux.Handle(consultPath, consultHandler)
+
+	// 16. Fast Billing, Invoicing & GST Service
+	billSvc := billing.NewService(s.db)
+	billPath, billHandler := billingv1connect.NewBillingServiceHandler(billSvc, opt)
+	s.mux.Handle(billPath, billHandler)
 }

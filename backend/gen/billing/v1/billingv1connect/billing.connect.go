@@ -51,6 +51,12 @@ const (
 	// BillingServiceGenerateInvoicePDFProcedure is the fully-qualified name of the BillingService's
 	// GenerateInvoicePDF RPC.
 	BillingServiceGenerateInvoicePDFProcedure = "/billing.v1.BillingService/GenerateInvoicePDF"
+	// BillingServiceRecordPaymentProcedure is the fully-qualified name of the BillingService's
+	// RecordPayment RPC.
+	BillingServiceRecordPaymentProcedure = "/billing.v1.BillingService/RecordPayment"
+	// BillingServiceGetBillingSummaryProcedure is the fully-qualified name of the BillingService's
+	// GetBillingSummary RPC.
+	BillingServiceGetBillingSummaryProcedure = "/billing.v1.BillingService/GetBillingSummary"
 )
 
 // BillingServiceClient is a client for the billing.v1.BillingService service.
@@ -61,6 +67,8 @@ type BillingServiceClient interface {
 	CancelInvoice(context.Context, *connect.Request[v1.CancelInvoiceRequest]) (*connect.Response[v1.CancelInvoiceResponse], error)
 	UpdateLogistics(context.Context, *connect.Request[v1.UpdateLogisticsRequest]) (*connect.Response[v1.UpdateLogisticsResponse], error)
 	GenerateInvoicePDF(context.Context, *connect.Request[v1.GenerateInvoicePDFRequest]) (*connect.Response[v1.GenerateInvoicePDFResponse], error)
+	RecordPayment(context.Context, *connect.Request[v1.RecordPaymentRequest]) (*connect.Response[v1.RecordPaymentResponse], error)
+	GetBillingSummary(context.Context, *connect.Request[v1.GetBillingSummaryRequest]) (*connect.Response[v1.GetBillingSummaryResponse], error)
 }
 
 // NewBillingServiceClient constructs a client for the billing.v1.BillingService service. By
@@ -110,6 +118,18 @@ func NewBillingServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(billingServiceMethods.ByName("GenerateInvoicePDF")),
 			connect.WithClientOptions(opts...),
 		),
+		recordPayment: connect.NewClient[v1.RecordPaymentRequest, v1.RecordPaymentResponse](
+			httpClient,
+			baseURL+BillingServiceRecordPaymentProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("RecordPayment")),
+			connect.WithClientOptions(opts...),
+		),
+		getBillingSummary: connect.NewClient[v1.GetBillingSummaryRequest, v1.GetBillingSummaryResponse](
+			httpClient,
+			baseURL+BillingServiceGetBillingSummaryProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("GetBillingSummary")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -121,6 +141,8 @@ type billingServiceClient struct {
 	cancelInvoice      *connect.Client[v1.CancelInvoiceRequest, v1.CancelInvoiceResponse]
 	updateLogistics    *connect.Client[v1.UpdateLogisticsRequest, v1.UpdateLogisticsResponse]
 	generateInvoicePDF *connect.Client[v1.GenerateInvoicePDFRequest, v1.GenerateInvoicePDFResponse]
+	recordPayment      *connect.Client[v1.RecordPaymentRequest, v1.RecordPaymentResponse]
+	getBillingSummary  *connect.Client[v1.GetBillingSummaryRequest, v1.GetBillingSummaryResponse]
 }
 
 // ListInvoices calls billing.v1.BillingService.ListInvoices.
@@ -153,6 +175,16 @@ func (c *billingServiceClient) GenerateInvoicePDF(ctx context.Context, req *conn
 	return c.generateInvoicePDF.CallUnary(ctx, req)
 }
 
+// RecordPayment calls billing.v1.BillingService.RecordPayment.
+func (c *billingServiceClient) RecordPayment(ctx context.Context, req *connect.Request[v1.RecordPaymentRequest]) (*connect.Response[v1.RecordPaymentResponse], error) {
+	return c.recordPayment.CallUnary(ctx, req)
+}
+
+// GetBillingSummary calls billing.v1.BillingService.GetBillingSummary.
+func (c *billingServiceClient) GetBillingSummary(ctx context.Context, req *connect.Request[v1.GetBillingSummaryRequest]) (*connect.Response[v1.GetBillingSummaryResponse], error) {
+	return c.getBillingSummary.CallUnary(ctx, req)
+}
+
 // BillingServiceHandler is an implementation of the billing.v1.BillingService service.
 type BillingServiceHandler interface {
 	ListInvoices(context.Context, *connect.Request[v1.ListInvoicesRequest]) (*connect.Response[v1.ListInvoicesResponse], error)
@@ -161,6 +193,8 @@ type BillingServiceHandler interface {
 	CancelInvoice(context.Context, *connect.Request[v1.CancelInvoiceRequest]) (*connect.Response[v1.CancelInvoiceResponse], error)
 	UpdateLogistics(context.Context, *connect.Request[v1.UpdateLogisticsRequest]) (*connect.Response[v1.UpdateLogisticsResponse], error)
 	GenerateInvoicePDF(context.Context, *connect.Request[v1.GenerateInvoicePDFRequest]) (*connect.Response[v1.GenerateInvoicePDFResponse], error)
+	RecordPayment(context.Context, *connect.Request[v1.RecordPaymentRequest]) (*connect.Response[v1.RecordPaymentResponse], error)
+	GetBillingSummary(context.Context, *connect.Request[v1.GetBillingSummaryRequest]) (*connect.Response[v1.GetBillingSummaryResponse], error)
 }
 
 // NewBillingServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -206,6 +240,18 @@ func NewBillingServiceHandler(svc BillingServiceHandler, opts ...connect.Handler
 		connect.WithSchema(billingServiceMethods.ByName("GenerateInvoicePDF")),
 		connect.WithHandlerOptions(opts...),
 	)
+	billingServiceRecordPaymentHandler := connect.NewUnaryHandler(
+		BillingServiceRecordPaymentProcedure,
+		svc.RecordPayment,
+		connect.WithSchema(billingServiceMethods.ByName("RecordPayment")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceGetBillingSummaryHandler := connect.NewUnaryHandler(
+		BillingServiceGetBillingSummaryProcedure,
+		svc.GetBillingSummary,
+		connect.WithSchema(billingServiceMethods.ByName("GetBillingSummary")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/billing.v1.BillingService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case BillingServiceListInvoicesProcedure:
@@ -220,6 +266,10 @@ func NewBillingServiceHandler(svc BillingServiceHandler, opts ...connect.Handler
 			billingServiceUpdateLogisticsHandler.ServeHTTP(w, r)
 		case BillingServiceGenerateInvoicePDFProcedure:
 			billingServiceGenerateInvoicePDFHandler.ServeHTTP(w, r)
+		case BillingServiceRecordPaymentProcedure:
+			billingServiceRecordPaymentHandler.ServeHTTP(w, r)
+		case BillingServiceGetBillingSummaryProcedure:
+			billingServiceGetBillingSummaryHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -251,4 +301,12 @@ func (UnimplementedBillingServiceHandler) UpdateLogistics(context.Context, *conn
 
 func (UnimplementedBillingServiceHandler) GenerateInvoicePDF(context.Context, *connect.Request[v1.GenerateInvoicePDFRequest]) (*connect.Response[v1.GenerateInvoicePDFResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("billing.v1.BillingService.GenerateInvoicePDF is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) RecordPayment(context.Context, *connect.Request[v1.RecordPaymentRequest]) (*connect.Response[v1.RecordPaymentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("billing.v1.BillingService.RecordPayment is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) GetBillingSummary(context.Context, *connect.Request[v1.GetBillingSummaryRequest]) (*connect.Response[v1.GetBillingSummaryResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("billing.v1.BillingService.GetBillingSummary is not implemented"))
 }

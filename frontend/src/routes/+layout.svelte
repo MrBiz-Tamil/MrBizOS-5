@@ -34,6 +34,14 @@
 	let legalError = $state('');
 	let upgradeFeatureTitle = $state('');
 	let upgradeFeatureDesc = $state('');
+	let billingOnlyMode = $state(false);
+
+	function toggleBillingMode() {
+		billingOnlyMode = !billingOnlyMode;
+		if (typeof localStorage !== 'undefined') {
+			localStorage.setItem('mrbiz_billing_only_mode', String(billingOnlyMode));
+		}
+	}
 
 	let isNextPlan = $derived(
 		currentUser?.is_super_admin ||
@@ -48,6 +56,9 @@
 			if (isBarePage) {
 				loading = false;
 				return;
+			}
+			if (typeof localStorage !== 'undefined') {
+				billingOnlyMode = localStorage.getItem('mrbiz_billing_only_mode') === 'true';
 			}
 			const data = await api.getMe();
 			currentUser = data.user;
@@ -220,58 +231,118 @@
 
 			<!-- Navigation Links -->
 			<nav style="padding: 0.5rem 0.75rem 1.25rem 0.75rem; display: flex; flex-direction: column; gap: 0.25rem; flex: 1; overflow-y: auto;">
-				<div style="font-size: 0.6875rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.25rem 0.5rem 0.25rem 0.5rem;">
-					Enterprise ERP Suite (Odoo/SAP Killer)
-				</div>
+				{#if billingOnlyMode}
+					<div style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 0.6rem 0.75rem; margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
+						<div>
+							<div style="font-size: 0.75rem; font-weight: 800; color: #34d399;">⚡ Billing Only Mode</div>
+							<div style="font-size: 0.65rem; color: #94a3b8;">Distraction-Free Fast Billing</div>
+						</div>
+						<button onclick={toggleBillingMode} style="background: #1e293b; color: #cbd5e1; border: 1px solid #334155; font-size: 0.6875rem; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer;">
+							Full ERP
+						</button>
+					</div>
 
-				<a href="/inbox" class="nav-item" class:active={currentPath.startsWith('/inbox')} style="color: #f43f5e; font-weight: 700; background: rgba(244, 63, 94, 0.08); border-left: 3px solid #f43f5e;">
-					<span class="nav-icon">💬</span> Omnichannel Social Inbox
-				</a>
-				<a href="/bpo-voice" class="nav-item" class:active={currentPath.startsWith('/bpo-voice')} style="color: #06b6d4; font-weight: 700; background: rgba(6, 182, 212, 0.08); border-left: 3px solid #06b6d4;">
-					<span class="nav-icon">🎙️</span> AI Voice Agent BPO Desk
-				</a>
-				<a href="/support" class="nav-item" class:active={currentPath.startsWith('/support')}>
-					<span class="nav-icon">🎫</span> Support Helpdesk & SLAs
-				</a>
-				<a href="/projects" class="nav-item" class:active={currentPath.startsWith('/projects')}>
-					<span class="nav-icon">📁</span> Projects & UTMS Tasks
-				</a>
-				<a href="/journeys" class="nav-item" class:active={currentPath.startsWith('/journeys')}>
-					<span class="nav-icon">🛤️</span> Journey Lifecycle Engine
-				</a>
-				<a href="/procurement" class="nav-item" class:active={currentPath.startsWith('/procurement')}>
-					<span class="nav-icon">📦</span> Procurement & 3-Way Match
-				</a>
-				<a href="/accounting/reconciliation" class="nav-item" class:active={currentPath.startsWith('/accounting/reconciliation')}>
-					<span class="nav-icon">🏦</span> Bank Auto-Reconciliation
-				</a>
-				<a href="/hrms" class="nav-item" class:active={currentPath.startsWith('/hrms')}>
-					<span class="nav-icon">👥</span> HRMS & 1-Click Payroll
-				</a>
-				<a href="/workflow" class="nav-item" class:active={currentPath.startsWith('/workflow')}>
-					<span class="nav-icon">🤖</span> AI Autonomous Missions
-				</a>
-				<a href="/healthcare" class="nav-item" class:active={currentPath.startsWith('/healthcare')}>
-					<span class="nav-icon">🏥</span> Smart Healthcare Hub
-				</a>
-				<a href="/travel" class="nav-item" class:active={currentPath.startsWith('/travel')}>
-					<span class="nav-icon">✈️</span> Travel & Visa OS
-				</a>
-				<a href="/realestate" class="nav-item" class:active={currentPath.startsWith('/realestate')}>
-					<span class="nav-icon">🏢</span> Real Estate Deals
-				</a>
+					<a href="/billing" class="nav-item" class:active={currentPath.startsWith('/billing')} style="color: #38bdf8; font-weight: 700; background: rgba(56, 189, 248, 0.12); border-left: 3px solid #38bdf8;">
+						<span class="nav-icon">⚡</span> Express Billing Counter
+					</a>
 
-				<div style="font-size: 0.6875rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; padding: 0.75rem 0.5rem 0.25rem 0.5rem;">
-					Core Invoicing & Billing
-				</div>
+					<a href="/" class="nav-item" class:active={currentPath === '/'}>
+						<span class="nav-icon">📊</span> Dashboard
+					</a>
 
-				<a href="/" class="nav-item" class:active={currentPath === '/'}>
-					<span class="nav-icon">📊</span> Dashboard
-				</a>
+					<a href="/pos" class="nav-item" class:active={currentPath.startsWith('/pos')}>
+						<span class="nav-icon">🛒</span> Retail POS Terminal
+					</a>
 
-				<a href="/pos" class="nav-item" class:active={currentPath.startsWith('/pos')} style="color: #38bdf8; font-weight: 700; background: rgba(56, 189, 248, 0.08); border-left: 3px solid #38bdf8;">
-					<span class="nav-icon">⚡</span> Retail POS Terminal
-				</a>
+					<a href="/invoices" class="nav-item" class:active={currentPath.startsWith('/invoices')}>
+						<span class="nav-icon">📄</span> Sales Invoices
+					</a>
+
+					<a href="/quotations" class="nav-item" class:active={currentPath.startsWith('/quotations')}>
+						<span class="nav-icon">📝</span> Quotations & Estimates
+					</a>
+
+					<a href="/payments" class="nav-item" class:active={currentPath === '/payments'}>
+						<span class="nav-icon">💳</span> Payments Received
+					</a>
+
+					<a href="/customers" class="nav-item" class:active={currentPath === '/customers'}>
+						<span class="nav-icon">👥</span> Customers & Balances
+					</a>
+
+					<a href="/products" class="nav-item" class:active={currentPath === '/products'}>
+						<span class="nav-icon">📦</span> Products & Pricing
+					</a>
+
+					<a href="/inventory" class="nav-item" class:active={currentPath === '/inventory'}>
+						<span class="nav-icon">📋</span> Inventory Stock
+					</a>
+
+					<a href="/accounting" class="nav-item" class:active={currentPath.startsWith('/accounting')}>
+						<span class="nav-icon">📖</span> Sales & Tax Reports
+					</a>
+
+					<a href="/settings" class="nav-item" class:active={currentPath === '/settings'}>
+						<span class="nav-icon">⚙️</span> Company Profile & QR
+					</a>
+				{:else}
+					<div style="display: flex; justify-content: space-between; align-items: center; padding: 0.25rem 0.5rem 0.25rem 0.5rem;">
+						<span style="font-size: 0.6875rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em;">Enterprise ERP Suite</span>
+						<button onclick={toggleBillingMode} style="background: rgba(16, 185, 129, 0.12); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.65rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 4px; cursor: pointer;">⚡ Billing Only</button>
+					</div>
+
+					<a href="/inbox" class="nav-item" class:active={currentPath.startsWith('/inbox')} style="color: #f43f5e; font-weight: 700; background: rgba(244, 63, 94, 0.08); border-left: 3px solid #f43f5e;">
+						<span class="nav-icon">💬</span> Omnichannel Social Inbox
+					</a>
+					<a href="/bpo-voice" class="nav-item" class:active={currentPath.startsWith('/bpo-voice')} style="color: #06b6d4; font-weight: 700; background: rgba(6, 182, 212, 0.08); border-left: 3px solid #06b6d4;">
+						<span class="nav-icon">🎙️</span> AI Voice Agent BPO Desk
+					</a>
+					<a href="/support" class="nav-item" class:active={currentPath.startsWith('/support')}>
+						<span class="nav-icon">🎫</span> Support Helpdesk & SLAs
+					</a>
+					<a href="/projects" class="nav-item" class:active={currentPath.startsWith('/projects')}>
+						<span class="nav-icon">📁</span> Projects & UTMS Tasks
+					</a>
+					<a href="/journeys" class="nav-item" class:active={currentPath.startsWith('/journeys')}>
+						<span class="nav-icon">🛤️</span> Journey Lifecycle Engine
+					</a>
+					<a href="/procurement" class="nav-item" class:active={currentPath.startsWith('/procurement')}>
+						<span class="nav-icon">📦</span> Procurement & 3-Way Match
+					</a>
+					<a href="/accounting/reconciliation" class="nav-item" class:active={currentPath.startsWith('/accounting/reconciliation')}>
+						<span class="nav-icon">🏦</span> Bank Auto-Reconciliation
+					</a>
+					<a href="/hrms" class="nav-item" class:active={currentPath.startsWith('/hrms')}>
+						<span class="nav-icon">👥</span> HRMS & 1-Click Payroll
+					</a>
+					<a href="/workflow" class="nav-item" class:active={currentPath.startsWith('/workflow')}>
+						<span class="nav-icon">🤖</span> AI Autonomous Missions
+					</a>
+					<a href="/healthcare" class="nav-item" class:active={currentPath.startsWith('/healthcare')}>
+						<span class="nav-icon">🏥</span> Smart Healthcare Hub
+					</a>
+					<a href="/travel" class="nav-item" class:active={currentPath.startsWith('/travel')}>
+						<span class="nav-icon">✈️</span> Travel & Visa OS
+					</a>
+					<a href="/realestate" class="nav-item" class:active={currentPath.startsWith('/realestate')}>
+						<span class="nav-icon">🏢</span> Real Estate Deals
+					</a>
+
+					<div style="font-size: 0.6875rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; padding: 0.75rem 0.5rem 0.25rem 0.5rem;">
+						Core Invoicing & Billing
+					</div>
+
+					<a href="/billing" class="nav-item" class:active={currentPath.startsWith('/billing')} style="color: #38bdf8; font-weight: 700; background: rgba(56, 189, 248, 0.08); border-left: 3px solid #38bdf8;">
+						<span class="nav-icon">⚡</span> Express Billing Counter
+					</a>
+
+					<a href="/" class="nav-item" class:active={currentPath === '/'}>
+						<span class="nav-icon">📊</span> Dashboard
+					</a>
+
+					<a href="/pos" class="nav-item" class:active={currentPath.startsWith('/pos')}>
+						<span class="nav-icon">🛒</span> Retail POS Terminal
+					</a>
 
 				<a href="/invoices" class="nav-item" class:active={currentPath.startsWith('/invoices')}>
 					<span class="nav-icon">📄</span> Sales Invoices
@@ -394,6 +465,7 @@
 				<a href="/settings/developer" class="nav-item" class:active={currentPath === '/settings/developer'} style="color: #818cf8; font-weight: 600;">
 					<span class="nav-icon">⚡</span> Developer & API Keys
 				</a>
+				{/if}
 
 				{#if currentUser?.is_super_admin}
 					<div style="font-size: 0.6875rem; font-weight: 700; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.05em; padding: 1rem 0.5rem 0.5rem 0.5rem;">

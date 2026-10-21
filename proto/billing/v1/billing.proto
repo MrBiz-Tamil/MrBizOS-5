@@ -11,6 +11,8 @@ service BillingService {
   rpc CancelInvoice(CancelInvoiceRequest) returns (CancelInvoiceResponse);
   rpc UpdateLogistics(UpdateLogisticsRequest) returns (UpdateLogisticsResponse);
   rpc GenerateInvoicePDF(GenerateInvoicePDFRequest) returns (GenerateInvoicePDFResponse);
+  rpc RecordPayment(RecordPaymentRequest) returns (RecordPaymentResponse);
+  rpc GetBillingSummary(GetBillingSummaryRequest) returns (GetBillingSummaryResponse);
 }
 
 message InvoiceItemProto {
@@ -217,5 +219,44 @@ message GenerateInvoicePDFRequest {
 message GenerateInvoicePDFResponse {
   bytes pdf_bytes = 1;
   string filename = 2;
+}
+
+message RecordPaymentRequest {
+  string tenant_id = 1;
+  string invoice_id = 2;
+  string amount_paid = 3;
+  string payment_mode = 4; // CASH, UPI, CARD, NETBANKING, CHEQUE
+  string reference_number = 5;
+  string payment_date = 6;
+  string notes = 7;
+}
+
+message RecordPaymentResponse {
+  InvoiceProto invoice = 1;
+  string message = 2;
+}
+
+message CustomerReceivableProto {
+  string customer_id = 1;
+  string customer_name = 2;
+  string phone = 3;
+  string total_billed = 4;
+  string total_paid = 5;
+  string balance_due = 6;
+  int32 unpaid_invoices_count = 7;
+}
+
+message GetBillingSummaryRequest {
+  string tenant_id = 1;
+}
+
+message GetBillingSummaryResponse {
+  string today_sales = 1;
+  string month_sales = 2;
+  string total_outstanding = 3;
+  int32 total_invoices_count = 4;
+  int32 paid_invoices_count = 5;
+  int32 unpaid_invoices_count = 6;
+  repeated CustomerReceivableProto top_receivables = 7;
 }
 
