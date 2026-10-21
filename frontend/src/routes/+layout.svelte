@@ -5,7 +5,6 @@
 	import { goto } from '$app/navigation';
 	import { api, setSelectedTenantId, type User, type Tenant, type TenantSubscriptionInfo } from '$lib/api';
 	import { realtimeBilling } from '$lib/stores/realtime.svelte';
-	import UnitSwitcher from '$lib/components/UnitSwitcher.svelte';
 	import WorkspaceManagerModal, { type CustomWorkspaceConfig } from '$lib/components/WorkspaceManagerModal.svelte';
 	import ToastContainer from '$lib/components/ToastContainer.svelte';
 
@@ -429,40 +428,39 @@
 				</div>
 			</div>
 
-			<!-- Multi-Unit Switcher -->
-			<UnitSwitcher />
-
-			<!-- Navigation Links -->
-			<nav style="padding: 0.5rem 0.75rem 1.25rem 0.75rem; display: flex; flex-direction: column; gap: 0.25rem; flex: 1; overflow-y: auto;">
-				<!-- Workspace Mode Selector Card -->
-				<div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 0.5rem; margin-bottom: 0.75rem;">
-					<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-						<div style="display: flex; align-items: center; gap: 0.35rem;">
-							<span style="font-size: 0.85rem;">{currentWorkspaceLabel.icon}</span>
-							<span style="font-size: 0.65rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">{currentWorkspaceLabel.badge}</span>
-						</div>
-						<button
-							type="button"
-							onclick={() => { showCommandPalette = true; commandSearch = ''; selectedCommandIndex = 0; }}
-							style="background: none; border: none; font-size: 0.65rem; color: #818cf8; cursor: pointer; font-family: var(--font-mono); display: flex; align-items: center; gap: 0.2rem;"
-							title="Command Palette"
-						>
-							🔍 <span>⌘K</span>
-						</button>
-					</div>
-
-					<!-- Clean Compact Studio Trigger -->
+			<!-- Active Business Operating System Context Card (Unified) -->
+			<div style="margin: 0.6rem 0.75rem 0.4rem 0.75rem; background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 0.65rem 0.75rem; display: flex; flex-direction: column; gap: 0.4rem;">
+				<div style="display: flex; justify-content: space-between; align-items: center;">
+					<span style="font-size: 0.625rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em;">Active Business OS</span>
 					<button
 						type="button"
-						class="ws-studio-btn"
-						onclick={() => (showWorkspaceManagerModal = true)}
-						title="Manage & Customize Works Workspace"
+						onclick={() => { showCommandPalette = true; commandSearch = ''; selectedCommandIndex = 0; }}
+						style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 4px; padding: 0.1rem 0.35rem; font-size: 0.65rem; color: #818cf8; cursor: pointer; font-family: var(--font-mono); display: flex; align-items: center; gap: 0.2rem;"
+						title="Quick Navigation (Ctrl+K)"
 					>
-						<span>🛠️ Customize Workspace</span>
-						<span style="font-size: 0.65rem; color: #a5b4fc; font-weight: 700;">Studio ⚙️</span>
+						⌘K
 					</button>
 				</div>
 
+				<button
+					type="button"
+					onclick={() => (showWorkspaceMenu = !showWorkspaceMenu)}
+					style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 7px; padding: 0.4rem 0.6rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; width: 100%; transition: all 0.2s;"
+					title="Switch Active Business OS"
+				>
+					<div style="display: flex; align-items: center; gap: 0.45rem; min-width: 0; text-align: left;">
+						<span style="font-size: 1.05rem;">{currentWorkspaceLabel.icon}</span>
+						<div style="display: flex; flex-direction: column; min-width: 0;">
+							<span style="font-size: 0.78rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{currentWorkspaceLabel.name}</span>
+							<span style="font-size: 0.625rem; color: #38bdf8; font-weight: 600;">{currentWorkspaceLabel.badge}</span>
+						</div>
+					</div>
+					<span style="font-size: 0.75rem; color: #94a3b8; margin-left: 0.25rem;">▾</span>
+				</button>
+			</div>
+
+			<!-- Navigation Links -->
+			<nav class="sidebar-nav" style="padding: 0.5rem 0.75rem 1.25rem 0.75rem; display: flex; flex-direction: column; gap: 0.25rem; flex: 1; overflow-y: auto;">
 				{#if activeWorkspacePreset === 'COUNTER'}
 					<!-- ============================================== -->
 					<!-- PRESET 1: EXPRESS COUNTER & RETAIL POS         -->

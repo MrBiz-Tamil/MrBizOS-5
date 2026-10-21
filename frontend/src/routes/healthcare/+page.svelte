@@ -351,70 +351,134 @@
 		<div class="error-alert">⚠️ {error}</div>
 	{/if}
 
-	<!-- Quick KPI Metrics -->
-	<div class="kpi-grid">
-		<div class="kpi-card">
-			<div class="kpi-label">Now Serving Token</div>
-			<div class="kpi-value text-emerald-400">#{currentServingToken}</div>
-			<div class="kpi-sub">Cabin 1: {selectedDoctor.name}</div>
+	<!-- Compact Clinical Triage & Queue Strip (Replaces bulky cards) -->
+	<div class="clinical-status-strip">
+		<div class="status-strip-chip active-token-chip">
+			<div class="chip-icon">🔔</div>
+			<div class="chip-content">
+				<span class="chip-label">Now Serving</span>
+				<span class="chip-val font-mono">#{currentServingToken}</span>
+			</div>
+			<button type="button" class="chip-action-btn" onclick={callNextPatient} title="Call next patient into cabin">
+				Next ❯
+			</button>
 		</div>
-		<div class="kpi-card">
-			<div class="kpi-label">OPD Queue Waiting</div>
-			<div class="kpi-value text-sky-400">{opdWaitingList.length} Patients</div>
-			<div class="kpi-sub">Avg Wait Time: ~8 Mins</div>
+
+		<div class="status-strip-chip">
+			<div class="chip-icon">👥</div>
+			<div class="chip-content">
+				<span class="chip-label">Waiting Queue</span>
+				<span class="chip-val text-sky">{opdWaitingList.length} Patients</span>
+			</div>
+			<span class="chip-badge">~8m wait</span>
 		</div>
-		<div class="kpi-card">
-			<div class="kpi-label">Prescription Safety</div>
-			<div class="kpi-value text-amber-400">Schedule H / H1</div>
-			<div class="kpi-sub">Restricted Antibiotic Shield</div>
+
+		<div class="status-strip-chip">
+			<div class="chip-icon">🛡️</div>
+			<div class="chip-content">
+				<span class="chip-label">Safety Shield</span>
+				<span class="chip-val text-amber">Schedule H / H1</span>
+			</div>
+			<span class="chip-badge">MCI Active</span>
 		</div>
-		<div class="kpi-card">
-			<div class="kpi-label">Verified Specialists</div>
-			<div class="kpi-value text-purple-400">{doctors.length || 2} Doctors</div>
-			<div class="kpi-sub">In-Clinic &amp; Telemedicine</div>
+
+		<div class="status-strip-chip">
+			<div class="chip-icon">👨‍⚕️</div>
+			<div class="chip-content">
+				<span class="chip-label">Attending Doctor</span>
+				<span class="chip-val">{selectedDoctor.name.split(' ')[1] || selectedDoctor.name}</span>
+			</div>
+			<span class="chip-badge">{selectedDoctor.specialty.split(' ')[0]}</span>
 		</div>
 	</div>
 
-	<!-- Multi-Persona Healthcare Workstations -->
-	<div class="nav-tabs">
+	<!-- Multi-Persona Healthcare Workstation Segmented Tabs -->
+	<div class="clinical-tabs-bar">
 		<button 
-			class="tab-btn" 
+			type="button"
+			class="clinical-tab-pill" 
 			class:active={activeTab === 'rx'} 
 			onclick={() => activeTab = 'rx'}>
-			🩺 Doctor Workstation (Clinical Rx Pad)
+			🩺 Doctor Rx Pad
 		</button>
 		<button 
-			class="tab-btn" 
+			type="button"
+			class="clinical-tab-pill" 
 			class:active={activeTab === 'pharmacy'} 
 			onclick={() => activeTab = 'pharmacy'}>
-			💊 Pharmacy POS &amp; Strip Dispenser
+			💊 Pharmacy POS
 		</button>
 		<button 
-			class="tab-btn" 
+			type="button"
+			class="clinical-tab-pill" 
 			class:active={activeTab === 'opd'} 
 			onclick={() => activeTab = 'opd'}>
-			💉 Nurse &amp; Triage Station (Vitals Check-in)
+			💉 Nurse Triage
 		</button>
 		<button 
-			class="tab-btn" 
+			type="button"
+			class="clinical-tab-pill" 
 			class:active={activeTab === 'owner'} 
 			onclick={() => activeTab = 'owner'}>
-			👑 Clinic Owner &amp; Financial Director
+			👑 Clinic Ledger
 		</button>
 		<button 
-			class="tab-btn" 
+			type="button"
+			class="clinical-tab-pill" 
 			class:active={activeTab === 'appointments'} 
 			onclick={() => activeTab = 'appointments'}>
-			📅 Telemedicine &amp; Consultations ({appointments.length})
+			📅 Consultations ({appointments.length})
 		</button>
 	</div>
 
 	<!-- TAB 1: CLINICAL RX PRESCRIPTION PAD -->
 	{#if activeTab === 'rx'}
+		<!-- Sticky Clinical Action Toolbar -->
+		<div class="clinical-action-bar no-print">
+			<div class="patient-quick-badge">
+				<span class="badge-dot">●</span>
+				<span><strong>Active Patient:</strong> {rxPatientName} ({rxPatientAge}Y / {rxPatientGender})</span>
+				<span class="font-mono text-muted">• Token #{currentServingToken}</span>
+			</div>
+
+			<div class="action-buttons-group">
+				<button type="button" class="btn btn-secondary btn-sm" onclick={addRxItem}>
+					+ Add Medicine
+				</button>
+				<button type="button" class="btn btn-emerald btn-sm glow-btn" onclick={saveAndPublishRx}>
+					💾 Save & Sign Rx
+				</button>
+				<button type="button" class="btn btn-secondary btn-sm" onclick={printPrescription}>
+					🖨️ Print Clinical Slip
+				</button>
+				<button type="button" class="btn btn-secondary btn-sm" onclick={callNextPatient} title="Finish and call next patient">
+					🔔 Call Next
+				</button>
+			</div>
+		</div>
+
 		<div class="rx-workspace">
 			<!-- Left Doctor Clinical Controls (Hidden on Print) -->
 			<div class="rx-controls no-print">
-				<h3 class="section-title text-base mb-3">Doctor &amp; Patient Inputs</h3>
+				<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+					<h3 class="section-title text-base" style="margin: 0;">Clinical Intake & Vitals</h3>
+					<button 
+						type="button" 
+						class="btn-text-action" 
+						onclick={() => {
+							vitalsBP = triageBP;
+							vitalsPulse = triagePulse;
+							vitalsTemp = triageTemp;
+							vitalsSpO2 = triageSpO2;
+							vitalsWeight = triageWeight;
+							statusMsg = '✅ Vitals synced from Nurse Triage!';
+							setTimeout(() => statusMsg = '', 3000);
+						}}
+						title="Sync vitals recorded by nurse at triage desk"
+					>
+						🔄 Sync Triage
+					</button>
+				</div>
 
 				<div class="form-group mb-3">
 					<label class="input-label" for="doc-select">Attending Doctor</label>
@@ -455,30 +519,33 @@
 				</div>
 
 				<!-- Vitals Section -->
-				<div class="p-3 bg-slate-900/60 rounded border border-slate-700/60 mb-3 space-y-2">
-					<div class="text-xs font-bold text-sky-400">Clinical Vitals</div>
+				<div class="clinical-vitals-card mb-3">
+					<div class="vitals-header">
+						<span>Clinical Vitals</span>
+						<span class="vitals-tag">MCI Standard</span>
+					</div>
 					<div class="grid grid-cols-3 gap-2">
 						<div>
 							<label class="input-label" for="v-bp">BP (mmHg)</label>
-							<input id="v-bp" class="text-input" type="text" bind:value={vitalsBP} />
+							<input id="v-bp" class="text-input font-mono" type="text" bind:value={vitalsBP} />
 						</div>
 						<div>
 							<label class="input-label" for="v-pulse">Pulse (bpm)</label>
-							<input id="v-pulse" class="text-input" type="number" bind:value={vitalsPulse} />
+							<input id="v-pulse" class="text-input font-mono" type="number" bind:value={vitalsPulse} />
 						</div>
 						<div>
 							<label class="input-label" for="v-temp">Temp (°F)</label>
-							<input id="v-temp" class="text-input" type="text" bind:value={vitalsTemp} />
+							<input id="v-temp" class="text-input font-mono" type="text" bind:value={vitalsTemp} />
 						</div>
 					</div>
-					<div class="grid grid-cols-2 gap-2">
+					<div class="grid grid-cols-2 gap-2" style="margin-top: 0.5rem;">
 						<div>
 							<label class="input-label" for="v-spo2">SpO2 (%)</label>
-							<input id="v-spo2" class="text-input" type="number" bind:value={vitalsSpO2} />
+							<input id="v-spo2" class="text-input font-mono" type="number" bind:value={vitalsSpO2} />
 						</div>
 						<div>
 							<label class="input-label" for="v-wt">Weight (kg)</label>
-							<input id="v-wt" class="text-input" type="number" bind:value={vitalsWeight} />
+							<input id="v-wt" class="text-input font-mono" type="number" bind:value={vitalsWeight} />
 						</div>
 					</div>
 				</div>
@@ -495,12 +562,7 @@
 
 				<div class="form-group mb-3">
 					<label class="input-label" for="rx-adv">Lifestyle / Dietary Advice</label>
-					<textarea id="rx-adv" class="text-input h-20" bind:value={rxAdvice}></textarea>
-				</div>
-
-				<div class="flex gap-2">
-					<button class="btn btn-secondary flex-1" onclick={addRxItem}>+ Add Medicine</button>
-					<button class="btn btn-primary flex-1" onclick={saveAndPublishRx}>Save &amp; Sign Rx</button>
+					<textarea id="rx-adv" class="text-input" rows="2" bind:value={rxAdvice}></textarea>
 				</div>
 			</div>
 
@@ -1241,69 +1303,200 @@
 		margin-bottom: 1.25rem;
 	}
 
-	/* KPI GRID */
-	.kpi-grid {
+	/* CLINICAL STATUS STRIP (Compact & Actionable) */
+	.clinical-status-strip {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-		gap: 1rem;
-		margin-bottom: 1.75rem;
+		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+		gap: 0.75rem;
+		margin-bottom: 1rem;
 	}
 
-	.kpi-card {
-		background: #1e293b;
+	.status-strip-chip {
+		background: rgba(15, 23, 42, 0.75);
 		border: 1px solid rgba(255, 255, 255, 0.08);
-		border-radius: 12px;
-		padding: 1.25rem;
+		border-radius: 8px;
+		padding: 0.6rem 0.85rem;
+		display: flex;
+		align-items: center;
+		gap: 0.65rem;
 	}
 
-	.kpi-label {
-		font-size: 0.75rem;
-		font-weight: 600;
+	.active-token-chip {
+		border-color: rgba(52, 211, 153, 0.35);
+		background: rgba(16, 185, 129, 0.08);
+	}
+
+	.chip-icon {
+		font-size: 1.15rem;
+		flex-shrink: 0;
+	}
+
+	.chip-content {
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+		flex: 1;
+	}
+
+	.chip-label {
+		font-size: 0.65rem;
+		font-weight: 700;
 		color: #94a3b8;
 		text-transform: uppercase;
-		letter-spacing: 0.05em;
+		letter-spacing: 0.04em;
 	}
 
-	.kpi-value {
-		font-size: 1.75rem;
+	.chip-val {
+		font-size: 0.95rem;
 		font-weight: 800;
-		margin: 0.25rem 0;
+		color: #fff;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
-	.kpi-sub {
-		font-size: 0.75rem;
-		color: #64748b;
+	.chip-badge {
+		font-size: 0.65rem;
+		font-weight: 700;
+		background: rgba(255, 255, 255, 0.06);
+		color: #cbd5e1;
+		padding: 0.15rem 0.4rem;
+		border-radius: 4px;
+		white-space: nowrap;
 	}
 
-	/* NAVIGATION TABS */
-	.nav-tabs {
-		display: flex;
-		gap: 0.5rem;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-		margin-bottom: 1.5rem;
-		overflow-x: auto;
-	}
-
-	.tab-btn {
-		background: transparent;
+	.chip-action-btn {
+		background: #10b981;
+		color: #0f172a;
 		border: none;
+		border-radius: 5px;
+		padding: 0.25rem 0.55rem;
+		font-size: 0.75rem;
+		font-weight: 800;
+		cursor: pointer;
+		transition: opacity 0.15s ease;
+		white-space: nowrap;
+	}
+	.chip-action-btn:hover {
+		opacity: 0.9;
+	}
+
+	/* CLINICAL TABS BAR (Responsive Segmented Pills) */
+	.clinical-tabs-bar {
+		display: flex;
+		gap: 0.4rem;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+		padding-bottom: 0.65rem;
+		margin-bottom: 1rem;
+		flex-wrap: wrap;
+	}
+
+	.clinical-tab-pill {
+		background: rgba(255, 255, 255, 0.03);
+		border: 1px solid rgba(255, 255, 255, 0.07);
+		border-radius: 6px;
 		color: #94a3b8;
-		font-size: 0.875rem;
+		font-size: 0.8125rem;
 		font-weight: 600;
-		padding: 0.75rem 1.25rem;
-		border-bottom: 2px solid transparent;
+		padding: 0.45rem 0.85rem;
 		cursor: pointer;
 		white-space: nowrap;
 		transition: all 0.15s ease;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
 	}
 
-	.tab-btn.active {
+	.clinical-tab-pill:hover:not(.active) {
+		background: rgba(255, 255, 255, 0.07);
+		color: #f1f5f9;
+	}
+
+	.clinical-tab-pill.active {
+		background: rgba(16, 185, 129, 0.12);
 		color: #34d399;
-		border-bottom-color: #34d399;
+		border-color: rgba(16, 185, 129, 0.35);
+		box-shadow: 0 0 10px rgba(16, 185, 129, 0.1);
 	}
 
-	.tab-btn:hover:not(.active) {
-		color: #cbd5e1;
+	/* CLINICAL ACTION BAR (Sticky Action Header) */
+	.clinical-action-bar {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+		background: rgba(15, 23, 42, 0.9);
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: 8px;
+		padding: 0.5rem 0.85rem;
+		margin-bottom: 1rem;
+	}
+
+	.patient-quick-badge {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.8125rem;
+		color: #f8fafc;
+	}
+
+	.badge-dot {
+		color: #10b981;
+		font-size: 0.85rem;
+	}
+
+	.action-buttons-group {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		flex-wrap: wrap;
+	}
+
+	.btn-emerald {
+		background: #059669;
+		color: #ffffff;
+		border: none;
+		font-weight: 700;
+	}
+	.btn-emerald:hover {
+		background: #10b981;
+	}
+
+	.btn-text-action {
+		background: none;
+		border: none;
+		color: #38bdf8;
+		font-size: 0.75rem;
+		font-weight: 700;
+		cursor: pointer;
+		padding: 0;
+	}
+	.btn-text-action:hover {
+		text-decoration: underline;
+	}
+
+	.clinical-vitals-card {
+		background: rgba(15, 23, 42, 0.6);
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		border-radius: 8px;
+		padding: 0.75rem;
+	}
+
+	.vitals-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		font-size: 0.75rem;
+		font-weight: 700;
+		color: #38bdf8;
+		margin-bottom: 0.5rem;
+	}
+
+	.vitals-tag {
+		font-size: 0.625rem;
+		color: #94a3b8;
+		font-weight: 600;
 	}
 
 	/* RX WORKSPACE */
