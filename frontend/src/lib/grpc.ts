@@ -10,6 +10,26 @@ export interface RpcOptions {
 	tenantId?: string;
 }
 
+function translateRpcError(err: any): Error {
+	const raw = String(err?.message || err || '');
+	if (raw.includes('Failed to fetch') || raw.includes('NetworkError') || raw.includes('Load failed') || raw.includes('unavailable')) {
+		return new Error('📡 Server is currently unreachable. Please check your internet connection; all local drafts remain safe.');
+	}
+	if (raw.includes('401') || raw.toLowerCase().includes('unauthenticated')) {
+		return new Error('🔒 Session has expired. Please sign in again.');
+	}
+	if (raw.includes('403') || raw.toLowerCase().includes('permission_denied')) {
+		return new Error('🚫 Access denied. You do not have permission for this business operation.');
+	}
+	if (raw.includes('404') || raw.toLowerCase().includes('not_found')) {
+		return new Error('🔍 The requested record could not be found.');
+	}
+	if (raw.includes('409') || raw.toLowerCase().includes('already_exists')) {
+		return new Error('📋 A bill or record with this document number already exists.');
+	}
+	return err instanceof Error ? err : new Error(raw);
+}
+
 export async function callRpc<TReq = any, TRes = any>(
 	service: string,
 	method: string,
@@ -37,18 +57,23 @@ export async function callRpc<TReq = any, TRes = any>(
 		headers['X-Tenant-Id'] = tenantId;
 	}
 
-	const res = await fetch(url, {
-		method: 'POST',
-		headers,
-		body: JSON.stringify(req || {}),
-	});
+	try {
+		const res = await fetch(url, {
+			method: 'POST',
+			headers,
+			body: JSON.stringify(req || {}),
+		});
 
-	if (!res.ok) {
-		const errJson = await res.json().catch(() => ({}));
-		throw new Error(errJson.message || `RPC Error (${res.status}): ${res.statusText}`);
+		if (!res.ok) {
+			const errJson = await res.json().catch(() => ({}));
+			const msg = errJson.message || `RPC Error (${res.status}): ${res.statusText}`;
+			throw new Error(msg);
+		}
+
+		return (await res.json()) as TRes;
+	} catch (err: any) {
+		throw translateRpcError(err);
 	}
-
-	return (await res.json()) as TRes;
 }
 
 // 0. IAM & Identity Service Client

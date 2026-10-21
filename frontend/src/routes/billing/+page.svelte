@@ -282,14 +282,24 @@
 	let lorryNumber = $state('TN 38 AB 1234');
 	let grossWeightKg = $state('28650');
 	let tareWeightKg = $state('8450');
+	let draftAutoSaved = $state(false);
+
+	let isWeightInvalid = $derived.by(() => {
+		if (!isQuarryMode) return false;
+		const g = parseFloat(grossWeightKg) || 0;
+		const t = parseFloat(tareWeightKg) || 0;
+		return g > 0 && t > 0 && g <= t;
+	});
+
 	let netWeightTons = $derived.by(() => {
 		const g = parseFloat(grossWeightKg) || 0;
 		const t = parseFloat(tareWeightKg) || 0;
 		if (g > t) {
 			return ((g - t) / 1000).toFixed(2);
 		}
-		return '20.20';
+		return '0.00';
 	});
+
 	let deliveryPlace = $state('Bypass Flyover Pier #12');
 	let poNumber = $state('PO-QUARRY-9821');
 	let lrNumber = $state('LR-6621');
@@ -320,6 +330,26 @@
 		{ name: 'Quarry Dust / Stone Powder', hsn: '25171010', rate: '320.00', unit: 'MT', taxRate: '5', icon: '🌪️', desc: 'Hollow Brick & Paver Base' }
 	];
 
+	function formatLorryNumber(raw: string) {
+		let cleaned = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
+		const m = cleaned.match(/^([A-Z]{2})(\d{1,2})([A-Z]{1,3})(\d{1,4})$/);
+		if (m) {
+			lorryNumber = `${m[1]} ${m[2]} ${m[3]} ${m[4]}`;
+		} else {
+			lorryNumber = raw.toUpperCase();
+		}
+
+		if (typeof localStorage !== 'undefined') {
+			const savedTare = localStorage.getItem(`quarry_tare_${cleaned}`);
+			if (savedTare && (!tareWeightKg || tareWeightKg === '8450')) {
+				tareWeightKg = savedTare;
+				bannerMessage = `⚡ Auto-recalled Tare Weight for ${lorryNumber}: ${savedTare} kg`;
+				setTimeout(() => (bannerMessage = null), 3000);
+			}
+		}
+		autoSaveDraft();
+	}
+
 	function applyQuarryMaterial(mat: QuarryMaterial) {
 		selectedTemplateId = '11';
 		items = [
@@ -327,7 +357,7 @@
 				productId: `BM-${mat.hsn}`,
 				itemDescription: mat.name,
 				hsnSac: mat.hsn,
-				quantity: netWeightTons,
+				quantity: netWeightTons !== '0.00' ? netWeightTons : '20.20',
 				unitCode: mat.unit,
 				unitPrice: mat.rate,
 				discountRate: '0',
@@ -335,16 +365,18 @@
 			}
 		];
 		billNotes = `Vehicle No: ${lorryNumber} | Gross: ${grossWeightKg} kg, Tare: ${tareWeightKg} kg, Net: ${netWeightTons} MT | Pass: ${transitPassNo} | Delivery: ${deliveryPlace}`;
-		bannerMessage = `🪨 Loaded ${mat.name} (${netWeightTons} MT @ ₹${mat.rate}/MT) with Template 11!`;
+		bannerMessage = `🪨 Loaded ${mat.name} (${items[0].quantity} MT @ ₹${mat.rate}/MT) with Template 11!`;
+		autoSaveDraft();
 		setTimeout(() => (bannerMessage = null), 4000);
 	}
 
 	function syncNetTonnageToItems() {
-		if (items.length > 0) {
+		if (items.length > 0 && netWeightTons !== '0.00') {
 			items[0].quantity = netWeightTons;
 			bannerMessage = `⚖️ Updated line item quantity to weighbridge net weight: ${netWeightTons} MT`;
 			setTimeout(() => (bannerMessage = null), 3000);
 		}
+		autoSaveDraft();
 	}
 
 	function toggleQuarryMode() {
@@ -363,7 +395,151 @@
 			supplyState = 'Maharashtra (27)';
 			bannerMessage = '🔄 General Retail / Express Mode restored.';
 		}
+		autoSaveDraft();
 		setTimeout(() => (bannerMessage = null), 4000);
+	}
+
+	function switchIndustryPreset(industry: 'QUARRY' | 'RETAIL' | 'TRAVEL' | 'PHARMA' | 'GENERAL') {
+		if (industry === 'QUARRY') {
+			if (!isQuarryMode) toggleQuarryMode();
+		} else if (industry === 'RETAIL') {
+			isQuarryMode = false;
+			selectedTemplateId = '16';
+			businessSubtitle = 'Supermarket & Retail Groceries';
+			customerName = 'Cash Walk-in Customer';
+			supplyState = 'Maharashtra (27)';
+			items = [
+				{ productId: 'GROC-01', itemDescription: 'Aashirvaad Shudh Chakki Atta 5kg', hsnSac: '1101', quantity: '1', unitCode: 'BAG', unitPrice: '275.00', discountRate: '5', taxRate: '0' },
+				{ productId: 'GROC-02', itemDescription: 'Tata Salt Iodized 1kg', hsnSac: '2501', quantity: '2', unitCode: 'PKT', unitPrice: '28.00', discountRate: '0', taxRate: '0' }
+			];
+			bannerMessage = '🛒 Supermarket & Retail Preset activated (Template 16)!';
+		} else if (industry === 'TRAVEL') {
+			isQuarryMode = false;
+			selectedTemplateId = '1';
+			businessSubtitle = 'Holidays, Flights & Tourism Logistics';
+			customerName = 'Skyline Tours & Travels Client';
+			items = [
+				{ productId: 'TRV-01', itemDescription: 'Goa 4D/3N Premium Holiday Package (4 Pax)', hsnSac: '9985', quantity: '1', unitCode: 'PKG', unitPrice: '38000.00', discountRate: '0', taxRate: '5' }
+			];
+			bannerMessage = '✈️ Travel & Tourism Preset activated (GST 5% Tours)!';
+		} else if (industry === 'PHARMA') {
+			isQuarryMode = false;
+			selectedTemplateId = '14';
+			businessSubtitle = 'Chemist & Surgical Supplies';
+			customerName = 'Walk-in Patient';
+			items = [
+				{ productId: 'MED-01', itemDescription: 'Paracetamol 650mg Strip (15 Tabs)', hsnSac: '3004', quantity: '2', unitCode: 'STRIP', unitPrice: '32.50', discountRate: '10', taxRate: '12' }
+			];
+			bannerMessage = '🏥 Pharmacy & Medical Store Preset activated (Template 14)!';
+		} else {
+			isQuarryMode = false;
+			selectedTemplateId = '1';
+			businessSubtitle = 'Wholesale & Retail Commercial Trading';
+			customerName = 'Cash Walk-in Customer';
+			bannerMessage = '⚡ General Commercial Counter active!';
+		}
+		autoSaveDraft();
+		setTimeout(() => (bannerMessage = null), 4000);
+	}
+
+	function autoSaveDraft() {
+		if (typeof localStorage === 'undefined') return;
+		try {
+			const draft = {
+				customerName,
+				customerPhone,
+				customerGstin,
+				supplyState,
+				paymentMode,
+				tenderedAmount,
+				billNotes,
+				selectedTemplateId,
+				isQuarryMode,
+				lorryNumber,
+				grossWeightKg,
+				tareWeightKg,
+				deliveryPlace,
+				transitPassNo,
+				driverName,
+				driverPhone,
+				ewayBill,
+				items
+			};
+			localStorage.setItem('mrbiz_counter_draft', JSON.stringify(draft));
+			draftAutoSaved = true;
+			setTimeout(() => (draftAutoSaved = false), 2000);
+		} catch (e) {}
+	}
+
+	function restoreDraftIfExists() {
+		if (typeof localStorage === 'undefined') return;
+		try {
+			const saved = localStorage.getItem('mrbiz_counter_draft');
+			if (saved) {
+				const d = JSON.parse(saved);
+				if (d && Array.isArray(d.items) && d.items.length > 0) {
+					customerName = d.customerName || customerName;
+					customerPhone = d.customerPhone || customerPhone;
+					customerGstin = d.customerGstin || customerGstin;
+					supplyState = d.supplyState || supplyState;
+					paymentMode = d.paymentMode || paymentMode;
+					tenderedAmount = d.tenderedAmount || tenderedAmount;
+					billNotes = d.billNotes || billNotes;
+					selectedTemplateId = d.selectedTemplateId || selectedTemplateId;
+					isQuarryMode = d.isQuarryMode ?? isQuarryMode;
+					lorryNumber = d.lorryNumber || lorryNumber;
+					grossWeightKg = d.grossWeightKg || grossWeightKg;
+					tareWeightKg = d.tareWeightKg || tareWeightKg;
+					deliveryPlace = d.deliveryPlace || deliveryPlace;
+					transitPassNo = d.transitPassNo || transitPassNo;
+					driverName = d.driverName || driverName;
+					driverPhone = d.driverPhone || driverPhone;
+					ewayBill = d.ewayBill || ewayBill;
+					items = d.items;
+					bannerMessage = '💾 Restored unbilled active draft from previous session!';
+					setTimeout(() => (bannerMessage = null), 4000);
+				}
+			}
+		} catch (e) {}
+	}
+
+	function clearDraft() {
+		if (typeof localStorage !== 'undefined') {
+			localStorage.removeItem('mrbiz_counter_draft');
+		}
+		items = [
+			{ productId: 'PROD-01', itemDescription: '', hsnSac: '9983', quantity: '1', unitCode: 'PCS', unitPrice: '100.00', discountRate: '0', taxRate: '18' }
+		];
+		customerName = 'Cash Walk-in Customer';
+		tenderedAmount = '';
+		bannerMessage = '🗑️ Counter cleared. Ready for fresh bill.';
+		setTimeout(() => (bannerMessage = null), 3000);
+	}
+
+	function handleKeydown(e: KeyboardEvent) {
+		if (e.key === 'F1') {
+			e.preventDefault();
+			document.getElementById('custName')?.focus();
+		} else if (e.key === 'F2') {
+			e.preventDefault();
+			if (isQuarryMode) {
+				document.getElementById('lorryNum')?.focus();
+			} else {
+				document.getElementById('item-desc-0')?.focus();
+			}
+		} else if (e.key === 'F3') {
+			e.preventDefault();
+			addItem();
+		} else if (e.key === 'F4') {
+			e.preventDefault();
+			document.getElementById('tenderedCash')?.focus();
+		} else if ((e.ctrlKey && e.key === 'Enter') || e.key === 'F9') {
+			e.preventDefault();
+			generateBill();
+		} else if (e.key === 'Escape') {
+			if (showTemplatePreviewModal) showTemplatePreviewModal = false;
+			if (showPayModal) showPayModal = false;
+		}
 	}
 
 	onMount(async () => {
@@ -374,6 +550,8 @@
 			const params = new URLSearchParams(window.location.search);
 			if (params.get('mode') === 'quarry' || params.get('template') === '11') {
 				toggleQuarryMode();
+			} else {
+				restoreDraftIfExists();
 			}
 		}
 		await loadBillingData();
@@ -559,6 +737,12 @@
 	}
 
 	async function generateBill() {
+		if (isWeightInvalid) {
+			bannerMessage = '⚠ Cannot generate bill: Loaded Gross Weight must be greater than empty Tare Weight!';
+			setTimeout(() => (bannerMessage = null), 4000);
+			return;
+		}
+
 		try {
 			loading = true;
 			const res = await billingGrpc.createInvoice({
@@ -597,6 +781,15 @@
 
 			if (res && res.invoice) {
 				bannerMessage = `✅ Bill ${res.invoice.invoice_number} created successfully with Template ${selectedTemplateId}! Total: ₹${res.invoice.grand_total}`;
+				if (typeof localStorage !== 'undefined') {
+					localStorage.removeItem('mrbiz_counter_draft');
+					if (isQuarryMode) {
+						const cleaned = lorryNumber.toUpperCase().replace(/[^A-Z0-9]/g, '');
+						if (cleaned && tareWeightKg) {
+							localStorage.setItem(`quarry_tare_${cleaned}`, tareWeightKg);
+						}
+					}
+				}
 				await loadBillingData();
 				activeTab = 'invoices';
 			}
@@ -798,6 +991,8 @@
 	<title>Express Billing & Invoicing Counter | MrBiz-OS</title>
 </svelte:head>
 
+<svelte:window onkeydown={handleKeydown} />
+
 <div class="billing-container">
 	<!-- Top Notification Banner -->
 	{#if bannerMessage}
@@ -821,6 +1016,26 @@
 			<p class="subtitle">
 				Ultra-fast 3-second billing with 17 industry invoice templates. Auto GST, dynamic UPI QR code, 80mm thermal print, and WhatsApp sharing.
 			</p>
+
+			<!-- 1-Click Industry Business Presets -->
+			<div class="industry-presets-bar">
+				<span class="preset-label">Quick Business Presets:</span>
+				<button type="button" class="preset-pill" class:active={isQuarryMode} onclick={() => switchIndustryPreset('QUARRY')}>
+					🪨 Blue Metals & Quarry
+				</button>
+				<button type="button" class="preset-pill" class:active={!isQuarryMode && selectedTemplateId === '16'} onclick={() => switchIndustryPreset('RETAIL')}>
+					🛒 Supermarket & Grocery
+				</button>
+				<button type="button" class="preset-pill" class:active={!isQuarryMode && selectedTemplateId === '14'} onclick={() => switchIndustryPreset('PHARMA')}>
+					🏥 Pharmacy & Medical
+				</button>
+				<button type="button" class="preset-pill" class:active={!isQuarryMode && selectedTemplateId === '1' && customerName.includes('Travel')} onclick={() => switchIndustryPreset('TRAVEL')}>
+					✈️ Travel & Tourism
+				</button>
+				<button type="button" class="preset-pill" class:active={!isQuarryMode && selectedTemplateId === '1' && !customerName.includes('Travel')} onclick={() => switchIndustryPreset('GENERAL')}>
+					⚡ Express POS
+				</button>
+			</div>
 		</div>
 
 		<div class="header-actions">
@@ -934,18 +1149,30 @@
 								<h3>Quarry Weighbridge & Material Dispatch Station</h3>
 								<p>Real-time Tonnage computation, Lorry Trip Pass, and authentic Indian quarry GST billing</p>
 							</div>
-							<div class="weighbridge-digital-display">
-								<span class="display-label">NET TONNAGE</span>
-								<span class="display-value">{netWeightTons} <small>MT</small></span>
-								<span class="display-sub">Gross: {grossWeightKg} kg • Tare: {tareWeightKg} kg</span>
+							<div class="weighbridge-digital-display" class:weight-error={isWeightInvalid}>
+								<span class="display-label">{isWeightInvalid ? '⚠ WEIGHT SANITY ERROR' : 'NET TONNAGE'}</span>
+								<span class="display-value">{isWeightInvalid ? 'INVALID' : netWeightTons} <small>{isWeightInvalid ? '' : 'MT'}</small></span>
+								<span class="display-sub">
+									{#if isWeightInvalid}
+										Gross ({grossWeightKg}kg) must be &gt; Tare ({tareWeightKg}kg)
+									{:else}
+										Gross: {grossWeightKg} kg • Tare: {tareWeightKg} kg
+									{/if}
+								</span>
 							</div>
 						</div>
 
 						<!-- Weighbridge Weight & Lorry Matrix -->
 						<div class="quarry-form-grid">
 							<div class="form-group">
-								<label for="lorryNum">🚛 Lorry / Vehicle Number</label>
-								<input id="lorryNum" type="text" bind:value={lorryNumber} placeholder="e.g. TN 38 AB 1234" />
+								<label for="lorryNum">🚛 Lorry / Vehicle Number (Auto RTO Spacing)</label>
+								<input
+									id="lorryNum"
+									type="text"
+									bind:value={lorryNumber}
+									oninput={(e) => formatLorryNumber(e.currentTarget.value)}
+									placeholder="e.g. TN 38 AB 1234"
+								/>
 							</div>
 
 							<div class="form-group">
@@ -1017,11 +1244,12 @@
 
 					<div class="form-row">
 						<div class="form-group flex-2">
-							<label for="custName">Customer / Company Name</label>
+							<label for="custName">Customer / Company Name [F1]</label>
 							<input
 								id="custName"
 								type="text"
 								bind:value={customerName}
+								oninput={autoSaveDraft}
 								placeholder="Enter customer name or select walk-in"
 							/>
 						</div>
@@ -1032,6 +1260,7 @@
 								id="custPhone"
 								type="text"
 								bind:value={customerPhone}
+								oninput={autoSaveDraft}
 								placeholder="+91 98..."
 							/>
 						</div>
@@ -1042,6 +1271,7 @@
 								id="custGstin"
 								type="text"
 								bind:value={customerGstin}
+								oninput={autoSaveDraft}
 								placeholder="27AABCA..."
 							/>
 						</div>
@@ -1104,9 +1334,11 @@
 									<tr>
 										<td>
 											<input
+												id="item-desc-{index}"
 												type="text"
 												class="table-input"
 												bind:value={item.itemDescription}
+												oninput={autoSaveDraft}
 												placeholder="Item name / barcode scan"
 											/>
 										</td>
@@ -1363,6 +1595,24 @@
 						</div>
 					</div>
 				</div>
+			</div>
+		</div>
+
+		<!-- Mouse-Free Pro Numpad / Keyboard Shortcuts Footer -->
+		<div class="keyboard-shortcuts-bar">
+			<div class="kb-hints-group">
+				<span class="kb-hint"><kbd>F1</kbd> Customer</span>
+				<span class="kb-hint"><kbd>F2</kbd> Lorry/Item</span>
+				<span class="kb-hint"><kbd>F3</kbd> +Item Row</span>
+				<span class="kb-hint"><kbd>F4</kbd> Cash Paid</span>
+				<span class="kb-hint"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> / <kbd>F9</kbd> Print Bill</span>
+				<span class="kb-hint"><kbd>Esc</kbd> Close</span>
+			</div>
+			<div class="kb-actions-group">
+				{#if draftAutoSaved}
+					<span class="kb-autosave">✓ Draft Auto-saved</span>
+				{/if}
+				<button type="button" class="kb-clear-btn" onclick={clearDraft}>🗑️ Clear Counter</button>
 			</div>
 		</div>
 	{/if}
@@ -3198,5 +3448,155 @@
 	.material-chip:hover .mat-add-badge {
 		background: #0284c7;
 		color: #ffffff;
+	}
+
+	/* Weight Error Alert State */
+	.weighbridge-digital-display.weight-error {
+		border-color: #ef4444 !important;
+		box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.8), 0 0 18px rgba(239, 68, 68, 0.5) !important;
+		animation: pulse-border 1.5s infinite;
+	}
+
+	.weighbridge-digital-display.weight-error .display-label {
+		color: #f87171 !important;
+	}
+
+	.weighbridge-digital-display.weight-error .display-value {
+		color: #ef4444 !important;
+		text-shadow: 0 0 12px rgba(239, 68, 68, 0.8) !important;
+	}
+
+	@keyframes pulse-border {
+		0%, 100% { border-color: #ef4444; }
+		50% { border-color: #b91c1c; }
+	}
+
+	/* 1-Click Industry Business Presets Bar */
+	.industry-presets-bar {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+		margin-top: 0.85rem;
+		padding-top: 0.75rem;
+		border-top: 1px solid rgba(255, 255, 255, 0.08);
+	}
+
+	.preset-label {
+		font-size: 0.75rem;
+		font-weight: 700;
+		color: #94a3b8;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		margin-right: 0.25rem;
+	}
+
+	.preset-pill {
+		background: rgba(30, 41, 59, 0.7);
+		color: #cbd5e1;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		padding: 0.3rem 0.7rem;
+		border-radius: 999px;
+		font-size: 0.75rem;
+		font-weight: 700;
+		cursor: pointer;
+		transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+	}
+
+	.preset-pill:hover {
+		background: rgba(51, 65, 85, 0.9);
+		color: #ffffff;
+		border-color: rgba(56, 189, 248, 0.4);
+		transform: translateY(-1px);
+	}
+
+	.preset-pill.active {
+		background: linear-gradient(135deg, rgba(2, 132, 199, 0.3), rgba(14, 165, 233, 0.4));
+		color: #38bdf8;
+		border-color: #38bdf8;
+		box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+	}
+
+	/* Pro-Numpad / Keyboard Shortcuts Footer */
+	.keyboard-shortcuts-bar {
+		margin-top: 1.5rem;
+		padding: 0.75rem 1.25rem;
+		background: rgba(15, 23, 42, 0.85);
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		border-radius: 10px;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 1rem;
+		font-size: 0.75rem;
+		color: #94a3b8;
+	}
+
+	.kb-hints-group {
+		display: flex;
+		align-items: center;
+		gap: 0.85rem;
+		flex-wrap: wrap;
+	}
+
+	.kb-hint {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		font-weight: 600;
+	}
+
+	.kb-hint kbd {
+		background: #1e293b;
+		border: 1px solid #475569;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+		color: #38bdf8;
+		padding: 0.15rem 0.4rem;
+		border-radius: 4px;
+		font-family: ui-monospace, SFMono-Regular, monospace;
+		font-size: 0.6875rem;
+		font-weight: 800;
+	}
+
+	.kb-actions-group {
+		display: flex;
+		align-items: center;
+		gap: 0.85rem;
+	}
+
+	.kb-autosave {
+		color: #10b981;
+		font-weight: 700;
+		font-size: 0.75rem;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		animation: fadeIn 0.3s ease;
+	}
+
+	@keyframes fadeIn {
+		from { opacity: 0; transform: translateY(2px); }
+		to { opacity: 1; transform: translateY(0); }
+	}
+
+	.kb-clear-btn {
+		background: transparent;
+		border: 1px solid rgba(239, 68, 68, 0.3);
+		color: #f87171;
+		padding: 0.25rem 0.6rem;
+		border-radius: 6px;
+		font-size: 0.6875rem;
+		font-weight: 700;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.kb-clear-btn:hover {
+		background: rgba(239, 68, 68, 0.15);
+		border-color: #ef4444;
 	}
 </style>
