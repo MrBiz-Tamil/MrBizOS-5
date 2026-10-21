@@ -7,6 +7,7 @@
 	import { realtimeBilling } from '$lib/stores/realtime.svelte';
 	import UnitSwitcher from '$lib/components/UnitSwitcher.svelte';
 	import WorkspaceManagerModal, { type CustomWorkspaceConfig } from '$lib/components/WorkspaceManagerModal.svelte';
+	import ToastContainer from '$lib/components/ToastContainer.svelte';
 
 	let { children } = $props();
 	let currentUser = $state<User | null>(null);
@@ -1498,6 +1499,9 @@
 		}
 	}}
 />
+
+<!-- Global Floating Toast Feedback Viewport -->
+<ToastContainer />
 
 <style>
 	@keyframes spin {
