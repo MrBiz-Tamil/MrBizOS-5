@@ -5,7 +5,10 @@ import (
 	"drayya-core/gen/healthcare/v1/healthcarev1connect"
 	"drayya-core/gen/hrms/v1/hrmsv1connect"
 	"drayya-core/gen/iam/v1/iamv1connect"
+	"drayya-core/gen/journey/v1/journeyv1connect"
+	"drayya-core/gen/omnichannel/v1/omnichannelv1connect"
 	"drayya-core/gen/procurement/v1/procurementv1connect"
+	"drayya-core/gen/project/v1/projectv1connect"
 	"drayya-core/gen/realestate/v1/realestatev1connect"
 	"drayya-core/gen/travel/v1/travelv1connect"
 	"drayya-core/gen/workflow/v1/workflowv1connect"
@@ -14,7 +17,10 @@ import (
 	"drayya-core/internal/grpcservices/healthcare"
 	"drayya-core/internal/grpcservices/hrms"
 	"drayya-core/internal/grpcservices/iam"
+	"drayya-core/internal/grpcservices/journey"
+	"drayya-core/internal/grpcservices/omnichannel"
 	"drayya-core/internal/grpcservices/procurement"
+	"drayya-core/internal/grpcservices/project"
 	"drayya-core/internal/grpcservices/realestate"
 	"drayya-core/internal/grpcservices/travel"
 	"drayya-core/internal/grpcservices/workflow"
@@ -63,4 +69,19 @@ func (s *Server) RegisterAllServices() {
 	hrmsSvc := hrms.NewServer(s.db)
 	hrmsPath, hrmsHandler := hrmsv1connect.NewHRMSServiceHandler(hrmsSvc, opt)
 	s.mux.Handle(hrmsPath, hrmsHandler)
+
+	// 9. Project & UTMS Task Management Service
+	projSvc := project.NewService(s.db)
+	projPath, projHandler := projectv1connect.NewProjectServiceHandler(projSvc, opt)
+	s.mux.Handle(projPath, projHandler)
+
+	// 10. Journey Management Service
+	journeySvc := journey.NewService(s.db)
+	journeyPath, journeyHandler := journeyv1connect.NewJourneyServiceHandler(journeySvc, opt)
+	s.mux.Handle(journeyPath, journeyHandler)
+
+	// 11. Omnichannel Social & Communication Service (WhatsApp, Instagram, FB, Email)
+	omniSvc := omnichannel.NewService(s.db)
+	omniPath, omniHandler := omnichannelv1connect.NewOmnichannelServiceHandler(omniSvc, opt)
+	s.mux.Handle(omniPath, omniHandler)
 }

@@ -224,6 +224,15 @@
 					Enterprise ERP Suite (Odoo/SAP Killer)
 				</div>
 
+				<a href="/inbox" class="nav-item" class:active={currentPath.startsWith('/inbox')} style="color: #f43f5e; font-weight: 700; background: rgba(244, 63, 94, 0.08); border-left: 3px solid #f43f5e;">
+					<span class="nav-icon">💬</span> Omnichannel Social Inbox
+				</a>
+				<a href="/projects" class="nav-item" class:active={currentPath.startsWith('/projects')}>
+					<span class="nav-icon">📁</span> Projects & UTMS Tasks
+				</a>
+				<a href="/journeys" class="nav-item" class:active={currentPath.startsWith('/journeys')}>
+					<span class="nav-icon">🛤️</span> Journey Lifecycle Engine
+				</a>
 				<a href="/procurement" class="nav-item" class:active={currentPath.startsWith('/procurement')}>
 					<span class="nav-icon">📦</span> Procurement & 3-Way Match
 				</a>

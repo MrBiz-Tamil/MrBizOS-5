@@ -83,6 +83,14 @@ def handle_overdue_invoice_event(event: dict):
     res = post_connect_rpc("workflow.v1.WorkflowService", "CreateTask", task_payload)
     logging.info(f"✅ Workflow approval task created: {res.get('task', {}).get('id', 'TASK-LOCAL')}")
 
+def handle_inbound_social_message(channel: str, sender: str, text: str, bu: str):
+    logging.info(f"🤖 Autonomous Omnichannel Triage: Inbound {channel} from {sender} ({bu}): '{text}'")
+    # Request ConnectRPC AI reply generation
+    res = post_connect_rpc("omnichannel.v1.OmnichannelService", "SuggestAIReply", {
+        "conversation_id": "CONV-WA-001"
+    })
+    logging.info(f"✨ AI Copilot generated response draft: {res.get('suggestedReply', 'Reply draft ready')}")
+
 def main():
     logging.info("🚀 Starting MrBiz-OS AI Mission Worker...")
     logging.info(f"ConnectRPC Endpoint: {GRPC_BASE}")

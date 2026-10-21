@@ -110,3 +110,38 @@ export const hrmsGrpc = {
 	runMonthlyPayroll: (req: any) => callRpc('hrms.v1.HRMSService', 'RunMonthlyPayroll', req),
 	listPayslips: (params = {}) => callRpc('hrms.v1.HRMSService', 'ListPayslips', params),
 };
+
+// 8. Project & UTMS Task Management Client
+export const projectGrpc = {
+	listProjects: (params = {}) => callRpc('project.v1.ProjectService', 'ListProjects', params),
+	createProject: (req: any) => callRpc('project.v1.ProjectService', 'CreateProject', req),
+	getProject: (req: any) => callRpc('project.v1.ProjectService', 'GetProject', req),
+	listTasks: (params = {}) => callRpc('project.v1.ProjectService', 'ListTasks', params),
+	createTask: (req: any) => callRpc('project.v1.ProjectService', 'CreateTask', req),
+	updateTaskStatus: (req: any) => callRpc('project.v1.ProjectService', 'UpdateTaskStatus', req),
+	delegateTask: (req: any) => callRpc('project.v1.ProjectService', 'DelegateTask', req),
+	listMilestones: (params = {}) => callRpc('project.v1.ProjectService', 'ListMilestones', params),
+	createMilestone: (req: any) => callRpc('project.v1.ProjectService', 'CreateMilestone', req),
+	logTimesheet: (req: any) => callRpc('project.v1.ProjectService', 'LogTimesheet', req),
+};
+
+// 9. Journey Management Client
+export const journeyGrpc = {
+	listTemplates: (params = {}) => callRpc('journey.v1.JourneyService', 'ListTemplates', params),
+	createTemplate: (req: any) => callRpc('journey.v1.JourneyService', 'CreateTemplate', req),
+	listInstances: (params = {}) => callRpc('journey.v1.JourneyService', 'ListInstances', params),
+	startJourney: (req: any) => callRpc('journey.v1.JourneyService', 'StartJourney', req),
+	advanceStage: (req: any) => callRpc('journey.v1.JourneyService', 'AdvanceStage', req),
+	getJourneyDetails: (req: any) => callRpc('journey.v1.JourneyService', 'GetJourneyDetails', req),
+};
+
+// 10. Omnichannel Social & Communication Hub Client (WhatsApp, Instagram, FB, Email)
+export const omnichannelGrpc = {
+	listConversations: (params = {}) => callRpc('omnichannel.v1.OmnichannelService', 'ListConversations', params),
+	getConversation: (req: any) => callRpc('omnichannel.v1.OmnichannelService', 'GetConversation', req),
+	sendMessage: (req: any) => callRpc('omnichannel.v1.OmnichannelService', 'SendMessage', req),
+	updateConversationStatus: (req: any) => callRpc('omnichannel.v1.OmnichannelService', 'UpdateConversationStatus', req),
+	convertToLeadOrTask: (req: any) => callRpc('omnichannel.v1.OmnichannelService', 'ConvertToLeadOrTask', req),
+	suggestAIReply: (req: any) => callRpc('omnichannel.v1.OmnichannelService', 'SuggestAIReply', req),
+};
+
