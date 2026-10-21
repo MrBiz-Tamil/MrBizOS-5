@@ -145,3 +145,24 @@ export const omnichannelGrpc = {
 	suggestAIReply: (req: any) => callRpc('omnichannel.v1.OmnichannelService', 'SuggestAIReply', req),
 };
 
+// 11. Support & Enterprise Helpdesk Client
+export const supportGrpc = {
+	listTickets: (params = {}) => callRpc('support.v1.SupportService', 'ListTickets', params),
+	createTicket: (req: any) => callRpc('support.v1.SupportService', 'CreateTicket', req),
+	getTicketDetails: (req: any) => callRpc('support.v1.SupportService', 'GetTicketDetails', req),
+	replyTicket: (req: any) => callRpc('support.v1.SupportService', 'ReplyTicket', req),
+	updateTicketStatus: (req: any) => callRpc('support.v1.SupportService', 'UpdateTicketStatus', req),
+	assignTicket: (req: any) => callRpc('support.v1.SupportService', 'AssignTicket', req),
+	submitCSAT: (req: any) => callRpc('support.v1.SupportService', 'SubmitCSAT', req),
+};
+
+// 12. BPO AI Voice Agent Call Center Client
+export const voiceBpoGrpc = {
+	startInboundCallSession: (req: any) => callRpc('bpo.v1.VoiceBPOService', 'StartInboundCallSession', req),
+	processVoiceTurn: (req: any) => callRpc('bpo.v1.VoiceBPOService', 'ProcessVoiceTurn', req),
+	requestHumanHandoff: (req: any) => callRpc('bpo.v1.VoiceBPOService', 'RequestHumanHandoff', req),
+	listActiveCalls: (params = {}) => callRpc('bpo.v1.VoiceBPOService', 'ListActiveCalls', params),
+	launchOutboundCampaign: (req: any) => callRpc('bpo.v1.VoiceBPOService', 'LaunchOutboundCampaign', req),
+};
+
+

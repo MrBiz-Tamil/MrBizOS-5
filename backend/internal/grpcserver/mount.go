@@ -2,6 +2,7 @@ package grpcserver
 
 import (
 	"drayya-core/gen/banking/v1/bankingv1connect"
+	"drayya-core/gen/bpo/v1/bpov1connect"
 	"drayya-core/gen/healthcare/v1/healthcarev1connect"
 	"drayya-core/gen/hrms/v1/hrmsv1connect"
 	"drayya-core/gen/iam/v1/iamv1connect"
@@ -10,10 +11,12 @@ import (
 	"drayya-core/gen/procurement/v1/procurementv1connect"
 	"drayya-core/gen/project/v1/projectv1connect"
 	"drayya-core/gen/realestate/v1/realestatev1connect"
+	"drayya-core/gen/support/v1/supportv1connect"
 	"drayya-core/gen/travel/v1/travelv1connect"
 	"drayya-core/gen/workflow/v1/workflowv1connect"
 
 	"drayya-core/internal/grpcservices/banking"
+	"drayya-core/internal/grpcservices/bpo"
 	"drayya-core/internal/grpcservices/healthcare"
 	"drayya-core/internal/grpcservices/hrms"
 	"drayya-core/internal/grpcservices/iam"
@@ -22,6 +25,7 @@ import (
 	"drayya-core/internal/grpcservices/procurement"
 	"drayya-core/internal/grpcservices/project"
 	"drayya-core/internal/grpcservices/realestate"
+	"drayya-core/internal/grpcservices/support"
 	"drayya-core/internal/grpcservices/travel"
 	"drayya-core/internal/grpcservices/workflow"
 )
@@ -84,4 +88,14 @@ func (s *Server) RegisterAllServices() {
 	omniSvc := omnichannel.NewService(s.db)
 	omniPath, omniHandler := omnichannelv1connect.NewOmnichannelServiceHandler(omniSvc, opt)
 	s.mux.Handle(omniPath, omniHandler)
+
+	// 12. Enterprise Support & Helpdesk Service
+	supportSvc := support.NewService(s.db)
+	supportPath, supportHandler := supportv1connect.NewSupportServiceHandler(supportSvc, opt)
+	s.mux.Handle(supportPath, supportHandler)
+
+	// 13. AI Voice Agent BPO Call Center Service
+	bpoSvc := bpo.NewService(s.db)
+	bpoPath, bpoHandler := bpov1connect.NewVoiceBPOServiceHandler(bpoSvc, opt)
+	s.mux.Handle(bpoPath, bpoHandler)
 }

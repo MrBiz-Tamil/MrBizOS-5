@@ -227,6 +227,12 @@
 				<a href="/inbox" class="nav-item" class:active={currentPath.startsWith('/inbox')} style="color: #f43f5e; font-weight: 700; background: rgba(244, 63, 94, 0.08); border-left: 3px solid #f43f5e;">
 					<span class="nav-icon">💬</span> Omnichannel Social Inbox
 				</a>
+				<a href="/bpo-voice" class="nav-item" class:active={currentPath.startsWith('/bpo-voice')} style="color: #06b6d4; font-weight: 700; background: rgba(6, 182, 212, 0.08); border-left: 3px solid #06b6d4;">
+					<span class="nav-icon">🎙️</span> AI Voice Agent BPO Desk
+				</a>
+				<a href="/support" class="nav-item" class:active={currentPath.startsWith('/support')}>
+					<span class="nav-icon">🎫</span> Support Helpdesk & SLAs
+				</a>
 				<a href="/projects" class="nav-item" class:active={currentPath.startsWith('/projects')}>
 					<span class="nav-icon">📁</span> Projects & UTMS Tasks
 				</a>

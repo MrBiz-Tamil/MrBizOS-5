@@ -1,0 +1,118 @@
+syntax = "proto3";
+
+package support.v1;
+
+option go_package = "drayya-core/gen/support/v1;supportv1";
+
+service SupportService {
+  rpc ListTickets(ListTicketsRequest) returns (ListTicketsResponse);
+  rpc CreateTicket(CreateTicketRequest) returns (CreateTicketResponse);
+  rpc GetTicketDetails(GetTicketDetailsRequest) returns (GetTicketDetailsResponse);
+  rpc ReplyTicket(ReplyTicketRequest) returns (ReplyTicketResponse);
+  rpc UpdateTicketStatus(UpdateTicketStatusRequest) returns (UpdateTicketStatusResponse);
+  rpc AssignTicket(AssignTicketRequest) returns (AssignTicketResponse);
+  rpc SubmitCSAT(SubmitCSATRequest) returns (SubmitCSATResponse);
+}
+
+message TicketItem {
+  string id = 1;
+  string ticket_number = 2; // e.g. TIK-2026-0891
+  string customer_name = 3;
+  string customer_contact = 4;
+  string subject = 5;
+  string category = 6; // BILLING, TECHNICAL, MEDICAL, LOGISTICS, GENERAL
+  string priority = 7; // LOW, NORMAL, HIGH, URGENT
+  string status = 8; // NEW, ASSIGNED, IN_PROGRESS, WAITING_CUSTOMER, RESOLVED, CLOSED
+  string channel = 9; // WHATSAPP, EMAIL, VOICE_BOT, PORTAL, SOCIAL
+  string assigned_to = 10;
+  string business_unit = 11;
+  int32 sla_minutes_remaining = 12;
+  bool is_sla_breached = 13;
+  string created_at = 14;
+}
+
+message TicketMessageItem {
+  string id = 1;
+  string ticket_id = 2;
+  string sender_name = 3;
+  string sender_type = 4; // CUSTOMER, AGENT, AI_BOT
+  string message = 5;
+  string sent_at = 6;
+}
+
+message ListTicketsRequest {
+  string status = 1;
+  string priority = 2;
+  string business_unit = 3;
+  string category = 4;
+}
+
+message ListTicketsResponse {
+  repeated TicketItem tickets = 1;
+  int32 total_open = 2;
+  int32 total_breached_sla = 3;
+  double avg_resolution_hours = 4;
+}
+
+message CreateTicketRequest {
+  string customer_name = 1;
+  string customer_contact = 2;
+  string subject = 3;
+  string description = 4;
+  string category = 5;
+  string priority = 6;
+  string channel = 7;
+  string business_unit = 8;
+}
+
+message CreateTicketResponse {
+  TicketItem ticket = 1;
+}
+
+message GetTicketDetailsRequest {
+  string ticket_id = 1;
+}
+
+message GetTicketDetailsResponse {
+  TicketItem ticket = 1;
+  repeated TicketMessageItem messages = 2;
+}
+
+message ReplyTicketRequest {
+  string ticket_id = 1;
+  string message = 2;
+  string sender_name = 3;
+  bool close_ticket = 4;
+}
+
+message ReplyTicketResponse {
+  TicketMessageItem message = 1;
+}
+
+message UpdateTicketStatusRequest {
+  string ticket_id = 1;
+  string status = 2;
+}
+
+message UpdateTicketStatusResponse {
+  TicketItem ticket = 1;
+}
+
+message AssignTicketRequest {
+  string ticket_id = 1;
+  string assigned_to = 2;
+}
+
+message AssignTicketResponse {
+  TicketItem ticket = 1;
+}
+
+message SubmitCSATRequest {
+  string ticket_id = 1;
+  int32 score = 2; // 1 to 5
+  string feedback = 3;
+}
+
+message SubmitCSATResponse {
+  bool success = 1;
+}

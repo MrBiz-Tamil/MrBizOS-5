@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package bpo.v1;
+
+option go_package = "drayya-core/gen/bpo/v1;bpov1";
+
+service VoiceBPOService {
+  rpc StartInboundCallSession(StartCallRequest) returns (StartCallResponse);
+  rpc ProcessVoiceTurn(VoiceTurnRequest) returns (VoiceTurnResponse);
+  rpc RequestHumanHandoff(HandoffRequest) returns (HandoffResponse);
+  rpc ListActiveCalls(ListCallsRequest) returns (ListCallsResponse);
+  rpc LaunchOutboundCampaign(LaunchCampaignRequest) returns (LaunchCampaignResponse);
+}
+
+message CallSession {
+  string call_id = 1;
+  string caller_phone = 2;
+  string customer_name = 3;
+  string status = 4; // AI_HANDLING, QUEUED_FOR_AGENT, IN_CALL_WITH_AGENT, COMPLETED
+  string intent = 5; // SALES_INQUIRY, BILLING_DISPUTE, SUPPORT_COMPLAINT, MEDICAL_TRIAGE
+  string assigned_agent = 6;
+  string target_department = 7;
+  string livekit_room_token = 8;
+  string live_transcript = 9;
+  string ai_summary = 10;
+  int32 call_duration_seconds = 11;
+  string customer_khata_balance = 12;
+  string active_deal_or_appointment = 13;
+}
+
+message StartCallRequest {
+  string caller_phone = 1;
+  string inbound_trunk = 2; // e.g. "DID-+918000012345"
+}
+
+message StartCallResponse {
+  CallSession session = 1;
+  string initial_greeting = 2;
+}
+
+message VoiceTurnRequest {
+  string call_id = 1;
+  string caller_utterance = 2;
+}
+
+message VoiceTurnResponse {
+  string bot_reply_text = 1;
+  string detected_intent = 2;
+  bool should_handoff = 3;
+  string handoff_department = 4;
+  string ai_summary_update = 5;
+}
+
+message HandoffRequest {
+  string call_id = 1;
+  string target_department = 2; // "SALES", "CLINICAL", "LOGISTICS", "FINANCE"
+  string preferred_agent = 3;
+  string urgency_level = 4; // NORMAL, HIGH, EMERGENCY
+}
+
+message HandoffResponse {
+  CallSession session = 1;
+  string transfer_status = 2; // "AGENT_NOTIFIED", "BRIDGED", "QUEUED"
+  string screen_pop_payload = 3; // JSON with Customer 360, AI summary, and transcript
+}
+
+message ListCallsRequest {
+  string status = 1;
+}
+
+message ListCallsResponse {
+  repeated CallSession calls = 1;
+  int32 total_active_calls = 2;
+  int32 total_ai_handled_today = 3;
+  int32 total_transferred_today = 4;
+}
+
+message LaunchCampaignRequest {
+  string campaign_name = 1;
+  string campaign_type = 2; // OVERDUE_COLLECTIONS, APPOINTMENT_REMINDER, FAST_LEAD_CALLBACK
+  repeated string target_phone_numbers = 3;
+  string script_template = 4;
+}
+
+message LaunchCampaignResponse {
+  string campaign_id = 1;
+  int32 calls_scheduled = 2;
+  string status = 3;
+}
