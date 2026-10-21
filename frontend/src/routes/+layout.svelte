@@ -4,9 +4,18 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { api, setSelectedTenantId, type User, type Tenant, type TenantSubscriptionInfo } from '$lib/api';
+	import { iamGrpc } from '$lib/grpc';
 	import { realtimeBilling } from '$lib/stores/realtime.svelte';
 	import WorkspaceManagerModal, { type CustomWorkspaceConfig } from '$lib/components/WorkspaceManagerModal.svelte';
 	import ToastContainer from '$lib/components/ToastContainer.svelte';
+	import {
+		workspaces,
+		workspaceList,
+		isNavItemActive,
+		type WorkspacePreset,
+		type NavGroup,
+		type NavItem
+	} from '$lib/navigation';
 
 	let { children } = $props();
 	let currentUser = $state<User | null>(null);
@@ -36,44 +45,74 @@
 	let upgradeFeatureTitle = $state('');
 	let upgradeFeatureDesc = $state('');
 
-	// Dynamic Works-Based Workspaces & Customization Engine
-	type WorkspacePreset = 'FULL' | 'COUNTER' | 'GROWTH' | 'OPERATIONS' | 'HEALTHCARE' | 'TRAVEL' | 'REALESTATE' | 'PROJECTS' | 'COMMERCE' | 'CUSTOM';
+	// Workspace (business-unit) state. The id + unit vocabulary is unchanged; the
+	// nav content now comes from the data-driven config in $lib/navigation.
 	let activeWorkspacePreset = $state<WorkspacePreset>('FULL');
 	let activeCustomConfig = $state<CustomWorkspaceConfig | null>(null);
 	let showWorkspaceManagerModal = $state(false);
 	let showWorkspaceMenu = $state(false);
 	let showProfileMenu = $state(false);
-	let billingOnlyMode = $derived(activeWorkspacePreset === 'COUNTER');
+	// Collapsible nav groups (persisted per browser).
+	let collapsedGroups = $state<Record<string, boolean>>({});
+	function toggleGroup(label: string) {
+		collapsedGroups[label] = !collapsedGroups[label];
+		if (typeof localStorage !== 'undefined') {
+			try { localStorage.setItem('mrbiz_nav_collapsed', JSON.stringify(collapsedGroups)); } catch {}
+		}
+	}
 
-	const workspacePresetsList: { id: WorkspacePreset; icon: string; name: string; badge: string; desc: string }[] = [
-		{ id: 'FULL', icon: '🌐', name: 'Enterprise ERP Suite', badge: 'All Modules', desc: 'Complete 16-module multi-industry ERP' },
-		{ id: 'HEALTHCARE', icon: '🏥', name: 'Smart Healthcare OS', badge: 'Clinical Suite', desc: 'Doctors, Telehealth, EMR Rx Pad, Pharmacy POS' },
-		{ id: 'TRAVEL', icon: '✈️', name: 'Travel & Tours OS', badge: 'GDS & DMC Hub', desc: 'Tour packages, PNR hold clocks & DMC vouchers' },
-		{ id: 'REALESTATE', icon: '🏢', name: 'Real Estate Matrix', badge: 'Plots & RERA', desc: '24-plot layout matrix, Indian land units & visits' },
-		{ id: 'PROJECTS', icon: '📁', name: 'UTMS Delivery OS', badge: 'SLA Engine', desc: 'SLA engine, Kanban pipeline & milestone billing' },
-		{ id: 'COUNTER', icon: '⚡', name: 'Express Retail Counter', badge: 'POS Terminal', desc: 'Ultra-fast retail counter with instant UPI QR' },
-		{ id: 'COMMERCE', icon: '🛍️', name: 'E-Commerce & POD', badge: 'Apparel & Labs', desc: 'Etsy sync, blank matrix & print lab queue' },
-		{ id: 'GROWTH', icon: '💬', name: 'Social Sales & AI Voice', badge: 'Growth Desk', desc: 'Omnichannel WhatsApp/IG, AI voice & deals' },
-		{ id: 'OPERATIONS', icon: '📦', name: 'Supply Chain & Ops', badge: '3-Way Match', desc: '3-way procurement, batches & vendor khata' }
-	];
+	// The business units this user may switch into. When the backend supplies an
+	// allow-list we honour it; otherwise (and for super admins) all are offered.
+	// Switching never happens silently from the URL — only from an explicit action.
+	let switchableWorkspaces = $derived.by(() => {
+		const allowed = currentUser?.allowed_business_units;
+		if (currentUser?.is_super_admin || !allowed || allowed.length === 0) return workspaceList;
+		return workspaceList.filter((w) => !w.unit || allowed.includes(w.unit));
+	});
+
+	// Nav groups for the active workspace. CUSTOM is assembled from the user's
+	// saved module selection; every other workspace reads its static config.
+	let activeGroups = $derived.by<NavGroup[]>(() => {
+		if (activeWorkspacePreset === 'CUSTOM') return buildCustomGroups(activeCustomConfig);
+		return workspaces[activeWorkspacePreset]?.groups ?? workspaces.FULL.groups;
+	});
+
+	function buildCustomGroups(cfg: CustomWorkspaceConfig | null): NavGroup[] {
+		const mods = cfg?.modules;
+		const has = (m: string) => !mods || mods.includes(m);
+		const items: NavItem[] = [];
+		if (cfg?.primaryAction) {
+			items.push({ href: cfg.primaryAction.href, label: cfg.primaryAction.label, icon: cfg.primaryAction.icon || '⚡', primary: true });
+		}
+		if (has('billing')) items.push({ href: '/billing', label: 'Express Billing', icon: '⚡' });
+		if (mods?.includes('pos')) items.push({ href: '/pos', label: 'Retail POS Terminal', icon: '🛒' });
+		if (mods?.includes('healthcare')) items.push({ href: '/healthcare', label: 'Smart Healthcare Hub', icon: '🏥' });
+		if (mods?.includes('travel')) items.push({ href: '/travel', label: 'Travel Agency OS', icon: '✈️' });
+		if (mods?.includes('realestate')) items.push({ href: '/realestate', label: 'Real Estate Deals', icon: '🏢' });
+		if (mods?.includes('ecommerce')) items.push({ href: '/ecommerce', label: 'E-Commerce & Print-on-Demand', icon: '🛍️' });
+		if (mods?.includes('projects')) items.push({ href: '/projects', label: 'Projects & UTMS Tasks', icon: '📁' });
+		if (mods?.includes('inbox')) items.push({ href: '/inbox', label: 'Omnichannel Social Inbox', icon: '💬' });
+		if (mods?.includes('bpo-voice')) items.push({ href: '/bpo-voice', label: 'AI Voice Agent BPO Desk', icon: '🎙️' });
+		if (mods?.includes('procurement')) items.push({ href: '/procurement', label: '3-Way Procurement', icon: '📦' });
+		if (mods?.includes('hrms')) items.push({ href: '/hrms', label: 'HRMS & Automated Payroll', icon: '👥' });
+		if (mods?.includes('trade')) items.push({ href: '/trade/shipments', label: 'Export & Import Trade OS', icon: '🚢' });
+		if (mods?.includes('support')) items.push({ href: '/support', label: 'Support Helpdesk & SLAs', icon: '🎫' });
+		if (mods?.includes('journeys')) items.push({ href: '/journeys', label: 'Journey Lifecycle Engine', icon: '🛤️' });
+		if (has('accounting')) items.push({ href: '/accounting', label: 'Financial Accounting', icon: '📖' });
+		if (has('settings')) items.push({ href: '/settings', label: 'Company Profile & Settings', icon: '⚙️', exact: true });
+		return [{ label: cfg?.name || 'Custom Workspace', items }];
+	}
 
 	let currentWorkspaceLabel = $derived.by(() => {
-		switch (activeWorkspacePreset) {
-			case 'HEALTHCARE': return { icon: '🏥', name: 'Smart Healthcare OS', badge: 'Clinical Suite' };
-			case 'TRAVEL': return { icon: '✈️', name: 'Travel & Tours OS', badge: 'GDS & DMC Hub' };
-			case 'REALESTATE': return { icon: '🏢', name: 'Real Estate Matrix', badge: 'Plots & RERA' };
-			case 'PROJECTS': return { icon: '📁', name: 'UTMS Delivery OS', badge: 'SLA Engine' };
-			case 'COMMERCE': return { icon: '🛍️', name: 'E-Commerce & POD', badge: 'Apparel & Labs' };
-			case 'COUNTER': return { icon: '⚡', name: 'Express Retail Counter', badge: 'POS Terminal' };
-			case 'GROWTH': return { icon: '💬', name: 'Social Sales & AI Voice', badge: 'Growth Desk' };
-			case 'OPERATIONS': return { icon: '📦', name: 'Supply Chain & Ops', badge: '3-Way Match' };
-			case 'CUSTOM': return {
+		if (activeWorkspacePreset === 'CUSTOM') {
+			return {
 				icon: activeCustomConfig?.icon || '💼',
 				name: activeCustomConfig?.name || 'Custom Workspace',
 				badge: activeCustomConfig?.badgeText || 'Custom Desk'
 			};
-			default: return { icon: '🌐', name: 'Enterprise ERP Suite', badge: 'All 16 Modules' };
 		}
+		const w = workspaces[activeWorkspacePreset] ?? workspaces.FULL;
+		return { icon: w.icon, name: w.name, badge: w.badge };
 	});
 
 	function setWorkspacePreset(preset: WorkspacePreset, customConfig?: CustomWorkspaceConfig) {
@@ -81,55 +120,35 @@
 		if (customConfig) {
 			activeCustomConfig = customConfig;
 		}
+		const ws = preset === 'CUSTOM' ? undefined : workspaces[preset];
+		const unit = ws?.unit;
 		if (typeof localStorage !== 'undefined') {
 			localStorage.setItem('mrbiz_workspace_preset', preset);
 			localStorage.setItem('mrbiz_billing_only_mode', String(preset === 'COUNTER'));
-			const unitMap: Record<string, string> = {
-				'TRAVEL': 'travel',
-				'HEALTHCARE': 'healthcare',
-				'REALESTATE': 'realestate',
-				'PROJECTS': 'consulting',
-				'COMMERCE': 'ecommerce',
-				'COUNTER': 'billing',
-				'FULL': 'billing'
-			};
-			if (unitMap[preset]) {
-				localStorage.setItem('mrbiz_active_unit', unitMap[preset]);
+			if (unit) {
+				localStorage.setItem('mrbiz_active_unit', unit);
 			}
 			if (customConfig) {
 				localStorage.setItem('mrbiz_custom_workspace_v2', JSON.stringify(customConfig));
 			}
-			window.dispatchEvent(new CustomEvent('mrbiz_unit_changed', { detail: { preset, unit: unitMap[preset] } }));
+			window.dispatchEvent(new CustomEvent('mrbiz_unit_changed', { detail: { preset, unit } }));
+		}
+		// Record the active business unit on the backend (best-effort). The
+		// X-Business-Unit-Id header on each RPC is what actually scopes data; this
+		// just persists the user's choice server-side.
+		if (unit && currentUser?.id) {
+			iamGrpc.switchBusinessUnit({ userId: currentUser.id, targetBusinessUnitId: unit }).catch(() => {});
 		}
 	}
 
-	// Auto-align workspace preset based on active route
-	$effect(() => {
-		if (currentPath.startsWith('/travel') || currentPath.startsWith('/journeys') || currentPath.startsWith('/bpo-voice')) {
-			if (activeWorkspacePreset !== 'TRAVEL') {
-				setWorkspacePreset('TRAVEL');
-			}
-		} else if (currentPath.startsWith('/healthcare')) {
-			if (activeWorkspacePreset !== 'HEALTHCARE') {
-				setWorkspacePreset('HEALTHCARE');
-			}
-		} else if (currentPath.startsWith('/realestate')) {
-			if (activeWorkspacePreset !== 'REALESTATE') {
-				setWorkspacePreset('REALESTATE');
-			}
-		} else if (currentPath.startsWith('/consulting')) {
-			if (activeWorkspacePreset !== 'PROJECTS') {
-				setWorkspacePreset('PROJECTS');
-			}
-		} else if (currentPath.startsWith('/ecommerce')) {
-			if (activeWorkspacePreset !== 'COMMERCE') {
-				setWorkspacePreset('COMMERCE');
-			}
-		}
-	});
-
-	function toggleBillingMode() {
-		setWorkspacePreset(activeWorkspacePreset === 'COUNTER' ? 'FULL' : 'COUNTER');
+	// Explicit, user-initiated switch from the workspace switcher. Unlike the old
+	// route-driven effect, the active unit only changes here — never silently from
+	// the URL — and the context follows by navigating to the workspace's landing.
+	function switchWorkspace(preset: WorkspacePreset) {
+		setWorkspacePreset(preset);
+		showWorkspaceMenu = false;
+		const landing = preset === 'CUSTOM' ? undefined : workspaces[preset]?.landing;
+		if (landing && landing !== currentPath) goto(landing);
 	}
 
 	// Universal Command Palette State (Ctrl+K / Cmd+K)
@@ -159,16 +178,16 @@
 		{ id: 'act-pay', title: 'HRMS 1-Click Payroll', subtitle: 'Process monthly salaries and timesheets', icon: '👥', category: 'Actions', href: '/hrms' },
 
 		// Works-Based Workspaces & Presets
-		{ id: 'ws-custom-modal', title: 'Custom Workspace Studio...', subtitle: 'Configure modules, branding & landing route for your team', icon: '🛠️', category: 'Workspaces', action: () => { showWorkspaceManagerModal = true; } },
-		{ id: 'ws-health', title: 'Switch Workspace: Smart Healthcare OS', subtitle: 'Doctor Rx Pad, Pharmacy POS, Nurse triage & owner stats', icon: '🏥', category: 'Workspaces', action: () => setWorkspacePreset('HEALTHCARE') },
-		{ id: 'ws-travel', title: 'Switch Workspace: Travel & Tours Agency', subtitle: 'Tour packages, PNR hold clocks & DMC vouchers', icon: '✈️', category: 'Workspaces', action: () => setWorkspacePreset('TRAVEL') },
-		{ id: 'ws-estate', title: 'Switch Workspace: Real Estate Deals', subtitle: '24-plot layout matrix, Indian land units & cab visits', icon: '🏢', category: 'Workspaces', action: () => setWorkspacePreset('REALESTATE') },
-		{ id: 'ws-proj', title: 'Switch Workspace: UTMS Projects & SOW', subtitle: 'SLA engine, Kanban pipeline & milestone invoicing', icon: '📁', category: 'Workspaces', action: () => setWorkspacePreset('PROJECTS') },
-		{ id: 'ws-ecom', title: 'Switch Workspace: E-Commerce & Print-on-Demand', subtitle: 'Blank inventory matrix, print lab queue & courier NDR', icon: '🛍️', category: 'Workspaces', action: () => setWorkspacePreset('COMMERCE') },
-		{ id: 'ws-counter', title: 'Switch Workspace: Express Counter & POS', subtitle: 'Clean, distraction-free retail counter', icon: '⚡', category: 'Workspaces', action: () => setWorkspacePreset('COUNTER') },
-		{ id: 'ws-growth', title: 'Switch Workspace: Growth & Social Sales', subtitle: 'Focused on WhatsApp/IG inbox, voice, and deals', icon: '💬', category: 'Workspaces', action: () => setWorkspacePreset('GROWTH') },
-		{ id: 'ws-ops', title: 'Switch Workspace: Supply Chain & Ops', subtitle: '3-way procurement, inventory, and trade shipments', icon: '📦', category: 'Workspaces', action: () => setWorkspacePreset('OPERATIONS') },
-		{ id: 'ws-full', title: 'Switch Workspace: Full Enterprise ERP', subtitle: 'All 16 business departments and multi-units', icon: '🌐', category: 'Workspaces', action: () => setWorkspacePreset('FULL') },
+		{ id: 'ws-custom-modal', title: 'Custom Workspace Studio...', subtitle: 'Configure modules, branding & landing route for your team', icon: '🛠️', category: 'Workspaces', action: () => { showCommandPalette = false; showWorkspaceManagerModal = true; } },
+		{ id: 'ws-health', title: 'Switch Workspace: Smart Healthcare OS', subtitle: 'Doctor Rx Pad, Pharmacy POS, Nurse triage & owner stats', icon: '🏥', category: 'Workspaces', action: () => switchWorkspace('HEALTHCARE') },
+		{ id: 'ws-travel', title: 'Switch Workspace: Travel & Tours Agency', subtitle: 'Tour packages, PNR hold clocks & DMC vouchers', icon: '✈️', category: 'Workspaces', action: () => switchWorkspace('TRAVEL') },
+		{ id: 'ws-estate', title: 'Switch Workspace: Real Estate Deals', subtitle: '24-plot layout matrix, Indian land units & cab visits', icon: '🏢', category: 'Workspaces', action: () => switchWorkspace('REALESTATE') },
+		{ id: 'ws-proj', title: 'Switch Workspace: UTMS Projects & SOW', subtitle: 'SLA engine, Kanban pipeline & milestone invoicing', icon: '📁', category: 'Workspaces', action: () => switchWorkspace('PROJECTS') },
+		{ id: 'ws-ecom', title: 'Switch Workspace: E-Commerce & Print-on-Demand', subtitle: 'Blank inventory matrix, print lab queue & courier NDR', icon: '🛍️', category: 'Workspaces', action: () => switchWorkspace('COMMERCE') },
+		{ id: 'ws-counter', title: 'Switch Workspace: Express Counter & POS', subtitle: 'Clean, distraction-free retail counter', icon: '⚡', category: 'Workspaces', action: () => switchWorkspace('COUNTER') },
+		{ id: 'ws-growth', title: 'Switch Workspace: Growth & Social Sales', subtitle: 'Focused on WhatsApp/IG inbox, voice, and deals', icon: '💬', category: 'Workspaces', action: () => switchWorkspace('GROWTH') },
+		{ id: 'ws-ops', title: 'Switch Workspace: Supply Chain & Ops', subtitle: '3-way procurement, inventory, and trade shipments', icon: '📦', category: 'Workspaces', action: () => switchWorkspace('OPERATIONS') },
+		{ id: 'ws-full', title: 'Switch Workspace: Full Enterprise ERP', subtitle: 'All 16 business departments and multi-units', icon: '🌐', category: 'Workspaces', action: () => switchWorkspace('FULL') },
 
 		// Industry Verticals
 		{ id: 'dom-health', title: 'Smart Healthcare Hub', subtitle: 'Patients, appointments, and EMR prescriptions', icon: '🏥', category: 'Verticals', href: '/healthcare' },
@@ -259,10 +278,23 @@
 						activeCustomConfig = JSON.parse(savedCustom);
 					} catch (e) {}
 				}
+				const savedCollapsed = localStorage.getItem('mrbiz_nav_collapsed');
+				if (savedCollapsed) {
+					try {
+						collapsedGroups = JSON.parse(savedCollapsed);
+					} catch (e) {}
+				}
 			}
 			const data = await api.getMe();
 			currentUser = data.user;
 			currentTenant = data.tenant || null;
+
+			// If the backend reports a current business unit, align the workspace to it
+			// (only when the user hasn't already chosen one this browser).
+			if (!localStorage.getItem('mrbiz_workspace_preset') && currentUser?.current_business_unit_id) {
+				const match = workspaceList.find((w) => w.unit === currentUser!.current_business_unit_id);
+				if (match) activeWorkspacePreset = match.id;
+			}
 
 			if (currentUser?.is_super_admin) {
 				try {
@@ -461,692 +493,43 @@
 
 			<!-- Navigation Links -->
 			<nav class="sidebar-nav" style="padding: 0.5rem 0.75rem 1.25rem 0.75rem; display: flex; flex-direction: column; gap: 0.25rem; flex: 1; overflow-y: auto;">
-				{#if activeWorkspacePreset === 'COUNTER'}
-					<!-- ============================================== -->
-					<!-- PRESET 1: EXPRESS COUNTER & RETAIL POS         -->
-					<!-- ============================================== -->
-					<div style="font-size: 0.6875rem; font-weight: 700; color: #34d399; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.25rem 0.5rem;">
-						Express Retail Counter
-					</div>
-
-					<a href="/billing" class="nav-item" class:active={currentPath.startsWith('/billing')} style="color: #38bdf8; font-weight: 700; background: rgba(56, 189, 248, 0.12); border-left: 3px solid #38bdf8;">
-						<span class="nav-icon">⚡</span> Express Billing Counter
-					</a>
-
-					<a href="/" class="nav-item" class:active={currentPath === '/'}>
-						<span class="nav-icon">📊</span> Quick Dashboard
-					</a>
-
-					<a href="/pos" class="nav-item" class:active={currentPath.startsWith('/pos')}>
-						<span class="nav-icon">🛒</span> Retail POS Terminal
-					</a>
-
-					<a href="/invoices" class="nav-item" class:active={currentPath.startsWith('/invoices')}>
-						<span class="nav-icon">📄</span> Sales Invoices
-					</a>
-
-					<a href="/quotations" class="nav-item" class:active={currentPath.startsWith('/quotations')}>
-						<span class="nav-icon">📝</span> Quotations & Estimates
-					</a>
-
-					<a href="/payments" class="nav-item" class:active={currentPath === '/payments'}>
-						<span class="nav-icon">💳</span> Payments Received
-					</a>
-
-					<a href="/customers" class="nav-item" class:active={currentPath === '/customers'}>
-						<span class="nav-icon">👥</span> Customers & Balances
-					</a>
-
-					<a href="/products" class="nav-item" class:active={currentPath === '/products'}>
-						<span class="nav-icon">📦</span> Products & Pricing
-					</a>
-
-					<a href="/inventory" class="nav-item" class:active={currentPath === '/inventory'}>
-						<span class="nav-icon">📋</span> Inventory Stock
-					</a>
-
-					<a href="/settings/templates" class="nav-item" class:active={currentPath === '/settings/templates'}>
-						<span class="nav-icon">🎨</span> 17 Billing Templates
-					</a>
-
-					<a href="/settings" class="nav-item" class:active={currentPath === '/settings'}>
-						<span class="nav-icon">⚙️</span> Company Profile & QR
-					</a>
-
-				{:else if activeWorkspacePreset === 'HEALTHCARE'}
-					<!-- ============================================== -->
-					<!-- PRESET: SMART HEALTHCARE & HOSPITAL OS         -->
-					<!-- ============================================== -->
-					<div style="font-size: 0.6875rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.25rem 0.5rem; display: flex; align-items: center; justify-content: space-between;">
-						<span>Smart Healthcare OS</span>
-						<span style="font-size: 0.625rem; background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 0.1rem 0.4rem; border-radius: 4px;">4 Workstations</span>
-					</div>
-
-					<a href="/healthcare" class="nav-item" class:active={currentPath.startsWith('/healthcare')} style="color: #38bdf8; font-weight: 700; background: rgba(56, 189, 248, 0.1); border-left: 3px solid #38bdf8;">
-						<span class="nav-icon">🏥</span> Clinical Workstations (Rx/EMR)
-					</a>
-
-					<a href="/billing" class="nav-item" class:active={currentPath.startsWith('/billing')}>
-						<span class="nav-icon">⚡</span> Quick Patient OPD Billing
-					</a>
-
-					<a href="/pos" class="nav-item" class:active={currentPath.startsWith('/pos')}>
-						<span class="nav-icon">🛒</span> Pharmacy POS Dispenser
-					</a>
-
-					<a href="/invoices" class="nav-item" class:active={currentPath.startsWith('/invoices')}>
-						<span class="nav-icon">📄</span> Invoices & Insurance Claims
-					</a>
-
-					<a href="/customers" class="nav-item" class:active={currentPath === '/customers'}>
-						<span class="nav-icon">👥</span> Patient Records & History
-					</a>
-
-					<a href="/products" class="nav-item" class:active={currentPath === '/products'}>
-						<span class="nav-icon">📦</span> Pharmacy Formulary / Drugs
-					</a>
-
-					<a href="/inventory" class="nav-item" class:active={currentPath === '/inventory'}>
-						<span class="nav-icon">📋</span> Drug Batches & Expiry Dates
-					</a>
-
-					<a href="/inbox" class="nav-item" class:active={currentPath.startsWith('/inbox')}>
-						<span class="nav-icon">💬</span> Patient WhatsApp Helpline
-					</a>
-
-					<a href="/accounting" class="nav-item" class:active={currentPath.startsWith('/accounting')}>
-						<span class="nav-icon">📖</span> Hospital Accounts & P&L
-					</a>
-
-					<a href="/hrms" class="nav-item" class:active={currentPath.startsWith('/hrms')}>
-						<span class="nav-icon">👥</span> Doctors & Nursing Roster
-					</a>
-
-					<a href="/settings" class="nav-item" class:active={currentPath === '/settings'}>
-						<span class="nav-icon">⚙️</span> Clinic Profile & Rx Header
-					</a>
-
-				{:else if activeWorkspacePreset === 'TRAVEL'}
-					<!-- ============================================== -->
-					<!-- PRESET: TRAVEL & TOUR AGENCY OPERATIONS        -->
-					<!-- ============================================== -->
-					<div style="font-size: 0.6875rem; font-weight: 700; color: #06b6d4; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.25rem 0.5rem; display: flex; align-items: center; justify-content: space-between;">
-						<span>Travel & Tour Agency OS</span>
-						<span style="font-size: 0.625rem; background: rgba(6, 182, 212, 0.15); color: #06b6d4; padding: 0.1rem 0.4rem; border-radius: 4px;">GDS & DMC</span>
-					</div>
-
-					<a href="/travel" class="nav-item" class:active={currentPath.startsWith('/travel')} style="color: #06b6d4; font-weight: 700; background: rgba(6, 182, 212, 0.1); border-left: 3px solid #06b6d4;">
-						<span class="nav-icon">✈️</span> Travel Agency Desk (PNR & Visa)
-					</a>
-
-					<a href="/inbox" class="nav-item" class:active={currentPath.startsWith('/inbox')}>
-						<span class="nav-icon">💬</span> Omnichannel WhatsApp Leads
-					</a>
-
-					<a href="/bpo-voice" class="nav-item" class:active={currentPath.startsWith('/bpo-voice')}>
-						<span class="nav-icon">🎙️</span> AI Voice Flight / Visa Bot
-					</a>
-
-					<a href="/billing" class="nav-item" class:active={currentPath.startsWith('/billing')}>
-						<span class="nav-icon">⚡</span> Quick Tour Booking Bill
-					</a>
-
-					<a href="/invoices" class="nav-item" class:active={currentPath.startsWith('/invoices')}>
-						<span class="nav-icon">📄</span> Tax Invoices & DMC Vouchers
-					</a>
-
-					<a href="/quotations" class="nav-item" class:active={currentPath.startsWith('/quotations')}>
-						<span class="nav-icon">📝</span> Custom Tour Quotations
-					</a>
-
-					<a href="/customers" class="nav-item" class:active={currentPath === '/customers'}>
-						<span class="nav-icon">👥</span> Travelers & Passport DB
-					</a>
-
-					<a href="/journeys" class="nav-item" class:active={currentPath.startsWith('/journeys')}>
-						<span class="nav-icon">🛤️</span> Tour Itinerary Engine
-					</a>
-
-					<a href="/accounting" class="nav-item" class:active={currentPath.startsWith('/accounting')}>
-						<span class="nav-icon">📖</span> Tour Operator Ledger & P&L
-					</a>
-
-					<a href="/settings" class="nav-item" class:active={currentPath === '/settings'}>
-						<span class="nav-icon">⚙️</span> Agency Setup & Airlines
-					</a>
-
-				{:else if activeWorkspacePreset === 'REALESTATE'}
-					<!-- ============================================== -->
-					<!-- PRESET: REAL ESTATE & LAYOUT DEVELOPMENT      -->
-					<!-- ============================================== -->
-					<div style="font-size: 0.6875rem; font-weight: 700; color: #10b981; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.25rem 0.5rem; display: flex; align-items: center; justify-content: space-between;">
-						<span>Real Estate OS</span>
-						<span style="font-size: 0.625rem; background: rgba(16, 185, 129, 0.15); color: #10b981; padding: 0.1rem 0.4rem; border-radius: 4px;">Plots & RERA</span>
-					</div>
-
-					<a href="/realestate" class="nav-item" class:active={currentPath.startsWith('/realestate')} style="color: #10b981; font-weight: 700; background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10b981;">
-						<span class="nav-icon">🏢</span> 24-Plot Matrix & Site Visits
-					</a>
-
-					<a href="/bpo-voice" class="nav-item" class:active={currentPath.startsWith('/bpo-voice')}>
-						<span class="nav-icon">🎙️</span> AI Voice Site Visit Dialer
-					</a>
-
-					<a href="/inbox" class="nav-item" class:active={currentPath.startsWith('/inbox')}>
-						<span class="nav-icon">💬</span> Buyer WhatsApp & Inquiries
-					</a>
-
-					<a href="/projects" class="nav-item" class:active={currentPath.startsWith('/projects')}>
-						<span class="nav-icon">📁</span> Layout Development Tasks
-					</a>
-
-					<a href="/billing" class="nav-item" class:active={currentPath.startsWith('/billing')}>
-						<span class="nav-icon">⚡</span> Plot Advance Token Receipt
-					</a>
-
-					<a href="/invoices" class="nav-item" class:active={currentPath.startsWith('/invoices')}>
-						<span class="nav-icon">📄</span> Sales Invoices & Agreements
-					</a>
-
-					<a href="/quotations" class="nav-item" class:active={currentPath.startsWith('/quotations')}>
-						<span class="nav-icon">📝</span> Plot Cost Sheets & Quotations
-					</a>
-
-					<a href="/customers" class="nav-item" class:active={currentPath === '/customers'}>
-						<span class="nav-icon">👥</span> Property Buyers & Leads
-					</a>
-
-					<a href="/accounting" class="nav-item" class:active={currentPath.startsWith('/accounting')}>
-						<span class="nav-icon">📖</span> Project Escrow & Land Ledger
-					</a>
-
-					<a href="/settings" class="nav-item" class:active={currentPath === '/settings'}>
-						<span class="nav-icon">⚙️</span> Builder & RERA Setup
-					</a>
-
-				{:else if activeWorkspacePreset === 'PROJECTS'}
-					<!-- ============================================== -->
-					<!-- PRESET: UTMS PROJECTS & SOW DELIVERY           -->
-					<!-- ============================================== -->
-					<div style="font-size: 0.6875rem; font-weight: 700; color: #818cf8; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.25rem 0.5rem; display: flex; align-items: center; justify-content: space-between;">
-						<span>UTMS Project OS</span>
-						<span style="font-size: 0.625rem; background: rgba(129, 140, 248, 0.15); color: #818cf8; padding: 0.1rem 0.4rem; border-radius: 4px;">SLA Engine</span>
-					</div>
-
-					<a href="/projects" class="nav-item" class:active={currentPath.startsWith('/projects')} style="color: #818cf8; font-weight: 700; background: rgba(129, 140, 248, 0.1); border-left: 3px solid #818cf8;">
-						<span class="nav-icon">📁</span> UTMS Tasks & SLA Command Center
-					</a>
-
-					<a href="/billing" class="nav-item" class:active={currentPath.startsWith('/billing')}>
-						<span class="nav-icon">⚡</span> Milestone Billing Triggers
-					</a>
-
-					<a href="/invoices" class="nav-item" class:active={currentPath.startsWith('/invoices')}>
-						<span class="nav-icon">📄</span> Client Milestone Invoices
-					</a>
-
-					<a href="/customers" class="nav-item" class:active={currentPath === '/customers'}>
-						<span class="nav-icon">👥</span> Client SOW Accounts
-					</a>
-
-					<a href="/hrms" class="nav-item" class:active={currentPath.startsWith('/hrms')}>
-						<span class="nav-icon">👥</span> Timesheets & Team Payroll
-					</a>
-
-					<a href="/support" class="nav-item" class:active={currentPath.startsWith('/support')}>
-						<span class="nav-icon">🎫</span> Client SLA Helpdesk
-					</a>
-
-					<a href="/inbox" class="nav-item" class:active={currentPath.startsWith('/inbox')}>
-						<span class="nav-icon">💬</span> Omnichannel Client Inbox
-					</a>
-
-					<a href="/workflow" class="nav-item" class:active={currentPath.startsWith('/workflow')}>
-						<span class="nav-icon">🤖</span> Autonomous AI Workflows
-					</a>
-
-					<a href="/accounting" class="nav-item" class:active={currentPath.startsWith('/accounting')}>
-						<span class="nav-icon">📖</span> Consulting SOW Ledger & P&L
-					</a>
-
-					<a href="/settings" class="nav-item" class:active={currentPath === '/settings'}>
-						<span class="nav-icon">⚙️</span> Agency Delivery Settings
-					</a>
-
-				{:else if activeWorkspacePreset === 'COMMERCE'}
-					<!-- ============================================== -->
-					<!-- PRESET: E-COMMERCE & PRINT-ON-DEMAND           -->
-					<!-- ============================================== -->
-					<div style="font-size: 0.6875rem; font-weight: 700; color: #ec4899; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.25rem 0.5rem; display: flex; align-items: center; justify-content: space-between;">
-						<span>E-Commerce & POD OS</span>
-						<span style="font-size: 0.625rem; background: rgba(236, 72, 153, 0.15); color: #ec4899; padding: 0.1rem 0.4rem; border-radius: 4px;">Apparel & Labs</span>
-					</div>
-
-					<a href="/ecommerce" class="nav-item" class:active={currentPath.startsWith('/ecommerce')} style="color: #ec4899; font-weight: 700; background: rgba(236, 72, 153, 0.1); border-left: 3px solid #ec4899;">
-						<span class="nav-icon">🛍️</span> Blank Matrix & Print Lab Queue
-					</a>
-
-					<a href="/pos" class="nav-item" class:active={currentPath.startsWith('/pos')}>
-						<span class="nav-icon">🛒</span> Retail Counter POS
-					</a>
-
-					<a href="/billing" class="nav-item" class:active={currentPath.startsWith('/billing')}>
-						<span class="nav-icon">⚡</span> Quick Order Invoicing
-					</a>
-
-					<a href="/procurement" class="nav-item" class:active={currentPath.startsWith('/procurement')}>
-						<span class="nav-icon">📦</span> 3-Way Blank Procurement
-					</a>
-
-					<a href="/inventory" class="nav-item" class:active={currentPath === '/inventory'}>
-						<span class="nav-icon">📋</span> Garment Stock & Color/Size
-					</a>
-
-					<a href="/trade/shipments" class="nav-item" class:active={currentPath.startsWith('/trade/shipments')}>
-						<span class="nav-icon">🚢</span> Courier Logistics & NDR
-					</a>
-
-					<a href="/inbox" class="nav-item" class:active={currentPath.startsWith('/inbox')}>
-						<span class="nav-icon">💬</span> Omnichannel Buyer Support
-					</a>
-
-					<a href="/accounting" class="nav-item" class:active={currentPath.startsWith('/accounting')}>
-						<span class="nav-icon">📖</span> Store Financial Accounting
-					</a>
-
-					<a href="/settings" class="nav-item" class:active={currentPath === '/settings'}>
-						<span class="nav-icon">⚙️</span> Print Lab & Store Settings
-					</a>
-
-				{:else if activeWorkspacePreset === 'CUSTOM'}
-					<!-- ============================================== -->
-					<!-- PRESET: DYNAMIC CUSTOM WORKSPACE STUDIO        -->
-					<!-- ============================================== -->
-					<div style="font-size: 0.6875rem; font-weight: 700; color: #a855f7; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.25rem 0.5rem; display: flex; align-items: center; justify-content: space-between;">
-						<span>{activeCustomConfig?.name || 'Custom Workspace'}</span>
-						<button
-							type="button"
-							onclick={() => (showWorkspaceManagerModal = true)}
-							style="background: none; border: none; font-size: 0.65rem; color: #c084fc; cursor: pointer; text-decoration: underline;"
-						>
-							Edit
-						</button>
-					</div>
-
-					{#if activeCustomConfig?.primaryAction}
-						<a href={activeCustomConfig.primaryAction.href} class="nav-item" style="color: #c084fc; font-weight: 700; background: rgba(168, 85, 247, 0.12); border-left: 3px solid #c084fc;">
-							<span class="nav-icon">{activeCustomConfig.primaryAction.icon || '⚡'}</span> {activeCustomConfig.primaryAction.label}
-						</a>
+				{#each activeGroups as group (group.label ?? group.items[0]?.href)}
+					{#if group.label}
+						<div class="nav-group-header">
+							<button
+								type="button"
+								class="nav-group-toggle"
+								onclick={() => toggleGroup(group.label ?? '')}
+								aria-expanded={!collapsedGroups[group.label ?? '']}
+							>
+								<span class="nav-group-chevron" class:collapsed={collapsedGroups[group.label ?? '']}>▾</span>
+								<span class="nav-group-label">{group.label}</span>
+							</button>
+							{#if group.badge}
+								<span class="nav-group-badge">{group.badge}</span>
+							{:else if group.nextPlan && !isNextPlan}
+								<span class="nav-group-badge next">Next Plan</span>
+							{/if}
+						</div>
 					{/if}
-
-					{#if !activeCustomConfig?.modules || activeCustomConfig.modules.includes('billing')}
-						<a href="/billing" class="nav-item" class:active={currentPath.startsWith('/billing')}>
-							<span class="nav-icon">⚡</span> Express Billing
-						</a>
+					{#if !group.label || !collapsedGroups[group.label]}
+						{#each group.items as item (item.href)}
+							<a
+								href={item.href}
+								class="nav-item"
+								class:active={isNavItemActive(item, currentPath)}
+								class:primary={item.primary}
+								onclick={item.gated ? (e) => handleLockedFeature(e, item.lockTitle ?? item.label, item.lockDesc ?? '') : undefined}
+							>
+								<span class="nav-icon">{item.icon}</span>
+								<span class="nav-label">{item.label}</span>
+								{#if item.gated && !isNextPlan}
+									<span class="nav-lock">🔒</span>
+								{/if}
+							</a>
+						{/each}
 					{/if}
-					{#if activeCustomConfig?.modules?.includes('pos')}
-						<a href="/pos" class="nav-item" class:active={currentPath.startsWith('/pos')}>
-							<span class="nav-icon">🛒</span> Retail POS Terminal
-						</a>
-					{/if}
-					{#if activeCustomConfig?.modules?.includes('healthcare')}
-						<a href="/healthcare" class="nav-item" class:active={currentPath.startsWith('/healthcare')}>
-							<span class="nav-icon">🏥</span> Smart Healthcare Hub
-						</a>
-					{/if}
-					{#if activeCustomConfig?.modules?.includes('travel')}
-						<a href="/travel" class="nav-item" class:active={currentPath.startsWith('/travel')}>
-							<span class="nav-icon">✈️</span> Travel Agency OS
-						</a>
-					{/if}
-					{#if activeCustomConfig?.modules?.includes('realestate')}
-						<a href="/realestate" class="nav-item" class:active={currentPath.startsWith('/realestate')}>
-							<span class="nav-icon">🏢</span> Real Estate Deals
-						</a>
-					{/if}
-					{#if activeCustomConfig?.modules?.includes('ecommerce')}
-						<a href="/ecommerce" class="nav-item" class:active={currentPath.startsWith('/ecommerce')}>
-							<span class="nav-icon">🛍️</span> E-Commerce & Print-on-Demand
-						</a>
-					{/if}
-					{#if activeCustomConfig?.modules?.includes('projects')}
-						<a href="/projects" class="nav-item" class:active={currentPath.startsWith('/projects')}>
-							<span class="nav-icon">📁</span> Projects & UTMS Tasks
-						</a>
-					{/if}
-					{#if activeCustomConfig?.modules?.includes('inbox')}
-						<a href="/inbox" class="nav-item" class:active={currentPath.startsWith('/inbox')}>
-							<span class="nav-icon">💬</span> Omnichannel Social Inbox
-						</a>
-					{/if}
-					{#if activeCustomConfig?.modules?.includes('bpo-voice')}
-						<a href="/bpo-voice" class="nav-item" class:active={currentPath.startsWith('/bpo-voice')}>
-							<span class="nav-icon">🎙️</span> AI Voice Agent BPO Desk
-						</a>
-					{/if}
-					{#if activeCustomConfig?.modules?.includes('procurement')}
-						<a href="/procurement" class="nav-item" class:active={currentPath.startsWith('/procurement')}>
-							<span class="nav-icon">📦</span> 3-Way Procurement
-						</a>
-					{/if}
-					{#if activeCustomConfig?.modules?.includes('hrms')}
-						<a href="/hrms" class="nav-item" class:active={currentPath.startsWith('/hrms')}>
-							<span class="nav-icon">👥</span> HRMS & Automated Payroll
-						</a>
-					{/if}
-					{#if activeCustomConfig?.modules?.includes('trade')}
-						<a href="/trade/shipments" class="nav-item" class:active={currentPath.startsWith('/trade/shipments')}>
-							<span class="nav-icon">🚢</span> Export & Import Trade OS
-						</a>
-					{/if}
-					{#if activeCustomConfig?.modules?.includes('support')}
-						<a href="/support" class="nav-item" class:active={currentPath.startsWith('/support')}>
-							<span class="nav-icon">🎫</span> Support Helpdesk & SLAs
-						</a>
-					{/if}
-					{#if activeCustomConfig?.modules?.includes('journeys')}
-						<a href="/journeys" class="nav-item" class:active={currentPath.startsWith('/journeys')}>
-							<span class="nav-icon">🛤️</span> Journey Lifecycle Engine
-						</a>
-					{/if}
-					{#if !activeCustomConfig?.modules || activeCustomConfig.modules.includes('accounting')}
-						<a href="/accounting" class="nav-item" class:active={currentPath.startsWith('/accounting')}>
-							<span class="nav-icon">📖</span> Financial Accounting
-						</a>
-					{/if}
-					{#if !activeCustomConfig?.modules || activeCustomConfig.modules.includes('settings')}
-						<a href="/settings" class="nav-item" class:active={currentPath === '/settings'}>
-							<span class="nav-icon">⚙️</span> Company Profile & Settings
-						</a>
-					{/if}
-
-				{:else if activeWorkspacePreset === 'GROWTH'}
-					<!-- ============================================== -->
-					<!-- PRESET 2: GROWTH & OMNICHANNEL SOCIAL SALES     -->
-					<!-- ============================================== -->
-					<div style="font-size: 0.6875rem; font-weight: 700; color: #f43f5e; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.25rem 0.5rem;">
-						Growth & Omnichannel Sales
-					</div>
-
-					<a href="/inbox" class="nav-item" class:active={currentPath.startsWith('/inbox')} style="color: #f43f5e; font-weight: 700; background: rgba(244, 63, 94, 0.08); border-left: 3px solid #f43f5e;">
-						<span class="nav-icon">💬</span> Omnichannel Social Inbox
-					</a>
-
-					<a href="/bpo-voice" class="nav-item" class:active={currentPath.startsWith('/bpo-voice')} style="color: #06b6d4; font-weight: 700; background: rgba(6, 182, 212, 0.08); border-left: 3px solid #06b6d4;">
-						<span class="nav-icon">🎙️</span> AI Voice Agent BPO Desk
-					</a>
-
-					<a href="/support" class="nav-item" class:active={currentPath.startsWith('/support')}>
-						<span class="nav-icon">🎫</span> Support Helpdesk & SLAs
-					</a>
-
-					<a href="/journeys" class="nav-item" class:active={currentPath.startsWith('/journeys')}>
-						<span class="nav-icon">🛤️</span> Journey Lifecycle Engine
-					</a>
-
-					<a href="/projects" class="nav-item" class:active={currentPath.startsWith('/projects')}>
-						<span class="nav-icon">📁</span> Projects & UTMS Tasks
-					</a>
-
-					<a href="/realestate" class="nav-item" class:active={currentPath.startsWith('/realestate')}>
-						<span class="nav-icon">🏢</span> Real Estate Deals
-					</a>
-
-					<a href="/travel" class="nav-item" class:active={currentPath.startsWith('/travel')}>
-						<span class="nav-icon">✈️</span> Travel & Visa OS
-					</a>
-
-					<a href="/healthcare" class="nav-item" class:active={currentPath.startsWith('/healthcare')}>
-						<span class="nav-icon">🏥</span> Smart Healthcare Hub
-					</a>
-
-					<a href="/billing" class="nav-item" class:active={currentPath.startsWith('/billing')}>
-						<span class="nav-icon">⚡</span> Quick Billing Counter
-					</a>
-
-					<a href="/customers" class="nav-item" class:active={currentPath === '/customers'}>
-						<span class="nav-icon">👥</span> Customers & CRM
-					</a>
-
-				{:else if activeWorkspacePreset === 'OPERATIONS'}
-					<!-- ============================================== -->
-					<!-- PRESET 3: SUPPLY CHAIN, OPERATIONS & TRADE     -->
-					<!-- ============================================== -->
-					<div style="font-size: 0.6875rem; font-weight: 700; color: #a855f7; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.25rem 0.5rem;">
-						Supply Chain & Operations
-					</div>
-
-					<a href="/procurement" class="nav-item" class:active={currentPath.startsWith('/procurement')} style="color: #a855f7; font-weight: 700; background: rgba(168, 85, 247, 0.08); border-left: 3px solid #a855f7;">
-						<span class="nav-icon">📦</span> Procurement & 3-Way Match
-					</a>
-
-					<a href="/inventory" class="nav-item" class:active={currentPath === '/inventory'}>
-						<span class="nav-icon">📋</span> Inventory Stock & Batches
-					</a>
-
-					<a href="/trade/shipments" class="nav-item" class:active={currentPath.startsWith('/trade/shipments')}>
-						<span class="nav-icon">🚢</span> Export / Import Shipments
-					</a>
-
-					<a href="/trade/export-invoice/new" class="nav-item" class:active={currentPath.startsWith('/trade/export-invoice')}>
-						<span class="nav-icon">🌍</span> New Export Invoice
-					</a>
-
-					<a href="/trade/settings" class="nav-item" class:active={currentPath === '/trade/settings'}>
-						<span class="nav-icon">💱</span> Trade Settings & Rates
-					</a>
-
-					<a href="/purchases" class="nav-item" class:active={currentPath.startsWith('/purchases')}>
-						<span class="nav-icon">📥</span> Purchase Bills
-					</a>
-
-					<a href="/products" class="nav-item" class:active={currentPath === '/products'}>
-						<span class="nav-icon">📦</span> Products & Pricing
-					</a>
-
-					<a href="/units" class="nav-item" class:active={currentPath === '/units'}>
-						<span class="nav-icon">⚖️</span> Units & Converter
-					</a>
-
-					<a href="/accounting/reconciliation" class="nav-item" class:active={currentPath.startsWith('/accounting/reconciliation')}>
-						<span class="nav-icon">🏦</span> Bank Auto-Reconciliation
-					</a>
-
-					<a href="/accounting" class="nav-item" class:active={currentPath.startsWith('/accounting')}>
-						<span class="nav-icon">📖</span> Audited Accounting
-					</a>
-
-					<a href="/suppliers" class="nav-item" class:active={currentPath.startsWith('/suppliers')}>
-						<span class="nav-icon">🏭</span> Suppliers & Khata
-					</a>
-
-				{:else}
-					<!-- ============================================== -->
-					<!-- PRESET 4: FULL UNIFIED ENTERPRISE ERP          -->
-					<!-- ============================================== -->
-					<div style="font-size: 0.6875rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.25rem 0.5rem;">
-						Enterprise ERP Suite
-					</div>
-
-					<a href="/services" class="nav-item" class:active={currentPath === '/services'} style="color: #38bdf8; font-weight: 700; background: rgba(56, 189, 248, 0.08); border-left: 3px solid #38bdf8;">
-						<span class="nav-icon">🌐</span> All 16 Services Hub
-					</a>
-
-					<a href="/inbox" class="nav-item" class:active={currentPath.startsWith('/inbox')} style="color: #f43f5e; font-weight: 700; background: rgba(244, 63, 94, 0.08); border-left: 3px solid #f43f5e;">
-						<span class="nav-icon">💬</span> Omnichannel Social Inbox
-					</a>
-					<a href="/bpo-voice" class="nav-item" class:active={currentPath.startsWith('/bpo-voice')} style="color: #06b6d4; font-weight: 700; background: rgba(6, 182, 212, 0.08); border-left: 3px solid #06b6d4;">
-						<span class="nav-icon">🎙️</span> AI Voice Agent BPO Desk
-					</a>
-					<a href="/support" class="nav-item" class:active={currentPath.startsWith('/support')}>
-						<span class="nav-icon">🎫</span> Support Helpdesk & SLAs
-					</a>
-					<a href="/projects" class="nav-item" class:active={currentPath.startsWith('/projects')}>
-						<span class="nav-icon">📁</span> Projects & UTMS Tasks
-					</a>
-					<a href="/journeys" class="nav-item" class:active={currentPath.startsWith('/journeys')}>
-						<span class="nav-icon">🛤️</span> Journey Lifecycle Engine
-					</a>
-					<a href="/procurement" class="nav-item" class:active={currentPath.startsWith('/procurement')}>
-						<span class="nav-icon">📦</span> Procurement & 3-Way Match
-					</a>
-					<a href="/accounting/reconciliation" class="nav-item" class:active={currentPath.startsWith('/accounting/reconciliation')}>
-						<span class="nav-icon">🏦</span> Bank Auto-Reconciliation
-					</a>
-					<a href="/hrms" class="nav-item" class:active={currentPath.startsWith('/hrms')}>
-						<span class="nav-icon">👥</span> HRMS & 1-Click Payroll
-					</a>
-					<a href="/workflow" class="nav-item" class:active={currentPath.startsWith('/workflow')}>
-						<span class="nav-icon">🤖</span> AI Autonomous Missions
-					</a>
-					<a href="/healthcare" class="nav-item" class:active={currentPath.startsWith('/healthcare')}>
-						<span class="nav-icon">🏥</span> Smart Healthcare Hub
-					</a>
-					<a href="/travel" class="nav-item" class:active={currentPath.startsWith('/travel')}>
-						<span class="nav-icon">✈️</span> Travel & Visa OS
-					</a>
-					<a href="/realestate" class="nav-item" class:active={currentPath.startsWith('/realestate')}>
-						<span class="nav-icon">🏢</span> Real Estate Deals
-					</a>
-
-					<div style="font-size: 0.6875rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; padding: 0.75rem 0.5rem 0.25rem 0.5rem;">
-						Core Invoicing & Billing
-					</div>
-
-					<a href="/billing" class="nav-item" class:active={currentPath.startsWith('/billing')} style="color: #38bdf8; font-weight: 700; background: rgba(56, 189, 248, 0.08); border-left: 3px solid #38bdf8;">
-						<span class="nav-icon">⚡</span> Express Billing Counter
-					</a>
-
-					<a href="/" class="nav-item" class:active={currentPath === '/'}>
-						<span class="nav-icon">📊</span> Dashboard
-					</a>
-
-					<a href="/pos" class="nav-item" class:active={currentPath.startsWith('/pos')}>
-						<span class="nav-icon">🛒</span> Retail POS Terminal
-					</a>
-
-					<a href="/invoices" class="nav-item" class:active={currentPath.startsWith('/invoices')}>
-						<span class="nav-icon">📄</span> Sales Invoices
-					</a>
-
-					<a href="/quotations" class="nav-item" class:active={currentPath.startsWith('/quotations')}>
-						<span class="nav-icon">📝</span> Quotations
-					</a>
-
-					<a href="/trade/shipments" class="nav-item" class:active={currentPath.startsWith('/trade/shipments')}>
-						<span class="nav-icon">🚢</span> Export / Import Shipments
-					</a>
-					<a href="/trade/export-invoice/new" class="nav-item" class:active={currentPath.startsWith('/trade/export-invoice')}>
-						<span class="nav-icon">🌍</span> New Export Invoice
-					</a>
-					<a href="/trade/settings" class="nav-item" class:active={currentPath === '/trade/settings'}>
-						<span class="nav-icon">💱</span> Trade Settings & Rates
-					</a>
-
-					<a href="/invoices/recurring" class="nav-item" class:active={currentPath === '/invoices/recurring'}>
-						<span class="nav-icon">🔁</span> Recurring Invoices
-					</a>
-
-					<a href="/purchases" class="nav-item" class:active={currentPath.startsWith('/purchases')}>
-						<span class="nav-icon">📥</span> Purchase Bills
-					</a>
-
-					<a href="/credit-notes" class="nav-item" class:active={currentPath.startsWith('/credit-notes')}>
-						<span class="nav-icon">🔄</span> Credit & Debit Notes
-					</a>
-
-					<a href="/payments" class="nav-item" class:active={currentPath === '/payments'}>
-						<span class="nav-icon">💳</span> Payments Received
-					</a>
-
-					<a href="/customers" class="nav-item" class:active={currentPath === '/customers'}>
-						<span class="nav-icon">👥</span> Customers & Balances
-					</a>
-
-					<a href="/suppliers" class="nav-item" class:active={currentPath.startsWith('/suppliers')}>
-						<span class="nav-icon">🏭</span> Suppliers & Khata
-					</a>
-
-					<a href="/products" class="nav-item" class:active={currentPath === '/products'}>
-						<span class="nav-icon">📦</span> Products & Pricing
-					</a>
-
-					<a href="/inventory" class="nav-item" class:active={currentPath === '/inventory'}>
-						<span class="nav-icon">📋</span> Inventory Stock
-					</a>
-
-					<a href="/units" class="nav-item" class:active={currentPath === '/units'}>
-						<span class="nav-icon">⚖️</span> Units & Converter
-					</a>
-
-					<!-- Next Plan Advanced Features -->
-					<div style="font-size: 0.6875rem; font-weight: 700; color: #818cf8; text-transform: uppercase; letter-spacing: 0.05em; padding: 1rem 0.5rem 0.5rem 0.5rem; display: flex; justify-content: space-between; align-items: center;">
-						<span>Financial Suite</span>
-						{#if !isNextPlan}
-							<span style="font-size: 0.625rem; background: rgba(129, 140, 248, 0.15); color: #a5b4fc; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 600;">Next Plan</span>
-						{/if}
-					</div>
-
-					<a
-						href="/accounting"
-						class="nav-item"
-						class:active={currentPath.startsWith('/accounting')}
-						onclick={(e) => handleLockedFeature(e, 'Audited Financial Accounting', 'Full Double-Entry Accounting, General Ledger, Chart of Accounts, Trial Balance, and Profit & Loss statement.')}
-					>
-						<span class="nav-icon">📖</span> Audited Accounting
-						{#if !isNextPlan}
-							<span style="margin-left: auto; font-size: 0.75rem;">🔒</span>
-						{/if}
-					</a>
-
-					<a
-						href="/expenses"
-						class="nav-item"
-						class:active={currentPath.startsWith('/expenses')}
-						onclick={(e) => handleLockedFeature(e, 'Company Expense Management', 'Track and categorize company expenses, record vendor receipts, manage payment modes, and automate financial expense postings.')}
-					>
-						<span class="nav-icon">💸</span> Expense Management
-						{#if !isNextPlan}
-							<span style="margin-left: auto; font-size: 0.75rem;">🔒</span>
-						{/if}
-					</a>
-
-					<div style="font-size: 0.6875rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; padding: 1rem 0.5rem 0.5rem 0.5rem;">
-						Administration
-					</div>
-
-					<a href="/settings" class="nav-item" class:active={currentPath === '/settings'}>
-						<span class="nav-icon">⚙️</span> Company Profile
-					</a>
-
-					<a href="/settings/team" class="nav-item" class:active={currentPath === '/settings/team'}>
-						<span class="nav-icon">👥</span> Team & Staff Users
-					</a>
-
-					<a href="/settings/security" class="nav-item" class:active={currentPath === "/settings/security"}>
-						<span class="nav-icon">🔐</span> Account Security
-					</a>
-
-					<a href="/settings/billing" class="nav-item" class:active={currentPath === "/settings/billing"}>
-						<span class="nav-icon">💳</span> Plan & Billing
-					</a>
-
-					<a href="/accounting/exchange" class="nav-item" class:active={currentPath === "/accounting/exchange"}>
-						<span class="nav-icon">🔄</span> Returns & Data Exchange
-					</a>
-
-					<a href="/settings/templates" class="nav-item" class:active={currentPath === '/settings/templates'}>
-						<span class="nav-icon">🎨</span> Billing Templates
-					</a>
-
-					<a href="/settings/templates/studio" class="nav-item" class:active={currentPath === '/settings/templates/studio'} style="color: #f472b6; font-weight: 600;">
-						<span class="nav-icon">🛠️</span> Bill Template Studio
-					</a>
-
-					<a href="/settings/developer" class="nav-item" class:active={currentPath === '/settings/developer'} style="color: #818cf8; font-weight: 600;">
-						<span class="nav-icon">⚡</span> Developer & API Keys
-					</a>
-				{/if}
+				{/each}
 
 				{#if currentUser?.is_super_admin}
 					<div style="font-size: 0.6875rem; font-weight: 700; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.05em; padding: 1rem 0.5rem 0.5rem 0.5rem;">
@@ -1262,19 +645,16 @@
 							></button>
 							<div class="workspace-popover animate-fade-in">
 								<div class="popover-header">
-									<span class="popover-title">SWITCH BUSINESS WORKSPACE</span>
-									<span class="popover-count">{workspacePresetsList.length} presets</span>
+									<span class="popover-title">SWITCH BUSINESS UNIT</span>
+									<span class="popover-count">{switchableWorkspaces.length} units</span>
 								</div>
 								<div class="popover-list">
-									{#each workspacePresetsList as p}
+									{#each switchableWorkspaces as p (p.id)}
 										<button
 											type="button"
 											class="workspace-item"
 											class:selected={activeWorkspacePreset === p.id}
-											onclick={() => {
-												setWorkspacePreset(p.id);
-												showWorkspaceMenu = false;
-											}}
+											onclick={() => switchWorkspace(p.id)}
 										>
 											<span class="item-icon">{p.icon}</span>
 											<div class="item-info">
@@ -1549,60 +929,6 @@
 		to { transform: rotate(360deg); }
 	}
 
-	/* Workspace Studio Sidebar Button */
-	.ws-studio-btn {
-		width: 100%;
-		background: linear-gradient(135deg, rgba(99, 102, 241, 0.18) 0%, rgba(168, 85, 247, 0.18) 100%);
-		border: 1px solid rgba(99, 102, 241, 0.35);
-		border-radius: 6px;
-		color: #e0e7ff;
-		font-size: 0.6875rem;
-		font-weight: 700;
-		padding: 0.4rem 0.5rem;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		cursor: pointer;
-		transition: all 0.15s ease;
-	}
-
-	.ws-studio-btn:hover {
-		background: linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(168, 85, 247, 0.3) 100%);
-		border-color: #818cf8;
-		box-shadow: 0 0 12px rgba(99, 102, 241, 0.25);
-		color: #ffffff;
-	}
-
-	/* Topbar Works Selector Pill */
-	.topbar-works-selector-pill {
-		display: flex;
-		align-items: center;
-		gap: 0.35rem;
-		background: rgba(30, 41, 59, 0.7);
-		border: 1px solid rgba(255, 255, 255, 0.12);
-		padding: 0.2rem 0.6rem;
-		border-radius: 6px;
-		cursor: pointer;
-		transition: all 0.15s ease;
-	}
-
-	.topbar-works-selector-pill:hover {
-		background: rgba(51, 65, 85, 0.9);
-		border-color: #818cf8;
-	}
-
-	.topbar-works-tag {
-		font-size: 0.6rem;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
-		background: rgba(99, 102, 241, 0.2);
-		color: #c7d2fe;
-		padding: 0.1rem 0.35rem;
-		border-radius: 4px;
-		border: 1px solid rgba(99, 102, 241, 0.3);
-	}
-
 	.nav-item {
 		display: flex;
 		align-items: center;
@@ -1633,34 +959,89 @@
 		display: inline-block;
 		width: 1.25rem;
 		text-align: center;
+		flex-shrink: 0;
 	}
 
-	/* Workspace Switcher Buttons in Sidebar */
-	.ws-btn {
-		background: rgba(30, 41, 59, 0.7);
-		border: 1px solid rgba(255, 255, 255, 0.08);
-		color: #94a3b8;
-		font-size: 0.6875rem;
-		font-weight: 600;
-		padding: 0.35rem 0.4rem;
-		border-radius: 6px;
-		cursor: pointer;
-		transition: all 0.15s ease;
-		text-align: center;
+	.nav-label {
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
-	.ws-btn:hover {
-		background: rgba(51, 65, 85, 0.8);
-		color: #f1f5f9;
-		border-color: rgba(99, 102, 241, 0.3);
+	.nav-lock {
+		font-size: 0.75rem;
+		opacity: 0.8;
+		flex-shrink: 0;
 	}
 
-	.ws-btn.active {
-		background: rgba(99, 102, 241, 0.2);
+	/* Primary (workspace landing) item — one consistent accent across all units */
+	.nav-item.primary {
+		background: var(--primary-light);
 		color: #a5b4fc;
-		border-color: #6366f1;
+		border-left: 3px solid #6366f1;
 		font-weight: 700;
-		box-shadow: 0 0 10px rgba(99, 102, 241, 0.25);
+	}
+
+	.nav-item.primary.active {
+		background: rgba(99, 102, 241, 0.22);
+	}
+
+	/* Collapsible nav group headers */
+	.nav-group-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.4rem;
+		padding: 0.75rem 0.5rem 0.25rem 0.5rem;
+	}
+
+	.nav-group-header:first-child {
+		padding-top: 0.25rem;
+	}
+
+	.nav-group-toggle {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		background: none;
+		border: none;
+		padding: 0;
+		cursor: pointer;
+		color: var(--text-muted);
+		font-size: 0.6875rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.nav-group-toggle:hover {
+		color: var(--text-secondary);
+	}
+
+	.nav-group-chevron {
+		font-size: 0.7rem;
+		transition: transform 0.15s ease;
+	}
+
+	.nav-group-chevron.collapsed {
+		transform: rotate(-90deg);
+	}
+
+	.nav-group-badge {
+		font-size: 0.625rem;
+		font-weight: 700;
+		background: rgba(56, 189, 248, 0.15);
+		color: #38bdf8;
+		padding: 0.1rem 0.4rem;
+		border-radius: 4px;
+		white-space: nowrap;
+	}
+
+	.nav-group-badge.next {
+		background: rgba(129, 140, 248, 0.15);
+		color: #a5b4fc;
 	}
 
 	/* ========================================================

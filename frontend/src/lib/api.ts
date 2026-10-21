@@ -8,6 +8,8 @@ export interface User {
 	role: string;
 	is_super_admin: boolean;
 	is_active: boolean;
+	current_business_unit_id?: string;
+	allowed_business_units?: string[];
 	last_login_at?: string;
 	created_at?: string;
 	updated_at?: string;
