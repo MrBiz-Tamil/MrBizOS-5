@@ -166,7 +166,12 @@ export const workspaces: Record<Exclude<WorkspacePreset, 'CUSTOM'>, Workspace> =
 					{ href: '/payments', label: 'Payments Received', icon: '💳', exact: true },
 					{ href: '/customers', label: 'Customers & Balances', icon: '👥', exact: true },
 					{ href: '/products', label: 'Products & Pricing', icon: '📦', exact: true },
-					{ href: '/inventory', label: 'Inventory Stock', icon: '📋', exact: true },
+					{ href: '/inventory', label: 'Inventory Stock', icon: '📋', exact: true }
+				]
+			},
+			{
+				label: 'Administration',
+				items: [
 					{ href: '/settings/templates', label: '17 Billing Templates', icon: '🎨', exact: true },
 					{ href: '/settings', label: 'Company Profile & QR', icon: '⚙️', exact: true }
 				]
@@ -183,21 +188,29 @@ export const workspaces: Record<Exclude<WorkspacePreset, 'CUSTOM'>, Workspace> =
 		landing: '/healthcare',
 		groups: [
 			{
-				label: 'Smart Healthcare OS',
+				label: 'Clinical Suite',
 				badge: '4 Workstations',
 				items: [
 					{ href: '/healthcare', label: 'Clinical Workstations (Rx/EMR)', icon: '🏥', primary: true },
-					{ href: '/billing', label: 'Quick Patient OPD Billing', icon: '⚡' },
 					{ href: '/pos', label: 'Pharmacy POS Dispenser', icon: '🛒' },
-					{ href: '/invoices', label: 'Invoices & Insurance Claims', icon: '📄' },
 					{ href: '/customers', label: 'Patient Records & History', icon: '👥', exact: true },
 					{ href: '/products', label: 'Pharmacy Formulary / Drugs', icon: '📦', exact: true },
 					{ href: '/inventory', label: 'Drug Batches & Expiry Dates', icon: '📋', exact: true },
 					{ href: '/inbox', label: 'Patient WhatsApp Helpline', icon: '💬' },
-					{ href: '/accounting', label: 'Hospital Accounts & P&L', icon: '📖' },
-					{ href: '/hrms', label: 'Doctors & Nursing Roster', icon: '👥' },
-					{ href: '/settings', label: 'Clinic Profile & Rx Header', icon: '⚙️', exact: true }
+					{ href: '/hrms', label: 'Doctors & Nursing Roster', icon: '👥' }
 				]
+			},
+			{
+				label: 'Finance & Billing',
+				items: [
+					{ href: '/billing', label: 'Quick Patient OPD Billing', icon: '⚡' },
+					{ href: '/invoices', label: 'Invoices & Insurance Claims', icon: '📄' },
+					{ href: '/accounting', label: 'Hospital Accounts & P&L', icon: '📖' }
+				]
+			},
+			{
+				label: 'Administration',
+				items: [{ href: '/settings', label: 'Clinic Profile & Rx Header', icon: '⚙️', exact: true }]
 			}
 		]
 	},
@@ -211,20 +224,28 @@ export const workspaces: Record<Exclude<WorkspacePreset, 'CUSTOM'>, Workspace> =
 		landing: '/travel',
 		groups: [
 			{
-				label: 'Travel & Tour Agency OS',
+				label: 'Agency Desk',
 				badge: 'GDS & DMC',
 				items: [
 					{ href: '/travel', label: 'Travel Agency Desk (PNR & Visa)', icon: '✈️', primary: true },
 					{ href: '/inbox', label: 'Omnichannel WhatsApp Leads', icon: '💬' },
 					{ href: '/bpo-voice', label: 'AI Voice Flight / Visa Bot', icon: '🎙️' },
+					{ href: '/journeys', label: 'Tour Itinerary Engine', icon: '🛤️' },
+					{ href: '/customers', label: 'Travelers & Passport DB', icon: '👥', exact: true }
+				]
+			},
+			{
+				label: 'Finance & Billing',
+				items: [
 					{ href: '/billing', label: 'Quick Tour Booking Bill', icon: '⚡' },
 					{ href: '/invoices', label: 'Tax Invoices & DMC Vouchers', icon: '📄' },
 					{ href: '/quotations', label: 'Custom Tour Quotations', icon: '📝' },
-					{ href: '/customers', label: 'Travelers & Passport DB', icon: '👥', exact: true },
-					{ href: '/journeys', label: 'Tour Itinerary Engine', icon: '🛤️' },
-					{ href: '/accounting', label: 'Tour Operator Ledger & P&L', icon: '📖' },
-					{ href: '/settings', label: 'Agency Setup & Airlines', icon: '⚙️', exact: true }
+					{ href: '/accounting', label: 'Tour Operator Ledger & P&L', icon: '📖' }
 				]
+			},
+			{
+				label: 'Administration',
+				items: [{ href: '/settings', label: 'Agency Setup & Airlines', icon: '⚙️', exact: true }]
 			}
 		]
 	},
@@ -238,20 +259,28 @@ export const workspaces: Record<Exclude<WorkspacePreset, 'CUSTOM'>, Workspace> =
 		landing: '/realestate',
 		groups: [
 			{
-				label: 'Real Estate OS',
+				label: 'Deals Desk',
 				badge: 'Plots & RERA',
 				items: [
 					{ href: '/realestate', label: '24-Plot Matrix & Site Visits', icon: '🏢', primary: true },
 					{ href: '/bpo-voice', label: 'AI Voice Site Visit Dialer', icon: '🎙️' },
 					{ href: '/inbox', label: 'Buyer WhatsApp & Inquiries', icon: '💬' },
 					{ href: '/projects', label: 'Layout Development Tasks', icon: '📁' },
+					{ href: '/customers', label: 'Property Buyers & Leads', icon: '👥', exact: true }
+				]
+			},
+			{
+				label: 'Finance & Billing',
+				items: [
 					{ href: '/billing', label: 'Plot Advance Token Receipt', icon: '⚡' },
 					{ href: '/invoices', label: 'Sales Invoices & Agreements', icon: '📄' },
 					{ href: '/quotations', label: 'Plot Cost Sheets & Quotations', icon: '📝' },
-					{ href: '/customers', label: 'Property Buyers & Leads', icon: '👥', exact: true },
-					{ href: '/accounting', label: 'Project Escrow & Land Ledger', icon: '📖' },
-					{ href: '/settings', label: 'Builder & RERA Setup', icon: '⚙️', exact: true }
+					{ href: '/accounting', label: 'Project Escrow & Land Ledger', icon: '📖' }
 				]
+			},
+			{
+				label: 'Administration',
+				items: [{ href: '/settings', label: 'Builder & RERA Setup', icon: '⚙️', exact: true }]
 			}
 		]
 	},
@@ -265,20 +294,28 @@ export const workspaces: Record<Exclude<WorkspacePreset, 'CUSTOM'>, Workspace> =
 		landing: '/projects',
 		groups: [
 			{
-				label: 'UTMS Project OS',
+				label: 'Delivery Desk',
 				badge: 'SLA Engine',
 				items: [
 					{ href: '/projects', label: 'UTMS Tasks & SLA Command Center', icon: '📁', primary: true },
-					{ href: '/billing', label: 'Milestone Billing Triggers', icon: '⚡' },
-					{ href: '/invoices', label: 'Client Milestone Invoices', icon: '📄' },
-					{ href: '/customers', label: 'Client SOW Accounts', icon: '👥', exact: true },
-					{ href: '/hrms', label: 'Timesheets & Team Payroll', icon: '👥' },
 					{ href: '/support', label: 'Client SLA Helpdesk', icon: '🎫' },
 					{ href: '/inbox', label: 'Omnichannel Client Inbox', icon: '💬' },
 					{ href: '/workflow', label: 'Autonomous AI Workflows', icon: '🤖' },
-					{ href: '/accounting', label: 'Consulting SOW Ledger & P&L', icon: '📖' },
-					{ href: '/settings', label: 'Agency Delivery Settings', icon: '⚙️', exact: true }
+					{ href: '/hrms', label: 'Timesheets & Team Payroll', icon: '👥' }
 				]
+			},
+			{
+				label: 'Finance & Billing',
+				items: [
+					{ href: '/billing', label: 'Milestone Billing Triggers', icon: '⚡' },
+					{ href: '/invoices', label: 'Client Milestone Invoices', icon: '📄' },
+					{ href: '/customers', label: 'Client SOW Accounts', icon: '👥', exact: true },
+					{ href: '/accounting', label: 'Consulting SOW Ledger & P&L', icon: '📖' }
+				]
+			},
+			{
+				label: 'Administration',
+				items: [{ href: '/settings', label: 'Agency Delivery Settings', icon: '⚙️', exact: true }]
 			}
 		]
 	},
@@ -292,19 +329,27 @@ export const workspaces: Record<Exclude<WorkspacePreset, 'CUSTOM'>, Workspace> =
 		landing: '/ecommerce',
 		groups: [
 			{
-				label: 'E-Commerce & POD OS',
+				label: 'Store Desk',
 				badge: 'Apparel & Labs',
 				items: [
 					{ href: '/ecommerce', label: 'Blank Matrix & Print Lab Queue', icon: '🛍️', primary: true },
 					{ href: '/pos', label: 'Retail Counter POS', icon: '🛒' },
-					{ href: '/billing', label: 'Quick Order Invoicing', icon: '⚡' },
-					{ href: '/procurement', label: '3-Way Blank Procurement', icon: '📦' },
 					{ href: '/inventory', label: 'Garment Stock & Color/Size', icon: '📋', exact: true },
 					{ href: '/trade/shipments', label: 'Courier Logistics & NDR', icon: '🚢' },
-					{ href: '/inbox', label: 'Omnichannel Buyer Support', icon: '💬' },
-					{ href: '/accounting', label: 'Store Financial Accounting', icon: '📖' },
-					{ href: '/settings', label: 'Print Lab & Store Settings', icon: '⚙️', exact: true }
+					{ href: '/inbox', label: 'Omnichannel Buyer Support', icon: '💬' }
 				]
+			},
+			{
+				label: 'Finance & Billing',
+				items: [
+					{ href: '/billing', label: 'Quick Order Invoicing', icon: '⚡' },
+					{ href: '/procurement', label: '3-Way Blank Procurement', icon: '📦' },
+					{ href: '/accounting', label: 'Store Financial Accounting', icon: '📖' }
+				]
+			},
+			{
+				label: 'Administration',
+				items: [{ href: '/settings', label: 'Print Lab & Store Settings', icon: '⚙️', exact: true }]
 			}
 		]
 	},
@@ -323,10 +368,20 @@ export const workspaces: Record<Exclude<WorkspacePreset, 'CUSTOM'>, Workspace> =
 					{ href: '/bpo-voice', label: 'AI Voice Agent BPO Desk', icon: '🎙️' },
 					{ href: '/support', label: 'Support Helpdesk & SLAs', icon: '🎫' },
 					{ href: '/journeys', label: 'Journey Lifecycle Engine', icon: '🛤️' },
-					{ href: '/projects', label: 'Projects & UTMS Tasks', icon: '📁' },
+					{ href: '/projects', label: 'Projects & UTMS Tasks', icon: '📁' }
+				]
+			},
+			{
+				label: 'Industry Desks',
+				items: [
 					{ href: '/realestate', label: 'Real Estate Deals', icon: '🏢' },
 					{ href: '/travel', label: 'Travel & Visa OS', icon: '✈️' },
-					{ href: '/healthcare', label: 'Smart Healthcare Hub', icon: '🏥' },
+					{ href: '/healthcare', label: 'Smart Healthcare Hub', icon: '🏥' }
+				]
+			},
+			{
+				label: 'Finance & Billing',
+				items: [
 					{ href: '/billing', label: 'Quick Billing Counter', icon: '⚡' },
 					{ href: '/customers', label: 'Customers & CRM', icon: '👥', exact: true }
 				]
@@ -342,19 +397,24 @@ export const workspaces: Record<Exclude<WorkspacePreset, 'CUSTOM'>, Workspace> =
 		landing: '/procurement',
 		groups: [
 			{
-				label: 'Supply Chain & Operations',
+				label: 'Supply Chain & Trade',
 				items: [
 					{ href: '/procurement', label: 'Procurement & 3-Way Match', icon: '📦', primary: true },
 					{ href: '/inventory', label: 'Inventory Stock & Batches', icon: '📋', exact: true },
 					{ href: '/trade/shipments', label: 'Export / Import Shipments', icon: '🚢' },
 					{ href: '/trade/export-invoice/new', label: 'New Export Invoice', icon: '🌍', match: '/trade/export-invoice' },
 					{ href: '/trade/settings', label: 'Trade Settings & Rates', icon: '💱', exact: true },
+					{ href: '/suppliers', label: 'Suppliers & Khata', icon: '🏭' }
+				]
+			},
+			{
+				label: 'Finance & Billing',
+				items: [
 					{ href: '/purchases', label: 'Purchase Bills', icon: '📥' },
 					{ href: '/products', label: 'Products & Pricing', icon: '📦', exact: true },
 					{ href: '/units', label: 'Units & Converter', icon: '⚖️', exact: true },
 					{ href: '/accounting/reconciliation', label: 'Bank Auto-Reconciliation', icon: '🏦' },
-					{ href: '/accounting', label: 'Audited Accounting', icon: '📖' },
-					{ href: '/suppliers', label: 'Suppliers & Khata', icon: '🏭' }
+					{ href: '/accounting', label: 'Audited Accounting', icon: '📖' }
 				]
 			}
 		]

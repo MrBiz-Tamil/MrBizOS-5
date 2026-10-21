@@ -460,35 +460,13 @@
 				</div>
 			</div>
 
-			<!-- Active Business Operating System Context Card (Unified) -->
-			<div style="margin: 0.6rem 0.75rem 0.4rem 0.75rem; background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 0.65rem 0.75rem; display: flex; flex-direction: column; gap: 0.4rem;">
-				<div style="display: flex; justify-content: space-between; align-items: center;">
-					<span style="font-size: 0.625rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em;">Active Business OS</span>
-					<button
-						type="button"
-						onclick={() => { showCommandPalette = true; commandSearch = ''; selectedCommandIndex = 0; }}
-						style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 4px; padding: 0.1rem 0.35rem; font-size: 0.65rem; color: #818cf8; cursor: pointer; font-family: var(--font-mono); display: flex; align-items: center; gap: 0.2rem;"
-						title="Quick Navigation (Ctrl+K)"
-					>
-						⌘K
-					</button>
+			<!-- Active business unit context (display only; the switcher lives in the topbar) -->
+			<div style="margin: 0.6rem 0.75rem 0.4rem 0.75rem; background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 0.6rem 0.7rem; display: flex; align-items: center; gap: 0.5rem;">
+				<span style="font-size: 1.15rem;">{currentWorkspaceLabel.icon}</span>
+				<div style="display: flex; flex-direction: column; min-width: 0;">
+					<span style="font-size: 0.55rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em;">Active Business Unit</span>
+					<span style="font-size: 0.8rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{currentWorkspaceLabel.name}</span>
 				</div>
-
-				<button
-					type="button"
-					onclick={() => (showWorkspaceMenu = !showWorkspaceMenu)}
-					style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 7px; padding: 0.4rem 0.6rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; width: 100%; transition: all 0.2s;"
-					title="Switch Active Business OS"
-				>
-					<div style="display: flex; align-items: center; gap: 0.45rem; min-width: 0; text-align: left;">
-						<span style="font-size: 1.05rem;">{currentWorkspaceLabel.icon}</span>
-						<div style="display: flex; flex-direction: column; min-width: 0;">
-							<span style="font-size: 0.78rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{currentWorkspaceLabel.name}</span>
-							<span style="font-size: 0.625rem; color: #38bdf8; font-weight: 600;">{currentWorkspaceLabel.badge}</span>
-						</div>
-					</div>
-					<span style="font-size: 0.75rem; color: #94a3b8; margin-left: 0.25rem;">▾</span>
-				</button>
 			</div>
 
 			<!-- Navigation Links -->
@@ -600,10 +578,6 @@
 							<span class="company-name">{currentTenant?.name || 'Private Enterprise'}</span>
 						</div>
 					{/if}
-
-					<span class="plan-pill {isNextPlan ? 'plan-next' : 'plan-basic'}">
-						{isNextPlan ? '💎 Next Plan' : '🌱 Basic'}
-					</span>
 				</div>
 
 				<!-- Center: Compact Universal Search + Single Unified Workspace Switcher -->
@@ -732,6 +706,12 @@
 									<div class="meta-fullname">{currentUser?.full_name || 'Executive Administrator'}</div>
 									<div class="meta-email font-mono">{currentUser?.email || 'admin@mrbiz.local'}</div>
 									<div class="meta-tenant">{currentTenant?.name || 'Global Business Group'}</div>
+									<a href="/settings/billing" class="meta-plan-row" onclick={() => (showProfileMenu = false)}>
+										<span class="plan-pill {isNextPlan ? 'plan-next' : 'plan-basic'}">
+											{isNextPlan ? '💎 Next Plan' : '🌱 Basic'}
+										</span>
+										<span class="meta-plan-manage">Manage →</span>
+									</a>
 								</div>
 								<div class="profile-links">
 									<a href="/settings" class="profile-link" onclick={() => (showProfileMenu = false)}>
@@ -1545,6 +1525,25 @@
 	.meta-tenant {
 		font-size: 0.7rem;
 		color: #818cf8;
+	}
+
+	.meta-plan-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+		margin-top: 0.6rem;
+		text-decoration: none;
+	}
+
+	.meta-plan-manage {
+		font-size: 0.7rem;
+		font-weight: 600;
+		color: #94a3b8;
+	}
+
+	.meta-plan-row:hover .meta-plan-manage {
+		color: #cbd5e1;
 	}
 
 	.profile-links {
