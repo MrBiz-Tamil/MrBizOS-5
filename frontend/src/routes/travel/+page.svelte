@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { travelGrpc } from '$lib/grpc';
+	import SharedWorkModal from '$lib/components/SharedWorkModal.svelte';
 
 	interface ItineraryDay {
 		day: number;
@@ -37,12 +38,154 @@
 		phone?: string;
 	}
 
-	let activeTab = $state<'packages' | 'visas' | 'calculator'>('packages');
+	interface Passenger {
+		name: string;
+		passportNo: string;
+		passportExpiry: string;
+		dob: string;
+		type: 'ADULT' | 'CHILD' | 'INFANT';
+		mealPreference: 'VEG' | 'JAIN' | 'NON_VEG';
+		wheelchair: boolean;
+	}
+
+	interface ActiveBooking {
+		id: string;
+		customerName: string;
+		customerPhone: string;
+		customerEmail: string;
+		destination: string;
+		packageTitle: string;
+		travelDates: string;
+		paxCount: number;
+		airlinePnr: string;
+		pnrDeadline: string;
+		hotelDmcRef: string;
+		hotelName: string;
+		visaStatus: 'NOT_REQUIRED' | 'SUBMITTED' | 'BIOMETRICS_DONE' | 'APPROVED' | 'STAMPED';
+		totalAmount: number;
+		advancePaid: number;
+		balanceDue: number;
+		invoiceNumber: string;
+		status: 'CONFIRMED' | 'OPERATIONS_HOLD' | 'IN_TRANSIT' | 'COMPLETED';
+		passengers: Passenger[];
+		readiness: {
+			hotelReconfirmed: boolean;
+			insuranceIssued: boolean;
+			webCheckInDone: boolean;
+			travelKitSent: boolean;
+		};
+	}
+
+	let activeTab = $state<'operations' | 'packages' | 'visas' | 'manifest' | 'calculator'>('operations');
 	let packages = $state<TourPackage[]>([]);
 	let applications = $state<VisaApplication[]>([]);
 	let loading = $state(true);
 	let error = $state('');
 	let statusMsg = $state('');
+
+	// Active Bookings in Agency Operations Pipeline
+	let activeBookings = $state<ActiveBooking[]>([
+		{
+			id: 'TRIP-2026-904',
+			customerName: 'Rahul Sharma & Family',
+			customerPhone: '+91 98401 23456',
+			customerEmail: 'rahul.sharma@techcorp.com',
+			destination: 'Dubai & Abu Dhabi, UAE',
+			packageTitle: 'Exotic Dubai Sky & Desert Safari 5D/4N',
+			travelDates: '14 Nov 2026 - 19 Nov 2026',
+			paxCount: 4,
+			airlinePnr: 'EK-521 (Emirates)',
+			pnrDeadline: 'Ticketing Done ✓',
+			hotelDmcRef: 'DMC-DXB-98421',
+			hotelName: 'JW Marriott Marquis Dubai (2 Deluxe Rooms)',
+			visaStatus: 'STAMPED',
+			totalAmount: 185000,
+			advancePaid: 95000,
+			balanceDue: 90000,
+			invoiceNumber: 'INV-TRA-202604',
+			status: 'CONFIRMED',
+			passengers: [
+				{ name: 'Rahul Sharma', passportNo: 'Z5829104', passportExpiry: '2031-08-14', dob: '1984-04-12', type: 'ADULT', mealPreference: 'VEG', wheelchair: false },
+				{ name: 'Pooja Sharma', passportNo: 'Z5829105', passportExpiry: '2031-08-14', dob: '1988-11-23', type: 'ADULT', mealPreference: 'JAIN', wheelchair: false },
+				{ name: 'Aarav Sharma', passportNo: 'Z9102834', passportExpiry: '2029-01-10', dob: '2016-06-05', type: 'CHILD', mealPreference: 'NON_VEG', wheelchair: false },
+				{ name: 'Ananya Sharma', passportNo: 'Z9102835', passportExpiry: '2029-01-10', dob: '2019-09-18', type: 'CHILD', mealPreference: 'VEG', wheelchair: false }
+			],
+			readiness: {
+				hotelReconfirmed: true,
+				insuranceIssued: true,
+				webCheckInDone: false, // 24h prior
+				travelKitSent: true
+			}
+		},
+		{
+			id: 'TRIP-2026-908',
+			customerName: 'Dr. V. Rajesh & Deepa',
+			customerPhone: '+91 98410 88990',
+			customerEmail: 'dr.rajesh@apollo.org',
+			destination: 'Bali & Nusa Penida, Indonesia',
+			packageTitle: 'Tropical Bali Luxury Villas 6D/5N',
+			travelDates: '22 Nov 2026 - 28 Nov 2026',
+			paxCount: 2,
+			airlinePnr: 'SQ-529 (Singapore Airlines)',
+			pnrDeadline: 'Hold Expires in 18 Hours ⚠️',
+			hotelDmcRef: 'DMC-DPS-1092',
+			hotelName: 'The Kayon Jungle Resort Ubud',
+			visaStatus: 'NOT_REQUIRED',
+			totalAmount: 142000,
+			advancePaid: 50000,
+			balanceDue: 92000,
+			invoiceNumber: 'INV-TRA-202608',
+			status: 'OPERATIONS_HOLD',
+			passengers: [
+				{ name: 'Dr. V. Rajesh', passportNo: 'K4920194', passportExpiry: '2030-05-19', dob: '1979-02-14', type: 'ADULT', mealPreference: 'VEG', wheelchair: false },
+				{ name: 'Deepa Rajesh', passportNo: 'K4920195', passportExpiry: '2030-05-19', dob: '1982-08-30', type: 'ADULT', mealPreference: 'VEG', wheelchair: false }
+			],
+			readiness: {
+				hotelReconfirmed: true,
+				insuranceIssued: false,
+				webCheckInDone: false,
+				travelKitSent: false
+			}
+		},
+		{
+			id: 'TRIP-2026-912',
+			customerName: 'K. Senthil Kumar & Friends',
+			customerPhone: '+91 94440 12345',
+			customerEmail: 'senthil@builders.in',
+			destination: 'Singapore & Sentosa Island',
+			packageTitle: 'Singapore Highlights & Universal Studios 4D/3N',
+			travelDates: '05 Dec 2026 - 09 Dec 2026',
+			paxCount: 6,
+			airlinePnr: '6E-1004 (IndiGo)',
+			pnrDeadline: 'Ticketing Done ✓',
+			hotelDmcRef: 'DMC-SIN-4091',
+			hotelName: 'Hotel Boss Singapore (3 Twin Rooms)',
+			visaStatus: 'BIOMETRICS_DONE',
+			totalAmount: 265000,
+			advancePaid: 150000,
+			balanceDue: 115000,
+			invoiceNumber: 'INV-TRA-202612',
+			status: 'CONFIRMED',
+			passengers: [
+				{ name: 'K. Senthil Kumar', passportNo: 'M1029384', passportExpiry: '2032-11-01', dob: '1975-03-20', type: 'ADULT', mealPreference: 'NON_VEG', wheelchair: false },
+				{ name: 'N. Murugan', passportNo: 'M1029385', passportExpiry: '2032-11-01', dob: '1976-07-15', type: 'ADULT', mealPreference: 'NON_VEG', wheelchair: false }
+			],
+			readiness: {
+				hotelReconfirmed: false,
+				insuranceIssued: true,
+				webCheckInDone: false,
+				travelKitSent: false
+			}
+		}
+	]);
+
+	// Shared Work Modal State
+	let showSharedWorkModal = $state(false);
+	let workBooking = $state<ActiveBooking | null>(null);
+
+	// Travel Kit Modal State
+	let showTravelKitModal = $state(false);
+	let kitBooking = $state<ActiveBooking | null>(null);
 
 	// Selected package for itinerary preview & print
 	let selectedPackage = $state<TourPackage | null>(null);
@@ -121,6 +264,28 @@
 	onMount(() => {
 		loadData();
 	});
+
+	function openSharedWorkHub(booking: ActiveBooking) {
+		workBooking = booking;
+		showSharedWorkModal = true;
+	}
+
+	function openTravelKit(booking: ActiveBooking) {
+		kitBooking = booking;
+		showTravelKitModal = true;
+	}
+
+	function toggleReadiness(bookingId: string, key: keyof ActiveBooking['readiness']) {
+		activeBookings = activeBookings.map(b => {
+			if (b.id === bookingId) {
+				const updated = { ...b.readiness, [key]: !b.readiness[key] };
+				return { ...b, readiness: updated };
+			}
+			return b;
+		});
+		statusMsg = `Pre-departure readiness updated.`;
+		setTimeout(() => statusMsg = '', 2000);
+	}
 
 	function openItineraryPreview(pkg: TourPackage) {
 		selectedPackage = pkg;
@@ -210,7 +375,7 @@
 </script>
 
 <svelte:head>
-	<title>Travel, Tours & Visa Management OS | MrBiz-OS</title>
+	<title>Travel, Tours &amp; Visa Management OS | MrBiz-OS</title>
 </svelte:head>
 
 <div class="travel-app">
@@ -218,11 +383,11 @@
 	<header class="app-header">
 		<div>
 			<div class="badge-row">
-				<span class="pill-badge">✈️ Global Travel & Visa OS</span>
+				<span class="pill-badge">✈️ Global Travel &amp; Visa OS</span>
 				<span class="status-indicator">● ConnectRPC v1 Connected</span>
 			</div>
-			<h1 class="main-title">Tour Operator & Immigration Desk</h1>
-			<p class="subtitle">Day-by-day itinerary designer, secret B2B margin calculator, Indian 206C(1G) TCS engine, and Embassy visa tracking.</p>
+			<h1 class="main-title">Tour Operator &amp; Immigration Operations Hub</h1>
+			<p class="subtitle">Multi-role shared works deck, airline PNR holds, DMC hotel voucher registry, pre-departure readiness, and Section 206C(1G) Indian TCS engine.</p>
 		</div>
 
 		<div class="header-actions">
@@ -246,24 +411,24 @@
 	<!-- Quick KPI Metric Cards -->
 	<div class="kpi-grid">
 		<div class="kpi-card">
-			<div class="kpi-label">Active Holiday Packages</div>
-			<div class="kpi-value">{packages.length}</div>
-			<div class="kpi-sub text-emerald-400">Domestic & International</div>
+			<div class="kpi-label">Active Trip Bookings</div>
+			<div class="kpi-value text-emerald-400">{activeBookings.length} Bookings</div>
+			<div class="kpi-sub">Total ₹{(activeBookings.reduce((sum, b) => sum + b.totalAmount, 0)).toLocaleString('en-IN')} Turn</div>
 		</div>
 		<div class="kpi-card">
-			<div class="kpi-label">Visa Applications Pipeline</div>
-			<div class="kpi-value text-sky-400">{applications.length}</div>
-			<div class="kpi-sub">Embassy & VFS Tracking</div>
+			<div class="kpi-label">Accounts Balance Due</div>
+			<div class="kpi-value text-amber-400">₹{(activeBookings.reduce((sum, b) => sum + b.balanceDue, 0)).toLocaleString('en-IN')}</div>
+			<div class="kpi-sub">GST &amp; TCS Invoices Synced</div>
 		</div>
 		<div class="kpi-card">
-			<div class="kpi-label">TCS Compliance Engine</div>
-			<div class="kpi-value text-amber-400">Sec 206C(1G)</div>
-			<div class="kpi-sub">5% / 20% Auto-TCS Slabs</div>
+			<div class="kpi-label">PNR / Voucher Holds</div>
+			<div class="kpi-value text-sky-400">1 Expiring &lt;24h</div>
+			<div class="kpi-sub">GDS Ticketing Deadlines</div>
 		</div>
 		<div class="kpi-card">
-			<div class="kpi-label">B2B Margin Guard</div>
-			<div class="kpi-value text-purple-400">{calcAgentMarkupPercent}% Markup</div>
-			<div class="kpi-sub">Confidential Net Costing</div>
+			<div class="kpi-label">Visa Cases Pipeline</div>
+			<div class="kpi-value text-purple-400">{applications.length} Applicants</div>
+			<div class="kpi-sub">VFS &amp; Consulate Biometrics</div>
 		</div>
 	</div>
 
@@ -271,30 +436,166 @@
 	<div class="nav-tabs">
 		<button 
 			class="tab-btn" 
+			class:active={activeTab === 'operations'} 
+			onclick={() => activeTab = 'operations'}>
+			⚡ Live Operations Deck &amp; Active Bookings ({activeBookings.length})
+		</button>
+		<button 
+			class="tab-btn" 
 			class:active={activeTab === 'packages'} 
 			onclick={() => activeTab = 'packages'}>
-			✈️ Holiday Packages & Itineraries ({packages.length})
+			✈️ Holiday Packages &amp; Itineraries ({packages.length})
 		</button>
 		<button 
 			class="tab-btn" 
 			class:active={activeTab === 'visas'} 
 			onclick={() => activeTab = 'visas'}>
-			🛂 Visa & Immigration Tracker ({applications.length})
+			🛂 Visa &amp; Immigration Pipeline ({applications.length})
+		</button>
+		<button 
+			class="tab-btn" 
+			class:active={activeTab === 'manifest'} 
+			onclick={() => activeTab = 'manifest'}>
+			👥 Passenger Manifest &amp; Rooming Lists
 		</button>
 		<button 
 			class="tab-btn" 
 			class:active={activeTab === 'calculator'} 
 			onclick={() => activeTab = 'calculator'}>
-			🧮 B2B Secret Margin & TCS 206C Calculator
+			🧮 B2B Secret Margin &amp; TCS 206C Calculator
 		</button>
 	</div>
+
+	<!-- TAB 0: LIVE OPERATIONS DECK & ACTIVE BOOKINGS (NEW HEARTBEAT) -->
+	{#if activeTab === 'operations'}
+		<div class="section-container">
+			<div class="section-header">
+				<div>
+					<h2 class="section-title">Active Travel Bookings &amp; Shared Team Cockpit</h2>
+					<p class="section-desc">Unified cross-team visibility connecting Sales, Ticketing, DMC Operations, Visa, and Accounts.</p>
+				</div>
+			</div>
+
+			<div class="bookings-grid">
+				{#each activeBookings as b}
+					<div class="booking-card">
+						<!-- Top Ribbon -->
+						<div class="booking-ribbon">
+							<div class="flex items-center gap-2">
+								<span class="booking-ref">{b.id}</span>
+								<span class="status-pill status-{b.status.toLowerCase()}">{b.status}</span>
+							</div>
+							<div class="booking-dates">📅 {b.travelDates}</div>
+						</div>
+
+						<!-- Core Info -->
+						<div class="booking-main">
+							<div class="customer-block">
+								<h3 class="cust-name">{b.customerName}</h3>
+								<div class="cust-meta">
+									<span>📱 {b.customerPhone}</span>
+									<span>👥 {b.paxCount} Travelers</span>
+								</div>
+								<div class="trip-title">🌴 {b.packageTitle}</div>
+							</div>
+
+							<div class="finance-block">
+								<div class="finance-total">₹{b.totalAmount.toLocaleString('en-IN')}</div>
+								<div class="finance-meta">
+									<span class="text-emerald-400">Paid: ₹{b.advancePaid.toLocaleString('en-IN')}</span> · 
+									<span class="text-rose-400 font-bold">Due: ₹{b.balanceDue.toLocaleString('en-IN')}</span>
+								</div>
+								<div class="invoice-ref">Invoice: #{b.invoiceNumber}</div>
+							</div>
+						</div>
+
+						<!-- Supplier PNR & Voucher Tracking -->
+						<div class="suppliers-grid">
+							<div class="supplier-cell">
+								<span class="sup-label">✈️ Airline PNR:</span>
+								<strong class="font-mono text-white">{b.airlinePnr}</strong>
+								<span class="sup-status" class:warn={b.pnrDeadline.includes('Expires')}>
+									{b.pnrDeadline}
+								</span>
+							</div>
+
+							<div class="supplier-cell">
+								<span class="sup-label">🏨 DMC Hotel Voucher:</span>
+								<strong class="font-mono text-sky-400">{b.hotelDmcRef}</strong>
+								<span class="sup-sub">{b.hotelName}</span>
+							</div>
+
+							<div class="supplier-cell">
+								<span class="sup-label">🛂 Visa Status:</span>
+								<strong class="font-semibold text-purple-400">{b.visaStatus}</strong>
+								<span class="sup-sub">Biometrics &amp; Passport Clear</span>
+							</div>
+						</div>
+
+						<!-- 48h/24h Pre-Departure Readiness Checklist -->
+						<div class="readiness-bar">
+							<div class="readiness-label">Pre-Departure Readiness Checklist:</div>
+							<div class="readiness-items">
+								<button 
+									type="button"
+									class="check-pill-interactive" 
+									class:done={b.readiness.hotelReconfirmed}
+									onclick={() => toggleReadiness(b.id, 'hotelReconfirmed')}>
+									{b.readiness.hotelReconfirmed ? '✓' : '○'} Hotel Reconfirmed (48h)
+								</button>
+
+								<button 
+									type="button"
+									class="check-pill-interactive" 
+									class:done={b.readiness.insuranceIssued}
+									onclick={() => toggleReadiness(b.id, 'insuranceIssued')}>
+									{b.readiness.insuranceIssued ? '✓' : '○'} Travel Insurance Issued
+								</button>
+
+								<button 
+									type="button"
+									class="check-pill-interactive" 
+									class:done={b.readiness.webCheckInDone}
+									onclick={() => toggleReadiness(b.id, 'webCheckInDone')}>
+									{b.readiness.webCheckInDone ? '✓' : '○'} Web Check-in (24h)
+								</button>
+
+								<button 
+									type="button"
+									class="check-pill-interactive" 
+									class:done={b.readiness.travelKitSent}
+									onclick={() => toggleReadiness(b.id, 'travelKitSent')}>
+									{b.readiness.travelKitSent ? '✓' : '○'} WhatsApp Kit Sent
+								</button>
+							</div>
+						</div>
+
+						<!-- Action Footer -->
+						<div class="booking-footer">
+							<div class="btn-group-footer">
+								<button class="btn btn-primary btn-sm" onclick={() => openSharedWorkHub(b)}>
+									⚡ Shared Works Hub (Billing &amp; Tasks)
+								</button>
+								<button class="btn btn-outline btn-sm" onclick={() => openTravelKit(b)}>
+									📜 Travel Kit &amp; Vouchers PDF
+								</button>
+								<a class="btn btn-whatsapp btn-sm" href="https://wa.me/{b.customerPhone.replace(/[^0-9]/g, '')}?text=Dear%20{encodeURIComponent(b.customerName)},%20update%20regarding%20your%20booking%20{b.id}" target="_blank">
+									💬 WhatsApp
+								</a>
+							</div>
+						</div>
+					</div>
+				{/each}
+			</div>
+		</div>
+	{/if}
 
 	<!-- TAB 1: TOUR PACKAGES -->
 	{#if activeTab === 'packages'}
 		<div class="section-container">
 			<div class="section-header">
 				<div>
-					<h2 class="section-title">Featured Itineraries & Tour Packages</h2>
+					<h2 class="section-title">Featured Itineraries &amp; Tour Packages</h2>
 					<p class="section-desc">Client proposals ready for 1-click WhatsApp share and PDF voucher printing.</p>
 				</div>
 				<button class="btn btn-outline" onclick={loadData}>🔄 Refresh</button>
@@ -326,6 +627,33 @@
 									<button class="btn-view" onclick={() => openItineraryPreview(pkg)}>
 										📜 View Itinerary
 									</button>
+									<button class="btn btn-primary btn-sm ml-2" onclick={() => {
+										workBooking = {
+											id: `TRIP-${Date.now().toString().slice(-4)}`,
+											customerName: 'Direct Walk-in / Inquirer',
+											customerPhone: '+91 98401 23456',
+											customerEmail: '',
+											destination: pkg.destination,
+											packageTitle: pkg.title,
+											travelDates: 'Upcoming Month',
+											paxCount: 2,
+											airlinePnr: 'PENDING_HOLD',
+											pnrDeadline: 'Hold 24h',
+											hotelDmcRef: 'PENDING_VOUCHER',
+											hotelName: 'Standard 4★ Hotel',
+											visaStatus: 'SUBMITTED',
+											totalAmount: Number(pkg.price) * 2,
+											advancePaid: Number(pkg.price),
+											balanceDue: Number(pkg.price),
+											invoiceNumber: `INV-${Date.now().toString().slice(-4)}`,
+											status: 'OPERATIONS_HOLD',
+											passengers: [],
+											readiness: { hotelReconfirmed: false, insuranceIssued: false, webCheckInDone: false, travelKitSent: false }
+										};
+										showSharedWorkModal = true;
+									}}>
+										⚡ Convert to Booking
+									</button>
 								</div>
 							</div>
 						</div>
@@ -340,7 +668,7 @@
 		<div class="section-container">
 			<div class="section-header">
 				<div>
-					<h2 class="section-title">Visa & Immigration Case Pipeline</h2>
+					<h2 class="section-title">Visa &amp; Immigration Case Pipeline</h2>
 					<p class="section-desc">Real-time status tracking, document completeness check, and biometrics scheduling.</p>
 				</div>
 				<button class="btn btn-primary" onclick={() => showNewVisaModal = true}>+ Log New Visa File</button>
@@ -405,12 +733,77 @@
 		</div>
 	{/if}
 
-	<!-- TAB 3: SECRET MARGIN & INDIAN TCS CALCULATOR -->
+	<!-- TAB 3: PASSENGER MANIFEST & ROOMING LISTS -->
+	{#if activeTab === 'manifest'}
+		<div class="section-container">
+			<div class="section-header">
+				<div>
+					<h2 class="section-title">Passenger Manifest &amp; Rooming Allocation Lists</h2>
+					<p class="section-desc">Critical passport bio details, birth dates, dietary requirements, and wheelchair assistance for airlines &amp; DMCs.</p>
+				</div>
+			</div>
+
+			<div class="space-y-6">
+				{#each activeBookings as b}
+					<div class="manifest-card">
+						<div class="manifest-header">
+							<div>
+								<div class="text-xs text-sky-400 font-bold uppercase">{b.id} · {b.packageTitle}</div>
+								<h3 class="text-lg font-bold text-white">Lead Pax: {b.customerName} ({b.paxCount} Travelers)</h3>
+							</div>
+							<div class="rooming-pill">
+								🏨 Hotel: {b.hotelName}
+							</div>
+						</div>
+
+						<table class="data-table mt-3">
+							<thead>
+								<tr>
+									<th>Traveler Name</th>
+									<th>Passenger Type</th>
+									<th>Passport No</th>
+									<th>Expiry Date</th>
+									<th>Date of Birth</th>
+									<th>Meal Preference</th>
+									<th>Special Requests</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each b.passengers as p}
+									<tr>
+										<td class="font-bold text-white">{p.name}</td>
+										<td>
+											<span class="badge status-submitted">{p.type}</span>
+										</td>
+										<td><span class="mono-badge">{p.passportNo}</span></td>
+										<td>{p.passportExpiry}</td>
+										<td>{p.dob}</td>
+										<td>
+											<span class="meal-tag meal-{p.mealPreference.toLowerCase()}">{p.mealPreference}</span>
+										</td>
+										<td>
+											{#if p.wheelchair}
+												<span class="text-amber-400 text-xs font-bold">♿ Wheelchair Requested</span>
+											{:else}
+												<span class="text-slate-500 text-xs">Standard</span>
+											{/if}
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				{/each}
+			</div>
+		</div>
+	{/if}
+
+	<!-- TAB 4: SECRET MARGIN & INDIAN TCS CALCULATOR -->
 	{#if activeTab === 'calculator'}
 		<div class="section-container">
 			<div class="section-header">
 				<div>
-					<h2 class="section-title">Secret B2B Margin & Section 206C(1G) TCS Engine</h2>
+					<h2 class="section-title">Secret B2B Margin &amp; Section 206C(1G) TCS Engine</h2>
 					<p class="section-desc">Strictly keep your vendor net procurement rates confidential while quoting full customer invoices with mandatory Indian TCS.</p>
 				</div>
 			</div>
@@ -447,7 +840,7 @@
 					</div>
 
 					<div class="form-row">
-						<label for="vendor-sightseeing">Sightseeing Entrances & Visa Fee:</label>
+						<label for="vendor-sightseeing">Sightseeing Entrances &amp; Visa Fee:</label>
 						<div class="input-prefix">
 							<span>₹</span>
 							<input id="vendor-sightseeing" type="number" bind:value={calcVendorSightseeing} />
@@ -544,7 +937,7 @@
 			<div class="modal-container printable-voucher">
 				<div class="modal-header">
 					<div>
-						<div class="text-xs text-sky-400 font-bold uppercase">Official Travel Voucher & Itinerary</div>
+						<div class="text-xs text-sky-400 font-bold uppercase">Official Travel Voucher &amp; Itinerary</div>
 						<h2 class="text-xl font-bold text-white">{selectedPackage.title}</h2>
 						<div class="text-xs text-slate-400">Destination: {selectedPackage.destination} · {selectedPackage.durationDays} Days</div>
 					</div>
@@ -585,6 +978,76 @@
 		</div>
 	{/if}
 
+	<!-- MODAL: TRAVEL KIT & VOUCHER VIEWER -->
+	{#if showTravelKitModal && kitBooking}
+		<div class="modal-backdrop">
+			<div class="modal-container max-w-2xl">
+				<div class="modal-header">
+					<div>
+						<div class="text-xs text-emerald-400 font-bold uppercase">Final Pre-Departure Travel Kit</div>
+						<h3 class="text-xl font-bold text-white">{kitBooking.packageTitle}</h3>
+						<div class="text-xs text-slate-400">Booking Ref: {kitBooking.id} · Lead: {kitBooking.customerName}</div>
+					</div>
+					<div class="flex gap-2">
+						<button class="btn btn-outline btn-sm" onclick={() => window.print()}>🖨️ Print Kit</button>
+						<button class="btn btn-secondary btn-sm" onclick={() => showTravelKitModal = false}>✕</button>
+					</div>
+				</div>
+
+				<div class="modal-body space-y-4">
+					<!-- Flight Ticket Card -->
+					<div class="p-4 bg-slate-900/80 rounded-lg border border-slate-700/80">
+						<div class="flex justify-between items-center mb-2">
+							<div class="font-bold text-white">✈️ E-Ticket &amp; Flight Confirmation</div>
+							<span class="font-mono text-emerald-400 font-bold">{kitBooking.airlinePnr}</span>
+						</div>
+						<div class="text-xs text-slate-300">Routing: Chennai (MAA) ➔ Dubai (DXB) · Emirates EK-521</div>
+						<div class="text-2xs text-slate-400 mt-1">Baggage: 30kg Check-in + 7kg Cabin. Terminal 3.</div>
+					</div>
+
+					<!-- Hotel Voucher Card -->
+					<div class="p-4 bg-slate-900/80 rounded-lg border border-slate-700/80">
+						<div class="flex justify-between items-center mb-2">
+							<div class="font-bold text-white">🏨 DMC Hotel Check-in Voucher</div>
+							<span class="font-mono text-sky-400 font-bold">{kitBooking.hotelDmcRef}</span>
+						</div>
+						<div class="text-xs text-slate-300">{kitBooking.hotelName}</div>
+						<div class="text-2xs text-slate-400 mt-1">Meal Plan: Daily Buffet Breakfast Included. Complimentary Wi-Fi.</div>
+					</div>
+
+					<!-- Emergency Concierge -->
+					<div class="p-3 bg-emerald-500/10 rounded border border-emerald-500/30 text-xs text-emerald-300 flex justify-between items-center">
+						<div>
+							<strong>24/7 On-Trip Concierge Desk:</strong>
+							<div>Local Airport Meet &amp; Greet: +971 50 123 4567 (Ahmed)</div>
+						</div>
+						<span class="text-xl">📞</span>
+					</div>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<!-- MODAL: SHARED WORK MODAL (DYNAMIC CROSS-MODULE HUB) -->
+	{#if showSharedWorkModal && workBooking}
+		<SharedWorkModal
+			businessDomain="TRAVEL"
+			referenceId={workBooking.id}
+			customerName={workBooking.customerName}
+			customerPhone={workBooking.customerPhone}
+			customerEmail={workBooking.customerEmail}
+			title={workBooking.packageTitle}
+			amount={workBooking.totalAmount}
+			taxRatePercent={5}
+			tcsRatePercent={5}
+			onClose={() => showSharedWorkModal = false}
+			onSuccess={(result) => {
+				statusMsg = `✅ Successfully created Invoice #${result.invoiceNumber} and dispatched ${result.tasksDispatched} tasks!`;
+				setTimeout(() => statusMsg = '', 5000);
+			}}
+		/>
+	{/if}
+
 	<!-- MODAL: NEW TOUR PACKAGE -->
 	{#if showNewPackageModal}
 		<div class="modal-backdrop">
@@ -596,7 +1059,7 @@
 				<div class="modal-body space-y-4">
 					<div>
 						<label class="input-label" for="pkg-title">Package Name / Headline</label>
-						<input id="pkg-title" class="text-input" type="text" bind:value={newPkgTitle} placeholder="e.g. Exotic Bali Beach & Kintamani 6D/5N" />
+						<input id="pkg-title" class="text-input" type="text" bind:value={newPkgTitle} placeholder="e.g. Exotic Bali Beach &amp; Kintamani 6D/5N" />
 					</div>
 					<div class="grid grid-cols-2 gap-3">
 						<div>
@@ -615,7 +1078,7 @@
 				</div>
 				<div class="modal-footer">
 					<button class="btn btn-secondary" onclick={() => showNewPackageModal = false}>Cancel</button>
-					<button class="btn btn-primary" onclick={handleCreatePackage}>Save & Publish Package</button>
+					<button class="btn btn-primary" onclick={handleCreatePackage}>Save &amp; Publish Package</button>
 				</div>
 			</div>
 		</div>
@@ -671,7 +1134,7 @@
 						<div class="font-bold text-sky-400">Embassies Mandatory Document Verification</div>
 						<label class="flex items-center gap-2">
 							<input type="checkbox" bind:checked={newVisaChecklist.passportSixMonthsValid} />
-							<span>Original Passport with &gt; 6 months validity & 2 blank pages</span>
+							<span>Original Passport with &gt; 6 months validity &amp; 2 blank pages</span>
 						</label>
 						<label class="flex items-center gap-2">
 							<input type="checkbox" bind:checked={newVisaChecklist.photographWhiteBg} />
@@ -679,7 +1142,7 @@
 						</label>
 						<label class="flex items-center gap-2">
 							<input type="checkbox" bind:checked={newVisaChecklist.bankStatementSixMonths} />
-							<span>6-month bank statement with branch seal & minimum balance</span>
+							<span>6-month bank statement with branch seal &amp; minimum balance</span>
 						</label>
 						<label class="flex items-center gap-2">
 							<input type="checkbox" bind:checked={newVisaChecklist.travelInsurance} />
@@ -767,40 +1230,30 @@
 		gap: 0.5rem;
 		transition: all 0.15s ease;
 		border: none;
+		text-decoration: none;
 	}
 
-	.btn-primary {
-		background: #0284c7;
-		color: #ffffff;
-	}
-	.btn-primary:hover {
-		background: #0369a1;
+	.btn-sm {
+		font-size: 0.75rem;
+		padding: 0.35rem 0.65rem;
+		border-radius: 6px;
 	}
 
-	.btn-secondary {
-		background: #334155;
-		color: #f1f5f9;
-	}
-	.btn-secondary:hover {
-		background: #475569;
-	}
+	.btn-primary { background: #0284c7; color: #ffffff; }
+	.btn-primary:hover { background: #0369a1; }
+	.btn-secondary { background: #334155; color: #f1f5f9; }
+	.btn-secondary:hover { background: #475569; }
+	.btn-success { background: #10b981; color: #ffffff; }
+	.btn-success:hover { background: #059669; }
+	.btn-whatsapp { background: #25d366; color: #000000; font-weight: 700; }
+	.btn-whatsapp:hover { background: #20ba59; }
 
 	.btn-outline {
 		background: transparent;
 		border: 1px solid rgba(255, 255, 255, 0.2);
 		color: #cbd5e1;
 	}
-	.btn-outline:hover {
-		background: rgba(255, 255, 255, 0.05);
-	}
-
-	.btn-success {
-		background: #10b981;
-		color: #ffffff;
-	}
-	.btn-success:hover {
-		background: #059669;
-	}
+	.btn-outline:hover { background: rgba(255, 255, 255, 0.05); }
 
 	.status-alert {
 		background: rgba(16, 185, 129, 0.15);
@@ -861,6 +1314,7 @@
 		gap: 0.5rem;
 		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 		margin-bottom: 1.5rem;
+		overflow-x: auto;
 	}
 
 	.tab-btn {
@@ -872,6 +1326,7 @@
 		padding: 0.75rem 1.25rem;
 		border-bottom: 2px solid transparent;
 		cursor: pointer;
+		white-space: nowrap;
 		transition: all 0.15s ease;
 	}
 
@@ -880,9 +1335,7 @@
 		border-bottom-color: #38bdf8;
 	}
 
-	.tab-btn:hover:not(.active) {
-		color: #cbd5e1;
-	}
+	.tab-btn:hover:not(.active) { color: #cbd5e1; }
 
 	/* SECTION CONTAINER */
 	.section-container {
@@ -908,6 +1361,322 @@
 	.section-desc {
 		font-size: 0.8125rem;
 		color: #94a3b8;
+	}
+
+	/* BOOKINGS GRID */
+	.bookings-grid {
+		display: flex;
+		flex-direction: column;
+		gap: 1.25rem;
+	}
+
+	.booking-card {
+		background: #0f172a;
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		border-radius: 12px;
+		padding: 1.5rem;
+		display: flex;
+		flex-direction: column;
+		gap: 1.25rem;
+		transition: border-color 0.15s;
+	}
+
+	.booking-card:hover {
+		border-color: rgba(56, 189, 248, 0.3);
+	}
+
+	.booking-ribbon {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+		padding-bottom: 0.75rem;
+	}
+
+	.booking-ref {
+		font-family: monospace;
+		font-weight: 800;
+		color: #38bdf8;
+		font-size: 0.875rem;
+		background: rgba(56, 189, 248, 0.1);
+		padding: 0.2rem 0.5rem;
+		border-radius: 4px;
+	}
+
+	.booking-dates {
+		font-size: 0.8125rem;
+		color: #cbd5e1;
+		font-weight: 600;
+	}
+
+	.booking-main {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		flex-wrap: wrap;
+		gap: 1rem;
+	}
+
+	.cust-name {
+		font-size: 1.25rem;
+		font-weight: 800;
+		color: #ffffff;
+	}
+
+	.cust-meta {
+		display: flex;
+		gap: 1rem;
+		font-size: 0.75rem;
+		color: #94a3b8;
+		margin: 0.25rem 0;
+	}
+
+	.trip-title {
+		font-size: 0.875rem;
+		color: #38bdf8;
+		font-weight: 600;
+	}
+
+	.finance-block {
+		text-align: right;
+	}
+
+	.finance-total {
+		font-size: 1.5rem;
+		font-weight: 800;
+		color: #ffffff;
+	}
+
+	.finance-meta {
+		font-size: 0.75rem;
+		margin: 0.2rem 0;
+	}
+
+	.invoice-ref {
+		font-size: 0.6875rem;
+		color: #94a3b8;
+		font-family: monospace;
+	}
+
+	/* SUPPLIERS GRID */
+	.suppliers-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+		gap: 1rem;
+		background: rgba(255, 255, 255, 0.02);
+		border: 1px solid rgba(255, 255, 255, 0.06);
+		border-radius: 8px;
+		padding: 1rem;
+	}
+
+	.supplier-cell {
+		display: flex;
+		flex-direction: column;
+		gap: 0.2rem;
+		font-size: 0.75rem;
+	}
+
+	.sup-label {
+		color: #94a3b8;
+		font-weight: 600;
+	}
+
+	.sup-status {
+		font-size: 0.6875rem;
+		color: #34d399;
+	}
+
+	.sup-status.warn {
+		color: #f87171;
+		font-weight: 700;
+	}
+
+	.sup-sub {
+		color: #cbd5e1;
+		font-size: 0.6875rem;
+	}
+
+	/* READINESS BAR */
+	.readiness-bar {
+		background: #1e293b;
+		border-radius: 8px;
+		padding: 0.875rem 1rem;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+	}
+
+	.readiness-label {
+		font-size: 0.75rem;
+		font-weight: 700;
+		color: #cbd5e1;
+	}
+
+	.readiness-items {
+		display: flex;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+
+	.check-pill-interactive {
+		background: rgba(255, 255, 255, 0.05);
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		color: #94a3b8;
+		font-size: 0.6875rem;
+		font-weight: 600;
+		padding: 0.3rem 0.6rem;
+		border-radius: 6px;
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+
+	.check-pill-interactive.done {
+		background: rgba(16, 185, 129, 0.15);
+		border-color: rgba(16, 185, 129, 0.3);
+		color: #34d399;
+	}
+
+	.booking-footer {
+		display: flex;
+		justify-content: flex-end;
+		border-top: 1px solid rgba(255, 255, 255, 0.06);
+		padding-top: 0.75rem;
+	}
+
+	.btn-group-footer {
+		display: flex;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+
+	/* MANIFEST CARD */
+	.manifest-card {
+		background: #0f172a;
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		border-radius: 12px;
+		padding: 1.25rem;
+	}
+
+	.manifest-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+		padding-bottom: 0.75rem;
+	}
+
+	.rooming-pill {
+		font-size: 0.75rem;
+		color: #fbbf24;
+		background: rgba(245, 158, 11, 0.1);
+		padding: 0.25rem 0.6rem;
+		border-radius: 6px;
+	}
+
+	.meal-tag {
+		font-size: 0.6875rem;
+		font-weight: 700;
+		padding: 0.15rem 0.4rem;
+		border-radius: 4px;
+	}
+	.meal-veg { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+	.meal-jain { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+	.meal-non_veg { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+
+	/* DATA TABLE */
+	.table-card {
+		overflow-x: auto;
+	}
+
+	.data-table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 0.8125rem;
+		text-align: left;
+	}
+
+	.data-table th {
+		background: rgba(0, 0, 0, 0.25);
+		color: #94a3b8;
+		font-weight: 600;
+		padding: 0.75rem 1rem;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+	}
+
+	.data-table td {
+		padding: 0.875rem 1rem;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+		color: #cbd5e1;
+	}
+
+	.mono-badge {
+		font-family: monospace;
+		background: #0f172a;
+		padding: 0.2rem 0.4rem;
+		border-radius: 4px;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		color: #f8fafc;
+	}
+
+	.country-cell {
+		font-weight: 600;
+		color: #f1f5f9;
+	}
+
+	.checklist-pills {
+		display: flex;
+		gap: 0.35rem;
+		flex-wrap: wrap;
+	}
+
+	.check-pill {
+		font-size: 0.6875rem;
+		padding: 0.15rem 0.4rem;
+		border-radius: 4px;
+		background: rgba(255, 255, 255, 0.05);
+		color: #94a3b8;
+	}
+
+	.check-pill.done {
+		background: rgba(16, 185, 129, 0.15);
+		color: #34d399;
+	}
+
+	.status-pill {
+		font-size: 0.6875rem;
+		font-weight: 700;
+		padding: 0.2rem 0.5rem;
+		border-radius: 6px;
+		text-transform: uppercase;
+	}
+	.status-confirmed { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+	.status-operations_hold { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+	.status-in_transit { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+	.status-completed { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+
+	.status-badge {
+		font-size: 0.6875rem;
+		font-weight: 700;
+		padding: 0.25rem 0.6rem;
+		border-radius: 6px;
+		text-transform: uppercase;
+	}
+
+	.status-submitted { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+	.status-under_review { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+	.status-biometrics_done { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+	.status-visa_approved { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+	.status-rejected { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+
+	.status-select {
+		background: #0f172a;
+		border: 1px solid rgba(255, 255, 255, 0.15);
+		color: #f1f5f9;
+		padding: 0.3rem 0.5rem;
+		border-radius: 6px;
+		font-size: 0.75rem;
 	}
 
 	/* PACKAGES GRID */
@@ -1013,92 +1782,6 @@
 		cursor: pointer;
 	}
 
-	.btn-view:hover {
-		background: rgba(56, 189, 248, 0.25);
-	}
-
-	/* DATA TABLE */
-	.table-card {
-		overflow-x: auto;
-	}
-
-	.data-table {
-		width: 100%;
-		border-collapse: collapse;
-		font-size: 0.8125rem;
-		text-align: left;
-	}
-
-	.data-table th {
-		background: rgba(0, 0, 0, 0.25);
-		color: #94a3b8;
-		font-weight: 600;
-		padding: 0.75rem 1rem;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-	}
-
-	.data-table td {
-		padding: 0.875rem 1rem;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-		color: #cbd5e1;
-	}
-
-	.mono-badge {
-		font-family: monospace;
-		background: #0f172a;
-		padding: 0.2rem 0.4rem;
-		border-radius: 4px;
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		color: #f8fafc;
-	}
-
-	.country-cell {
-		font-weight: 600;
-		color: #f1f5f9;
-	}
-
-	.checklist-pills {
-		display: flex;
-		gap: 0.35rem;
-		flex-wrap: wrap;
-	}
-
-	.check-pill {
-		font-size: 0.6875rem;
-		padding: 0.15rem 0.4rem;
-		border-radius: 4px;
-		background: rgba(255, 255, 255, 0.05);
-		color: #94a3b8;
-	}
-
-	.check-pill.done {
-		background: rgba(16, 185, 129, 0.15);
-		color: #34d399;
-	}
-
-	.status-badge {
-		font-size: 0.6875rem;
-		font-weight: 700;
-		padding: 0.25rem 0.6rem;
-		border-radius: 6px;
-		text-transform: uppercase;
-	}
-
-	.status-submitted { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
-	.status-under_review { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
-	.status-biometrics_done { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
-	.status-visa_approved { background: rgba(16, 185, 129, 0.15); color: #34d399; }
-	.status-rejected { background: rgba(239, 68, 68, 0.15); color: #f87171; }
-
-	.status-select {
-		background: #0f172a;
-		border: 1px solid rgba(255, 255, 255, 0.15);
-		color: #f1f5f9;
-		padding: 0.3rem 0.5rem;
-		border-radius: 6px;
-		font-size: 0.75rem;
-	}
-
 	/* CALCULATOR GRID */
 	.calc-grid {
 		display: grid;
@@ -1135,16 +1818,8 @@
 		margin-bottom: 1.25rem;
 	}
 
-	.form-row {
-		margin-bottom: 1rem;
-	}
-
-	.form-row label {
-		display: block;
-		font-size: 0.8125rem;
-		color: #94a3b8;
-		margin-bottom: 0.35rem;
-	}
+	.form-row { margin-bottom: 1rem; }
+	.form-row label { display: block; font-size: 0.8125rem; color: #94a3b8; margin-bottom: 0.35rem; }
 
 	.input-prefix {
 		display: flex;
@@ -1155,11 +1830,7 @@
 		padding: 0 0.75rem;
 	}
 
-	.input-prefix span {
-		color: #94a3b8;
-		font-weight: 600;
-	}
-
+	.input-prefix span { color: #94a3b8; font-weight: 600; }
 	.input-prefix input {
 		width: 100%;
 		background: transparent;
@@ -1183,22 +1854,10 @@
 		color: #cbd5e1;
 	}
 
-	.mono-num {
-		font-family: monospace;
-		font-size: 1.125rem;
-		font-weight: 700;
-		color: #ffffff;
-	}
+	.mono-num { font-family: monospace; font-size: 1.125rem; font-weight: 700; color: #ffffff; }
 
-	.quotation-card {
-		border-color: rgba(56, 189, 248, 0.3);
-	}
-
-	.quotation-body {
-		display: flex;
-		flex-direction: column;
-		gap: 1.25rem;
-	}
+	.quotation-card { border-color: rgba(56, 189, 248, 0.3); }
+	.quotation-body { display: flex; flex-direction: column; gap: 1.25rem; }
 
 	.quote-line {
 		display: flex;
@@ -1215,27 +1874,9 @@
 		border: 1px solid rgba(255, 255, 255, 0.06);
 	}
 
-	.label-bold {
-		font-size: 0.8125rem;
-		font-weight: 700;
-		color: #f1f5f9;
-		margin-bottom: 0.6rem;
-	}
-
-	.radio-group {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.radio-label {
-		display: flex;
-		align-items: center;
-		gap: 0.6rem;
-		font-size: 0.8125rem;
-		color: #cbd5e1;
-		cursor: pointer;
-	}
+	.label-bold { font-size: 0.8125rem; font-weight: 700; color: #f1f5f9; margin-bottom: 0.6rem; }
+	.radio-group { display: flex; flex-direction: column; gap: 0.5rem; }
+	.radio-label { display: flex; align-items: center; gap: 0.6rem; font-size: 0.8125rem; color: #cbd5e1; cursor: pointer; }
 
 	.tcs-breakdown-box {
 		background: rgba(245, 158, 11, 0.1);
@@ -1258,7 +1899,7 @@
 	.modal-backdrop {
 		position: fixed;
 		inset: 0;
-		background: rgba(0, 0, 0, 0.8);
+		background: rgba(0, 0, 0, 0.85);
 		backdrop-filter: blur(4px);
 		display: flex;
 		align-items: center;
@@ -1295,14 +1936,7 @@
 		margin-top: 1.5rem;
 	}
 
-	.input-label {
-		display: block;
-		font-size: 0.75rem;
-		font-weight: 600;
-		color: #94a3b8;
-		margin-bottom: 0.35rem;
-	}
-
+	.input-label { display: block; font-size: 0.75rem; font-weight: 600; color: #94a3b8; margin-bottom: 0.35rem; }
 	.text-input {
 		width: 100%;
 		padding: 0.6rem 0.75rem;
@@ -1314,13 +1948,7 @@
 	}
 
 	/* ITINERARY TIMELINE */
-	.itinerary-timeline {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-		margin-bottom: 1.5rem;
-	}
-
+	.itinerary-timeline { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem; }
 	.timeline-day {
 		display: flex;
 		gap: 1rem;
@@ -1341,29 +1969,10 @@
 		white-space: nowrap;
 	}
 
-	.day-content {
-		flex: 1;
-	}
-
-	.day-title {
-		font-size: 1rem;
-		font-weight: 700;
-		color: #ffffff;
-		margin-bottom: 0.25rem;
-	}
-
-	.day-activities {
-		font-size: 0.8125rem;
-		color: #94a3b8;
-		margin-bottom: 0.5rem;
-	}
-
-	.day-meta {
-		display: flex;
-		gap: 1rem;
-		font-size: 0.75rem;
-		color: #38bdf8;
-	}
+	.day-content { flex: 1; }
+	.day-title { font-size: 1rem; font-weight: 700; color: #ffffff; margin-bottom: 0.25rem; }
+	.day-activities { font-size: 0.8125rem; color: #94a3b8; margin-bottom: 0.5rem; }
+	.day-meta { display: flex; gap: 1rem; font-size: 0.75rem; color: #38bdf8; }
 
 	.voucher-footer {
 		display: flex;
@@ -1375,34 +1984,14 @@
 		padding: 1rem;
 	}
 
-	.voucher-notes {
-		font-size: 0.75rem;
-		color: #94a3b8;
-		line-height: 1.4;
-	}
+	.voucher-notes { font-size: 0.75rem; color: #94a3b8; line-height: 1.4; }
 
 	/* PRINT STYLES */
 	@media print {
-		.no-print, .nav-tabs, .kpi-grid, .app-header {
-			display: none !important;
-		}
-		body {
-			background: white !important;
-			color: black !important;
-		}
-		.printable-voucher {
-			background: white !important;
-			color: black !important;
-			border: 1px solid #ccc !important;
-			box-shadow: none !important;
-		}
-		.timeline-day, .voucher-footer {
-			background: white !important;
-			border: 1px solid #eee !important;
-			color: black !important;
-		}
-		.day-title, .day-activities {
-			color: black !important;
-		}
+		.no-print, .nav-tabs, .kpi-grid, .app-header { display: none !important; }
+		body { background: white !important; color: black !important; }
+		.printable-voucher { background: white !important; color: black !important; border: 1px solid #ccc !important; box-shadow: none !important; }
+		.timeline-day, .voucher-footer { background: white !important; border: 1px solid #eee !important; color: black !important; }
+		.day-title, .day-activities { color: black !important; }
 	}
 </style>
