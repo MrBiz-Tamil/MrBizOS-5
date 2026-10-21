@@ -238,7 +238,7 @@
 			icon: '🚢',
 			badge: 'Customs & FX',
 			badgeColor: '#e11d48',
-			href: '/trade/shipments',
+			href: '/trade',
 			summary: 'Commercial invoices, packing lists, sea/air cargo manifests, multi-currency conversions, and customs filing records.',
 			features: ['Multi-Currency Invoicing', 'Container & B/L Tracking', 'Live Foreign Exchange (FX)', 'Packing List Generation'],
 			stats: 'Customs Compliant'
