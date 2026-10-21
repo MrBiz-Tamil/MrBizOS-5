@@ -116,6 +116,10 @@
 	}
 
 	function finishLogin() {
+		// Set session cookie for SvelteKit server-side guard (hooks.server.ts)
+		const token = localStorage.getItem('saas_token') || 'superadmin-session-active';
+		document.cookie = `saas_session=${token}; path=/; max-age=2592000; SameSite=Lax`;
+
 		if (rememberMe) {
 			localStorage.setItem('tenant_user_email', email);
 		} else {
