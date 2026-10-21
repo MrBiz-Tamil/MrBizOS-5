@@ -94,20 +94,25 @@ export const healthcareGrpc = {
 	listAppointments: (params = {}) => callRpc('healthcare.v1.HealthcareService', 'ListAppointments', params),
 	bookAppointment: (req: any) => callRpc('healthcare.v1.HealthcareService', 'BookAppointment', req),
 	createPrescription: (req: any) => callRpc('healthcare.v1.HealthcareService', 'CreatePrescription', req),
+	updateAppointmentStatus: (req: any) => callRpc('healthcare.v1.HealthcareService', 'UpdateAppointmentStatus', req),
 };
 
 // 2. Travel & Visa Service Client
 export const travelGrpc = {
 	listTourPackages: (params = {}) => callRpc('travel.v1.TravelService', 'ListTourPackages', params),
+	createTourPackage: (req: any) => callRpc('travel.v1.TravelService', 'CreateTourPackage', req),
 	listVisaApplications: (params = {}) => callRpc('travel.v1.TravelService', 'ListVisaApplications', params),
 	submitVisaApplication: (req: any) => callRpc('travel.v1.TravelService', 'SubmitVisaApplication', req),
+	updateVisaStatus: (req: any) => callRpc('travel.v1.TravelService', 'UpdateVisaStatus', req),
 };
 
 // 3. Real Estate Service Client
 export const realestateGrpc = {
 	listProperties: (params = {}) => callRpc('realestate.v1.RealEstateService', 'ListProperties', params),
+	createProperty: (req: any) => callRpc('realestate.v1.RealEstateService', 'CreateProperty', req),
 	scheduleSiteVisit: (req: any) => callRpc('realestate.v1.RealEstateService', 'ScheduleSiteVisit', req),
 	listSiteVisits: (params = {}) => callRpc('realestate.v1.RealEstateService', 'ListSiteVisits', params),
+	createDeal: (req: any) => callRpc('realestate.v1.RealEstateService', 'CreatePropertyDeal', req),
 	listDeals: (params = {}) => callRpc('realestate.v1.RealEstateService', 'ListPropertyDeals', params),
 };
 
