@@ -45,6 +45,13 @@
 		igstTotal?: string;
 		templateId?: string;
 		paperSize?: string;
+		vehicleNumber?: string;
+		deliveryPlace?: string;
+		grossWeight?: string;
+		netWeight?: string;
+		poNumber?: string;
+		lrNumber?: string;
+		ewayBill?: string;
 		items?: InvoiceItem[];
 	}
 
@@ -270,9 +277,104 @@
 		`upi://pay?pa=mrbiz@upi&pn=MrBizStore&am=${payableAmount}&cu=INR&tn=BillPayment`
 	);
 
+	// ── 🏗️ Blue Metal Quarry & Weighbridge System ──────────────────────────────
+	let isQuarryMode = $state(false);
+	let lorryNumber = $state('TN 38 AB 1234');
+	let grossWeightKg = $state('28650');
+	let tareWeightKg = $state('8450');
+	let netWeightTons = $derived.by(() => {
+		const g = parseFloat(grossWeightKg) || 0;
+		const t = parseFloat(tareWeightKg) || 0;
+		if (g > t) {
+			return ((g - t) / 1000).toFixed(2);
+		}
+		return '20.20';
+	});
+	let deliveryPlace = $state('Bypass Flyover Pier #12');
+	let poNumber = $state('PO-QUARRY-9821');
+	let lrNumber = $state('LR-6621');
+	let ewayBill = $state('331298457891');
+	let driverName = $state('K. Murugan');
+	let driverPhone = $state('+91 94431 23456');
+	let transitPassNo = $state('TP-2026-0941');
+
+	interface QuarryMaterial {
+		name: string;
+		hsn: string;
+		rate: string;
+		unit: string;
+		taxRate: string;
+		icon: string;
+		desc: string;
+	}
+
+	const quarryMaterials: QuarryMaterial[] = [
+		{ name: '20mm Blue Metal (Jally)', hsn: '25171010', rate: '550.00', unit: 'MT', taxRate: '5', icon: '🪨', desc: 'Concrete Slab & Columns' },
+		{ name: '40mm Blue Metal (Ballast)', hsn: '25171010', rate: '480.00', unit: 'MT', taxRate: '5', icon: '🪨', desc: 'Railway & Heavy Foundation' },
+		{ name: '12mm Blue Metal', hsn: '25171010', rate: '580.00', unit: 'MT', taxRate: '5', icon: '🪨', desc: 'Plastering & Interlock Pavers' },
+		{ name: '6mm Chipped Gravel', hsn: '25171010', rate: '620.00', unit: 'MT', taxRate: '5', icon: '🪨', desc: 'Bitumen Road Works' },
+		{ name: 'M-Sand (Manufactured Sand)', hsn: '25051010', rate: '650.00', unit: 'MT', taxRate: '5', icon: '🏖️', desc: 'IS 383 Concreting Sand' },
+		{ name: 'P-Sand (Plastering Sand)', hsn: '25051010', rate: '750.00', unit: 'MT', taxRate: '5', icon: '🏖️', desc: 'Smooth Super-Fine Plaster' },
+		{ name: 'GSB (Granular Sub Base)', hsn: '25171020', rate: '380.00', unit: 'MT', taxRate: '5', icon: '🛣️', desc: 'Highway Sub-Base Grading' },
+		{ name: 'Wet Mix Macadam (WMM)', hsn: '25171020', rate: '420.00', unit: 'MT', taxRate: '5', icon: '🛣️', desc: 'Moist Base Mix' },
+		{ name: 'Quarry Dust / Stone Powder', hsn: '25171010', rate: '320.00', unit: 'MT', taxRate: '5', icon: '🌪️', desc: 'Hollow Brick & Paver Base' }
+	];
+
+	function applyQuarryMaterial(mat: QuarryMaterial) {
+		selectedTemplateId = '11';
+		items = [
+			{
+				productId: `BM-${mat.hsn}`,
+				itemDescription: mat.name,
+				hsnSac: mat.hsn,
+				quantity: netWeightTons,
+				unitCode: mat.unit,
+				unitPrice: mat.rate,
+				discountRate: '0',
+				taxRate: mat.taxRate
+			}
+		];
+		billNotes = `Vehicle No: ${lorryNumber} | Gross: ${grossWeightKg} kg, Tare: ${tareWeightKg} kg, Net: ${netWeightTons} MT | Pass: ${transitPassNo} | Delivery: ${deliveryPlace}`;
+		bannerMessage = `🪨 Loaded ${mat.name} (${netWeightTons} MT @ ₹${mat.rate}/MT) with Template 11!`;
+		setTimeout(() => (bannerMessage = null), 4000);
+	}
+
+	function syncNetTonnageToItems() {
+		if (items.length > 0) {
+			items[0].quantity = netWeightTons;
+			bannerMessage = `⚖️ Updated line item quantity to weighbridge net weight: ${netWeightTons} MT`;
+			setTimeout(() => (bannerMessage = null), 3000);
+		}
+	}
+
+	function toggleQuarryMode() {
+		isQuarryMode = !isQuarryMode;
+		if (isQuarryMode) {
+			selectedTemplateId = '11';
+			businessSubtitle = 'Quarry, Aggregates & Ready-Mix Transport';
+			customerName = 'Bypass Infrastructure Pvt Ltd';
+			supplyState = 'Tamil Nadu (33)';
+			applyQuarryMaterial(quarryMaterials[0]);
+			bannerMessage = '🏗️ Blue Metals & Quarry Weighbridge Mode activated (Template 11 Active)!';
+		} else {
+			selectedTemplateId = '1';
+			businessSubtitle = 'Wholesale & Retail Commercial Trading';
+			customerName = 'Cash Walk-in Customer';
+			supplyState = 'Maharashtra (27)';
+			bannerMessage = '🔄 General Retail / Express Mode restored.';
+		}
+		setTimeout(() => (bannerMessage = null), 4000);
+	}
+
 	onMount(async () => {
 		if (typeof localStorage !== 'undefined') {
 			billingOnlyMode = localStorage.getItem('mrbiz_billing_only_mode') === 'true';
+		}
+		if (typeof window !== 'undefined') {
+			const params = new URLSearchParams(window.location.search);
+			if (params.get('mode') === 'quarry' || params.get('template') === '11') {
+				toggleQuarryMode();
+			}
 		}
 		await loadBillingData();
 		await loadTenantTemplate();
@@ -383,6 +485,13 @@
 					igstTotal: i.igst_total,
 					templateId: i.template_id || '1',
 					paperSize: i.paper_size || 'A4',
+					vehicleNumber: i.vehicle_number,
+					deliveryPlace: i.delivery_place,
+					grossWeight: i.gross_weight,
+					netWeight: i.net_weight,
+					poNumber: i.po_number,
+					lrNumber: i.lr_number,
+					ewayBill: i.eway_bill,
 					items: i.items?.map((it: any) => ({
 						id: it.id,
 						productId: it.product_id,
@@ -461,6 +570,13 @@
 				notes: billNotes,
 				template_id: selectedTemplateId,
 				paper_size: selectedPaperSize,
+				vehicle_number: isQuarryMode ? lorryNumber : '',
+				delivery_place: isQuarryMode ? deliveryPlace : '',
+				gross_weight: isQuarryMode ? grossWeightKg + ' kg' : '',
+				net_weight: isQuarryMode ? netWeightTons + ' MT' : '',
+				po_number: isQuarryMode ? poNumber : '',
+				lr_number: isQuarryMode ? lrNumber : '',
+				eway_bill: isQuarryMode ? ewayBill : '',
 				template_options_json: JSON.stringify({
 					primary_color: brandColor,
 					show_bank: showBankDetails,
@@ -501,7 +617,12 @@
 			paymentMode
 		};
 
-		const text = `Hello ${targetInv.customerName}, here is your bill *${targetInv.invoiceNumber}* from MrBiz-OS Store.\nTotal Amount: ₹${targetInv.grandTotal}\nBalance Due: ₹${targetInv.balanceDue}\nPayment Link: https://mrbiz.app/pay/${targetInv.invoiceNumber}\nThank you!`;
+		let text = '';
+		if (isQuarryMode) {
+			text = `🚚 *WEIGHMENT DELIVERY CHALLAN (DC)*\n*${company.name || 'Sri Krishna Blue Metals'}*\n------------------------------\n*Bill No:* ${targetInv.invoiceNumber}\n*Lorry No:* ${lorryNumber}\n*Driver:* ${driverName} (${driverPhone})\n*Material:* ${items[0]?.itemDescription || 'Blue Metal'}\n*Gross Wt:* ${grossWeightKg} kg\n*Tare Wt:* ${tareWeightKg} kg\n*Net Tonnage:* ${netWeightTons} MT\n*Total Amount:* ₹${targetInv.grandTotal} (Incl. GST)\n*Site / Unloading:* ${deliveryPlace}\n*E-Way Bill:* ${ewayBill}\n*Permit No:* ${transitPassNo}\n------------------------------\nThank you for choosing us!`;
+		} else {
+			text = `Hello ${targetInv.customerName}, here is your bill *${targetInv.invoiceNumber}* from MrBiz-OS Store.\nTotal Amount: ₹${targetInv.grandTotal}\nBalance Due: ₹${targetInv.balanceDue}\nPayment Link: https://mrbiz.app/pay/${targetInv.invoiceNumber}\nThank you!`;
+		}
 		const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
 		window.open(url, '_blank');
 	}
@@ -570,6 +691,13 @@
 				shipping_address: 'Main Market, Station Road, Mumbai 400001',
 				utgst_total: '0.00',
 				notes: 'Thank you for choosing MrBiz-OS.',
+				vehicle_number: inv.vehicleNumber || (isQuarryMode ? lorryNumber : ''),
+				delivery_place: inv.deliveryPlace || (isQuarryMode ? deliveryPlace : ''),
+				gross_weight: inv.grossWeight || (isQuarryMode ? grossWeightKg + ' kg' : ''),
+				net_weight: inv.netWeight || (isQuarryMode ? netWeightTons + ' MT' : ''),
+				po_number: inv.poNumber || (isQuarryMode ? poNumber : ''),
+				lr_number: inv.lrNumber || (isQuarryMode ? lrNumber : ''),
+				eway_bill: inv.ewayBill || (isQuarryMode ? ewayBill : ''),
 				items: inv.items?.map((it, idx) => ({
 					id: it.id || String(idx),
 					invoice_id: inv.id,
@@ -621,10 +749,17 @@
 				balance_due: calculatedDue,
 				supply_state: supplyState,
 				is_inter_state: isInterState,
-				billing_address: 'Walk-in Counter, MrBiz Store',
-				shipping_address: 'Walk-in Counter, MrBiz Store',
+				billing_address: isQuarryMode ? `Delivery Site: ${deliveryPlace}` : 'Walk-in Counter, MrBiz Store',
+				shipping_address: isQuarryMode ? deliveryPlace : 'Walk-in Counter, MrBiz Store',
 				utgst_total: '0.00',
 				notes: billNotes,
+				vehicle_number: isQuarryMode ? lorryNumber : '',
+				delivery_place: isQuarryMode ? deliveryPlace : '',
+				gross_weight: isQuarryMode ? grossWeightKg + ' kg' : '',
+				net_weight: isQuarryMode ? netWeightTons + ' MT' : '',
+				po_number: isQuarryMode ? poNumber : '',
+				lr_number: isQuarryMode ? lrNumber : '',
+				eway_bill: isQuarryMode ? ewayBill : '',
 				items: items.map((it, idx) => ({
 					id: String(idx + 1),
 					invoice_id: 'draft',
@@ -689,6 +824,15 @@
 		</div>
 
 		<div class="header-actions">
+			<button
+				class="quarry-toggle-btn"
+				class:active={isQuarryMode}
+				onclick={toggleQuarryMode}
+				title="Toggle Blue Metals & Quarry Weighbridge Station"
+			>
+				{isQuarryMode ? '🏗️ Quarry Mode: ON (Template 11)' : '🏗️ Blue Metals Quarry Mode'}
+			</button>
+
 			<button
 				class="mode-toggle-btn"
 				class:active={billingOnlyMode}
@@ -778,6 +922,90 @@
 		<div class="bill-workbench">
 			<!-- Left: Customer & Items -->
 			<div class="bill-main">
+				<!-- 🏗️ Dedicated Blue Metals & Weighbridge Station -->
+				{#if isQuarryMode}
+					<div class="card quarry-station-card">
+						<div class="quarry-header">
+							<div class="quarry-title">
+								<div class="quarry-badge-row">
+									<span class="quarry-badge">🏭 BLUE METALS WEIGHBRIDGE</span>
+									<span class="quarry-subbadge">Template 11 Heavy Grid Active</span>
+								</div>
+								<h3>Quarry Weighbridge & Material Dispatch Station</h3>
+								<p>Real-time Tonnage computation, Lorry Trip Pass, and authentic Indian quarry GST billing</p>
+							</div>
+							<div class="weighbridge-digital-display">
+								<span class="display-label">NET TONNAGE</span>
+								<span class="display-value">{netWeightTons} <small>MT</small></span>
+								<span class="display-sub">Gross: {grossWeightKg} kg • Tare: {tareWeightKg} kg</span>
+							</div>
+						</div>
+
+						<!-- Weighbridge Weight & Lorry Matrix -->
+						<div class="quarry-form-grid">
+							<div class="form-group">
+								<label for="lorryNum">🚛 Lorry / Vehicle Number</label>
+								<input id="lorryNum" type="text" bind:value={lorryNumber} placeholder="e.g. TN 38 AB 1234" />
+							</div>
+
+							<div class="form-group">
+								<label for="grossWt">Gross Weight (Loaded kg)</label>
+								<input id="grossWt" type="number" bind:value={grossWeightKg} oninput={syncNetTonnageToItems} placeholder="e.g. 28650" />
+							</div>
+
+							<div class="form-group">
+								<label for="tareWt">Tare Weight (Empty kg)</label>
+								<input id="tareWt" type="number" bind:value={tareWeightKg} oninput={syncNetTonnageToItems} placeholder="e.g. 8450" />
+							</div>
+
+							<div class="form-group">
+								<label for="delPlace">📍 Unloading Site / Location</label>
+								<input id="delPlace" type="text" bind:value={deliveryPlace} placeholder="e.g. Bypass Flyover Pier #12" />
+							</div>
+
+							<div class="form-group">
+								<label for="transitPass">📜 Mineral Transit Pass / Permit No</label>
+								<input id="transitPass" type="text" bind:value={transitPassNo} placeholder="e.g. TP-2026-0941" />
+							</div>
+
+							<div class="form-group">
+								<label for="driverContact">👤 Driver Name & Mobile</label>
+								<input id="driverContact" type="text" bind:value={driverName} placeholder="e.g. K. Murugan (+91 94431 23456)" />
+							</div>
+
+							<div class="form-group">
+								<label for="ewayNum">📄 E-Way Bill Number</label>
+								<input id="ewayNum" type="text" bind:value={ewayBill} placeholder="12-digit E-Way Bill" />
+							</div>
+
+							<div class="form-group">
+								<label for="poNum">📋 P.O. / Work Order Ref</label>
+								<input id="poNum" type="text" bind:value={poNumber} placeholder="e.g. PO-ROAD-442" />
+							</div>
+						</div>
+
+						<!-- 1-Click Blue Metal Materials Palette -->
+						<div class="materials-palette-wrapper">
+							<div class="palette-header">
+								<span class="palette-title">🪨 Quick-Add Quarry Materials (Auto-Calculates at {netWeightTons} MT):</span>
+								<span class="palette-hint">Click any grade to instantly populate bill</span>
+							</div>
+							<div class="quarry-materials-grid">
+								{#each quarryMaterials as mat}
+									<button type="button" class="material-chip" onclick={() => applyQuarryMaterial(mat)}>
+										<span class="mat-icon">{mat.icon}</span>
+										<div class="mat-info">
+											<span class="mat-name">{mat.name}</span>
+											<span class="mat-meta">₹{mat.rate}/MT • HSN {mat.hsn} • {mat.taxRate}% GST</span>
+										</div>
+										<span class="mat-add-badge">+ Apply</span>
+									</button>
+								{/each}
+							</div>
+						</div>
+					</div>
+				{/if}
+
 				<!-- Customer Details Card -->
 				<div class="card customer-card">
 					<div class="card-header">
@@ -1522,7 +1750,14 @@
 							terms: defaultTerms,
 							jurisdictionCity: defaultJurisdiction,
 							interestRate: defaultInterestRate,
-							returnPolicy: defaultReturnPolicy
+							returnPolicy: defaultReturnPolicy,
+							vehicleNumber: isQuarryMode ? lorryNumber : (previewInvoiceData?.vehicle_number || ''),
+							deliveryPlace: isQuarryMode ? deliveryPlace : (previewInvoiceData?.delivery_place || ''),
+							grossWeight: isQuarryMode ? grossWeightKg + ' kg' : (previewInvoiceData?.gross_weight || ''),
+							netWeight: isQuarryMode ? netWeightTons + ' MT' : (previewInvoiceData?.net_weight || ''),
+							poNumber: isQuarryMode ? poNumber : (previewInvoiceData?.po_number || ''),
+							lrNumber: isQuarryMode ? lrNumber : (previewInvoiceData?.lr_number || ''),
+							ewayBill: isQuarryMode ? ewayBill : (previewInvoiceData?.eway_bill || '')
 						}}
 					/>
 				</div>
@@ -2670,5 +2905,298 @@
 		border-radius: 6px;
 		font-size: 0.8125rem;
 		margin-bottom: 1rem;
+	}
+
+	/* ── 🏗️ Blue Metals & Quarry Weighbridge Station UI ── */
+	.quarry-toggle-btn {
+		background: linear-gradient(135deg, rgba(14, 165, 233, 0.2), rgba(2, 132, 199, 0.3));
+		color: #38bdf8;
+		border: 1px solid rgba(56, 189, 248, 0.4);
+		padding: 0.45rem 0.95rem;
+		border-radius: 8px;
+		font-size: 0.8125rem;
+		font-weight: 700;
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+		box-shadow: 0 2px 8px rgba(2, 132, 199, 0.2);
+	}
+
+	.quarry-toggle-btn:hover {
+		background: linear-gradient(135deg, rgba(14, 165, 233, 0.35), rgba(2, 132, 199, 0.5));
+		border-color: #38bdf8;
+		transform: translateY(-1px);
+		box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+	}
+
+	.quarry-toggle-btn.active {
+		background: linear-gradient(135deg, #0284c7, #0369a1);
+		color: #ffffff;
+		border-color: #38bdf8;
+		box-shadow: 0 0 15px rgba(56, 189, 248, 0.5);
+	}
+
+	.quarry-station-card {
+		background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%);
+		border: 1px solid rgba(56, 189, 248, 0.35);
+		border-radius: 12px;
+		padding: 1.5rem;
+		margin-bottom: 1.5rem;
+		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 20px rgba(2, 132, 199, 0.15);
+		position: relative;
+		overflow: hidden;
+	}
+
+	.quarry-station-card::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 3px;
+		background: linear-gradient(90deg, #0284c7, #38bdf8, #f59e0b, #10b981);
+	}
+
+	.quarry-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		gap: 1.5rem;
+		flex-wrap: wrap;
+		padding-bottom: 1.25rem;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+		margin-bottom: 1.25rem;
+	}
+
+	.quarry-title {
+		flex: 1;
+		min-width: 280px;
+	}
+
+	.quarry-badge-row {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		margin-bottom: 0.45rem;
+	}
+
+	.quarry-badge {
+		background: rgba(2, 132, 199, 0.25);
+		color: #38bdf8;
+		border: 1px solid rgba(56, 189, 248, 0.5);
+		padding: 0.2rem 0.6rem;
+		border-radius: 999px;
+		font-size: 0.7rem;
+		font-weight: 800;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+	}
+
+	.quarry-subbadge {
+		background: rgba(245, 158, 11, 0.2);
+		color: #fbbf24;
+		border: 1px solid rgba(245, 158, 11, 0.4);
+		padding: 0.2rem 0.55rem;
+		border-radius: 999px;
+		font-size: 0.7rem;
+		font-weight: 700;
+	}
+
+	.quarry-title h3 {
+		font-size: 1.25rem;
+		font-weight: 800;
+		color: #ffffff;
+		margin: 0 0 0.25rem 0;
+		letter-spacing: -0.02em;
+	}
+
+	.quarry-title p {
+		font-size: 0.8125rem;
+		color: #94a3b8;
+		margin: 0;
+	}
+
+	/* Weighbridge Digital Phosphor Display */
+	.weighbridge-digital-display {
+		background: #020617;
+		border: 2px solid #0284c7;
+		border-radius: 8px;
+		padding: 0.75rem 1.25rem;
+		min-width: 240px;
+		text-align: right;
+		box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.8), 0 0 15px rgba(2, 132, 199, 0.3);
+		position: relative;
+	}
+
+	.display-label {
+		display: block;
+		font-size: 0.6875rem;
+		font-weight: 800;
+		letter-spacing: 0.1em;
+		color: #64748b;
+		text-transform: uppercase;
+	}
+
+	.display-value {
+		display: block;
+		font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+		font-size: 2.25rem;
+		font-weight: 900;
+		color: #38bdf8;
+		line-height: 1.1;
+		margin: 0.15rem 0;
+		text-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
+	}
+
+	.display-value small {
+		font-size: 1.125rem;
+		color: #0284c7;
+		font-weight: 700;
+	}
+
+	.display-sub {
+		display: block;
+		font-size: 0.6875rem;
+		color: #94a3b8;
+		font-family: ui-monospace, SFMono-Regular, monospace;
+	}
+
+	.quarry-form-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+		gap: 1rem;
+		margin-bottom: 1.25rem;
+	}
+
+	.quarry-form-grid label {
+		font-size: 0.75rem;
+		font-weight: 700;
+		color: #cbd5e1;
+		margin-bottom: 0.35rem;
+		display: flex;
+		align-items: center;
+		gap: 0.3rem;
+	}
+
+	.quarry-form-grid input {
+		background: rgba(15, 23, 42, 0.85);
+		border: 1px solid rgba(255, 255, 255, 0.12);
+		color: #ffffff;
+		padding: 0.55rem 0.75rem;
+		border-radius: 6px;
+		font-size: 0.875rem;
+		font-weight: 600;
+		width: 100%;
+		transition: all 0.2s;
+	}
+
+	.quarry-form-grid input:focus {
+		outline: none;
+		border-color: #38bdf8;
+		background: rgba(15, 23, 42, 1);
+		box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+	}
+
+	/* Materials Palette */
+	.materials-palette-wrapper {
+		background: rgba(15, 23, 42, 0.65);
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		border-radius: 8px;
+		padding: 1rem;
+	}
+
+	.palette-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 0.75rem;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+
+	.palette-title {
+		font-size: 0.8125rem;
+		font-weight: 700;
+		color: #e2e8f0;
+	}
+
+	.palette-hint {
+		font-size: 0.6875rem;
+		color: #38bdf8;
+		font-weight: 600;
+	}
+
+	.quarry-materials-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+		gap: 0.65rem;
+	}
+
+	.material-chip {
+		background: rgba(30, 41, 59, 0.75);
+		border: 1px solid rgba(255, 255, 255, 0.09);
+		border-radius: 8px;
+		padding: 0.65rem 0.85rem;
+		display: flex;
+		align-items: center;
+		gap: 0.65rem;
+		cursor: pointer;
+		text-align: left;
+		transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+		color: #ffffff;
+		position: relative;
+	}
+
+	.material-chip:hover {
+		background: rgba(30, 41, 59, 1);
+		border-color: #38bdf8;
+		transform: translateY(-2px);
+		box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+	}
+
+	.mat-icon {
+		font-size: 1.35rem;
+		flex-shrink: 0;
+	}
+
+	.mat-info {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.mat-name {
+		display: block;
+		font-size: 0.8125rem;
+		font-weight: 700;
+		color: #f8fafc;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.mat-meta {
+		display: block;
+		font-size: 0.6875rem;
+		color: #94a3b8;
+		margin-top: 0.1rem;
+		font-family: ui-monospace, SFMono-Regular, monospace;
+	}
+
+	.mat-add-badge {
+		background: rgba(56, 189, 248, 0.15);
+		color: #38bdf8;
+		font-size: 0.6875rem;
+		font-weight: 700;
+		padding: 0.2rem 0.45rem;
+		border-radius: 4px;
+		flex-shrink: 0;
+		transition: all 0.2s;
+	}
+
+	.material-chip:hover .mat-add-badge {
+		background: #0284c7;
+		color: #ffffff;
 	}
 </style>

@@ -4,12 +4,16 @@ import (
 	"log"
 	"os"
 
+	"github.com/joho/godotenv"
+
 	"drayya-core/internal/automigrate"
 	"drayya-core/internal/database"
 	"drayya-core/internal/grpcserver"
 )
 
 func main() {
+	_ = godotenv.Load(".env")
+
 	port := os.Getenv("GRPC_PORT")
 	if port == "" {
 		port = "8080"

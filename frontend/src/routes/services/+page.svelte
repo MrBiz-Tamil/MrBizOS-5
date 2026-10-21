@@ -242,6 +242,20 @@
 			summary: 'Commercial invoices, packing lists, sea/air cargo manifests, multi-currency conversions, and customs filing records.',
 			features: ['Multi-Currency Invoicing', 'Container & B/L Tracking', 'Live Foreign Exchange (FX)', 'Packing List Generation'],
 			stats: 'Customs Compliant'
+		},
+		// 17. Blue Metals & Quarry Weighbridge Billing
+		{
+			id: 'quarry-billing',
+			title: 'Blue Metals & Quarry Weighbridge',
+			category: 'VERTICALS',
+			categoryLabel: 'Industry Verticals',
+			icon: '🏗️',
+			badge: 'Template 11 Active',
+			badgeColor: '#0284c7',
+			href: '/billing?mode=quarry',
+			summary: 'Automated Gross-Tare-Net weighbridge tonnage billing, Lorry trip pass, mineral transit challan, and heavy boxed Indian quarry GST.',
+			features: ['Gross & Tare Digital Weighbridge', '20mm/40mm/M-Sand Quick Palette', 'Lorry Trip Pass & Mineral Challan', 'Heavy Grid Template 11 Print'],
+			stats: 'Weighbridge Instant DC'
 		}
 	];
 

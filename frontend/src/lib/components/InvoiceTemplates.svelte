@@ -1590,10 +1590,6 @@
 		</div>
 
 	<!-- ====================================================================
-	     TEMPLATE 11: INDUSTRIAL BLUEMETALS & TRANSPORT GST (HEAVY GRID)
-	     Matches authentic Indian blue metals, quarry, transport & materials tax bill
-	     ==================================================================== -->
-	<!-- ====================================================================
 	     TEMPLATE 12: HOSTEL / LODGING GUEST FOLIO
 	     Stay details (room/bed, check-in/out, nights) + room-charge & services table
 	     Field mapping: Room/Bed = counter_number, Booking Ref = project_name,
@@ -2491,7 +2487,11 @@
 			</div>
 		</div>
 
-	{:else}
+	<!-- ====================================================================
+	     TEMPLATE 11: INDUSTRIAL BLUEMETALS & TRANSPORT GST (HEAVY GRID)
+	     Matches authentic Indian blue metals, quarry, transport & materials tax bill
+	     ==================================================================== -->
+	{:else if templateId === '11'}
 		{@const compStateCode = getStateCode(company?.gstin, company?.state || 'Tamil Nadu')}
 		{@const compPan = getPanNumber(company?.gstin)}
 		{@const custStateCode = getStateCode(invoice?.customer_gstin, invoice?.supply_state || company?.state || 'Tamil Nadu')}
