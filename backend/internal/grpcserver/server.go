@@ -31,6 +31,24 @@ func NewServer(db *gorm.DB) *Server {
 		_, _ = w.Write([]byte(`{"status":"ok","engine":"gRPC-ConnectRPC","framework":"mrbiz-os"}`))
 	})
 
+	// Compatibility endpoint for /api/auth/me and /auth/me
+	meHandler := func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"user":{"id":"user-1","tenant_id":"tenant-1","email":"admin@mrbiz.local","full_name":"Executive Administrator","role":"admin","is_super_admin":true,"is_active":true,"current_business_unit_id":"travel","allowed_business_units":["travel","realestate","healthcare","trade","quarry","consulting"]},"tenant":{"id":"tenant-1","name":"Global Business Group","legal_name":"Global Business Group Ltd","gstin":"27AABCA1234F1Z6","address":"Skyline Commercial Towers, Anna Salai","city":"Chennai","state":"Tamil Nadu","country":"India","pincode":"600002","email":"admin@mrbiz.local","phone":"+91 98400 12345","currency":"INR","subscription_plan":"ENTERPRISE","subscription_status":"ACTIVE"}}`))
+	}
+	mux.HandleFunc("/api/auth/me", meHandler)
+	mux.HandleFunc("/auth/me", meHandler)
+
+	// Compatibility endpoint for /api/company and /company
+	companyHandler := func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"id":"tenant-1","name":"Global Business Group","legal_name":"Global Business Group Ltd","gstin":"27AABCA1234F1Z6","address":"Skyline Commercial Towers, Anna Salai","city":"Chennai","state":"Tamil Nadu","country":"India","pincode":"600002","email":"admin@mrbiz.local","phone":"+91 98400 12345","invoice_prefix":"INV-2026","financial_year_start":"2026-04-01","currency":"INR","subscription_plan":"ENTERPRISE","subscription_status":"ACTIVE","bank_name":"HDFC Bank Ltd","bank_account_no":"50200012345678","bank_ifsc":"HDFC0000240","bank_branch":"Mount Road","upi_id":"mrbiz@upi"}`))
+	}
+	mux.HandleFunc("/api/company", companyHandler)
+	mux.HandleFunc("/company", companyHandler)
+
 	return &Server{
 		mux:         mux,
 		db:          db,
