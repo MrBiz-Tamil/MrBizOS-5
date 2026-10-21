@@ -100,7 +100,8 @@
 		{ id: '14', name: '14. Pharmacy / Medical Store', category: 'Pharmacies, Chemists & Medical Stores', desc: 'Drug licence header, patient & prescribing doctor, per-line batch / expiry / MRP with short-expiry flag, MRP savings, GST slab summary, Schedule H notice and pharmacist signature.', badge: 'Pharma' },
 		{ id: '15', name: '15. Bakery / Sweet Shop', category: 'Bakeries, Cake Shops, Sweet Marts & Cafes', desc: 'FSSAI licence header, veg / non-veg marks, best-before per item, cake-order block (pickup date, message on cake), per-rate GST split, advance paid & balance, UPI QR.', badge: 'Bakery' },
 		{ id: '16', name: '16. Grocery / Supermarket', category: 'Kirana Stores, Supermarkets & Fresh Produce', desc: 'MRP vs selling price per line, total savings badge, weighed quantities (kg / L), item & quantity count, GST summary that keeps exempt staples visible, cash tendered & change, UPI QR.', badge: 'Grocery' },
-		{ id: '17', name: '17. Hardware / Building Materials', category: 'Hardware, Paints, Plumbing, Electricals & Building Materials', desc: 'Trade-discount column, delivery / site block with transport details (vehicle, e-way, LR), HSN-wise tax summary, credit terms with due date, bank details, receiver and authorised signatures.', badge: 'Hardware' }
+		{ id: '17', name: '17. Hardware / Building Materials', category: 'Hardware, Paints, Plumbing, Electricals & Building Materials', desc: 'Trade-discount column, delivery / site block with transport details (vehicle, e-way, LR), HSN-wise tax summary, credit terms with due date, bank details, receiver and authorised signatures.', badge: 'Hardware' },
+		{ id: '18', name: '18. Tour Operator & DMC Travel Voucher', category: 'Tour Operators, Travel Agencies & DMC', desc: 'Domestic & International holiday package invoice with Airline PNR, passenger count, travel dates, hotel DMC voucher ref, 5% Tour Package GST, and statutory Indian Section 206C(1G) TCS breakdown.', badge: 'Travel & Tours' }
 	];
 
 	let activeTab = $state<'quickbill' | 'invoices' | 'khata' | 'templates'>('quickbill');
@@ -415,13 +416,16 @@
 			bannerMessage = '🛒 Supermarket & Retail Preset activated (Template 16)!';
 		} else if (industry === 'TRAVEL') {
 			isQuarryMode = false;
-			selectedTemplateId = '1';
-			businessSubtitle = 'Holidays, Flights & Tourism Logistics';
-			customerName = 'Skyline Tours & Travels Client';
+			selectedTemplateId = '18';
+			brandColor = '#06b6d4';
+			businessSubtitle = 'International Tour Operator & DMC Travel Partner';
+			customerName = 'Rahul Sharma & Family';
+			customerPhone = '+91 98401 23456';
+			supplyState = 'Tamil Nadu (33)';
 			items = [
-				{ productId: 'TRV-01', itemDescription: 'Goa 4D/3N Premium Holiday Package (4 Pax)', hsnSac: '9985', quantity: '1', unitCode: 'PKG', unitPrice: '38000.00', discountRate: '0', taxRate: '5' }
+				{ productId: 'TOUR-01', itemDescription: 'Swiss Alps & Zurich Winter Magic 7D/6N (Flight + Hotel + Schengen Concierge)', hsnSac: '998555', quantity: '1', unitCode: 'PAX', unitPrice: '185000.00', discountRate: '0', taxRate: '5' }
 			];
-			bannerMessage = '✈️ Travel & Tourism Preset activated (GST 5% Tours)!';
+			bannerMessage = '✈️ Travel & Tourism Preset activated (Template 18 - 5% Tour GST & TCS Sec 206C)!';
 		} else if (industry === 'PHARMA') {
 			isQuarryMode = false;
 			selectedTemplateId = '14';
@@ -550,6 +554,8 @@
 			const params = new URLSearchParams(window.location.search);
 			if (params.get('mode') === 'quarry' || params.get('template') === '11') {
 				toggleQuarryMode();
+			} else if (params.get('mode') === 'travel' || params.get('template') === '18' || (typeof localStorage !== 'undefined' && localStorage.getItem('mrbiz_active_unit') === 'travel')) {
+				switchIndustryPreset('TRAVEL');
 			} else {
 				restoreDraftIfExists();
 			}
@@ -1228,6 +1234,94 @@
 										<span class="mat-add-badge">+ Apply</span>
 									</button>
 								{/each}
+							</div>
+						</div>
+					</div>
+				{/if}
+
+				<!-- Template 18: Dedicated Tour Operator & Travel Voucher Quick Palette -->
+				{#if selectedTemplateId === '18'}
+					<div class="card quarry-dispatch-card animate-fade-in" style="border-left: 4px solid #06b6d4; background: rgba(6, 182, 212, 0.05); margin-bottom: 1.5rem;">
+						<div class="dispatch-header">
+							<div class="title-with-icon">
+								<span class="icon">✈️</span>
+								<div>
+									<h4>International & Domestic Tour Booking Details</h4>
+									<p>Passenger manifest, airline PNR hold, hotel DMC voucher ref, and Section 206C(1G) TCS</p>
+								</div>
+							</div>
+							<span class="weighbridge-status ready">✓ DMC GDS Active</span>
+						</div>
+
+						<div class="dispatch-grid">
+							<div class="field-col">
+								<label for="tourPnr">Airline PNR / GDS Record</label>
+								<input id="tourPnr" type="text" placeholder="e.g. EK-521 (Emirates) / 6E-1004" value="EK-521 (Emirates)" />
+							</div>
+							<div class="field-col">
+								<label for="tourDmc">Hotel DMC Voucher Ref</label>
+								<input id="tourDmc" type="text" placeholder="e.g. DMC-DXB-98421 / JW Marriott" value="DMC-DXB-98421" />
+							</div>
+							<div class="field-col">
+								<label for="tourPax">Travel Dates</label>
+								<input id="tourPax" type="text" placeholder="14 Nov 2026 - 19 Nov 2026" value="14 Nov 2026 - 19 Nov 2026" />
+							</div>
+						</div>
+
+						<div class="materials-palette-wrapper" style="margin-top: 1rem;">
+							<div class="palette-header">
+								<span class="palette-title">🏝️ Quick-Select Holiday Packages & Travel Vouchers:</span>
+								<span class="palette-hint">Click any package to populate with 5% GST & 5% TCS Sec 206C</span>
+							</div>
+							<div class="quarry-materials-grid">
+								<button
+									type="button"
+									class="material-chip"
+									onclick={() => {
+										items = [{ productId: 'TOUR-01', itemDescription: 'Swiss Alps & Zurich Winter Magic 7D/6N (Flight + 4-Star Hotel + Guided Tours)', hsnSac: '998555', quantity: '1', unitCode: 'PAX', unitPrice: '185000.00', discountRate: '0', taxRate: '5' }];
+										bannerMessage = '🏔️ Loaded Swiss Alps Package (₹1,85,000)!';
+										setTimeout(() => (bannerMessage = null), 3000);
+									}}
+								>
+									<span class="mat-icon">🏔️</span>
+									<div class="mat-info">
+										<span class="mat-name">Swiss Alps 7D/6N</span>
+										<span class="mat-meta">₹1,85,000 • SAC 998555 • 5% GST</span>
+									</div>
+									<span class="mat-add-badge" style="background: rgba(6, 182, 212, 0.2); color: #06b6d4;">+ Select</span>
+								</button>
+								<button
+									type="button"
+									class="material-chip"
+									onclick={() => {
+										items = [{ productId: 'TOUR-02', itemDescription: 'Exotic Dubai Sky & Desert Safari 5D/4N (Burj Khalifa + Desert Camp + Luxury Hotel)', hsnSac: '998555', quantity: '1', unitCode: 'PAX', unitPrice: '45000.00', discountRate: '0', taxRate: '5' }];
+										bannerMessage = '🏜️ Loaded Dubai Safari Package (₹45,000)!';
+										setTimeout(() => (bannerMessage = null), 3000);
+									}}
+								>
+									<span class="mat-icon">🏜️</span>
+									<div class="mat-info">
+										<span class="mat-name">Dubai Safari 5D/4N</span>
+										<span class="mat-meta">₹45,000 • SAC 998555 • 5% GST</span>
+									</div>
+									<span class="mat-add-badge" style="background: rgba(6, 182, 212, 0.2); color: #06b6d4;">+ Select</span>
+								</button>
+								<button
+									type="button"
+									class="material-chip"
+									onclick={() => {
+										items = [{ productId: 'TOUR-03', itemDescription: 'Tropical Bali Luxury Villas 6D/5N (Private Pool Villa + Nusa Penida Tour)', hsnSac: '998555', quantity: '1', unitCode: 'PAX', unitPrice: '72000.00', discountRate: '0', taxRate: '5' }];
+										bannerMessage = '🌴 Loaded Bali Luxury Villas (₹72,000)!';
+										setTimeout(() => (bannerMessage = null), 3000);
+									}}
+								>
+									<span class="mat-icon">🌴</span>
+									<div class="mat-info">
+										<span class="mat-name">Bali Luxury 6D/5N</span>
+										<span class="mat-meta">₹72,000 • SAC 998555 • 5% GST</span>
+									</div>
+									<span class="mat-add-badge" style="background: rgba(6, 182, 212, 0.2); color: #06b6d4;">+ Select</span>
+								</button>
 							</div>
 						</div>
 					</div>

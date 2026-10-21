@@ -85,11 +85,49 @@
 		if (typeof localStorage !== 'undefined') {
 			localStorage.setItem('mrbiz_workspace_preset', preset);
 			localStorage.setItem('mrbiz_billing_only_mode', String(preset === 'COUNTER'));
+			const unitMap: Record<string, string> = {
+				'TRAVEL': 'travel',
+				'HEALTHCARE': 'healthcare',
+				'REALESTATE': 'realestate',
+				'PROJECTS': 'consulting',
+				'COMMERCE': 'ecommerce',
+				'COUNTER': 'billing',
+				'FULL': 'billing'
+			};
+			if (unitMap[preset]) {
+				localStorage.setItem('mrbiz_active_unit', unitMap[preset]);
+			}
 			if (customConfig) {
 				localStorage.setItem('mrbiz_custom_workspace_v2', JSON.stringify(customConfig));
 			}
+			window.dispatchEvent(new CustomEvent('mrbiz_unit_changed', { detail: { preset, unit: unitMap[preset] } }));
 		}
 	}
+
+	// Auto-align workspace preset based on active route
+	$effect(() => {
+		if (currentPath.startsWith('/travel') || currentPath.startsWith('/journeys') || currentPath.startsWith('/bpo-voice')) {
+			if (activeWorkspacePreset !== 'TRAVEL') {
+				setWorkspacePreset('TRAVEL');
+			}
+		} else if (currentPath.startsWith('/healthcare')) {
+			if (activeWorkspacePreset !== 'HEALTHCARE') {
+				setWorkspacePreset('HEALTHCARE');
+			}
+		} else if (currentPath.startsWith('/realestate')) {
+			if (activeWorkspacePreset !== 'REALESTATE') {
+				setWorkspacePreset('REALESTATE');
+			}
+		} else if (currentPath.startsWith('/consulting')) {
+			if (activeWorkspacePreset !== 'PROJECTS') {
+				setWorkspacePreset('PROJECTS');
+			}
+		} else if (currentPath.startsWith('/ecommerce')) {
+			if (activeWorkspacePreset !== 'COMMERCE') {
+				setWorkspacePreset('COMMERCE');
+			}
+		}
+	});
 
 	function toggleBillingMode() {
 		setWorkspacePreset(activeWorkspacePreset === 'COUNTER' ? 'FULL' : 'COUNTER');

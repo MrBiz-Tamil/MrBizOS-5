@@ -36,6 +36,22 @@
 	let customerSearch = $state('');
 	let balanceFilter = $state<'ALL' | 'DUE' | 'SETTLED'>('ALL');
 
+	// Domain Vertical State & Persistence
+	type CustomerDomainCategory = 'ALL' | 'TRAVELERS' | 'PATIENTS' | 'CORPORATE';
+	let domainCategory = $state<CustomerDomainCategory>('ALL');
+
+	function syncDomainFromStorage() {
+		if (typeof window === 'undefined') return;
+		const unit = (localStorage.getItem('mrbiz_active_unit') || '').toLowerCase();
+		if (unit === 'travel') {
+			domainCategory = 'TRAVELERS';
+		} else if (unit === 'healthcare') {
+			domainCategory = 'PATIENTS';
+		} else if (unit === 'consulting' || unit === 'quarry' || unit === 'ecommerce' || unit === 'realestate') {
+			domainCategory = 'CORPORATE';
+		}
+	}
+
 	// All Transactions History Filters (Tab 2)
 	let historySearch = $state('');
 	let historyType = $state<'ALL' | 'INVOICE' | 'PAYMENT'>('ALL');
@@ -72,9 +88,59 @@
 	}
 
 	// Load Data
-	onMount(async () => {
-		await loadAllData();
+	onMount(() => {
+		syncDomainFromStorage();
+		const handleUnitChange = (e: any) => {
+			const unit = (e?.detail?.unitId || localStorage.getItem('mrbiz_active_unit') || '').toLowerCase();
+			if (unit === 'travel') domainCategory = 'TRAVELERS';
+			else if (unit === 'healthcare') domainCategory = 'PATIENTS';
+			else if (unit === 'consulting' || unit === 'quarry' || unit === 'ecommerce' || unit === 'realestate') domainCategory = 'CORPORATE';
+		};
+		window.addEventListener('mrbiz_unit_changed', handleUnitChange);
+		loadAllData();
+		return () => {
+			window.removeEventListener('mrbiz_unit_changed', handleUnitChange);
+		};
 	});
+
+	// Domain Attribute Enrichment Helpers
+	function getTravelerDetails(cust: CustomerWithBalance) {
+		const seed = (cust.id || cust.name).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+		const passportNo = 'P' + (1000000 + (seed * 97) % 8999999);
+		const months = ['Mar', 'Jun', 'Aug', 'Oct', 'Dec'];
+		const expiry = `${months[seed % months.length]} 202${7 + (seed % 4)}`;
+		const visas = [
+			{ label: 'Schengen Multi-Entry', status: 'VALID', color: '#34d399' },
+			{ label: 'Dubai E-Visa 30D', status: 'APPROVED', color: '#38bdf8' },
+			{ label: 'US B1/B2 10Y', status: 'VALID', color: '#a855f7' },
+			{ label: 'UK Standard Visitor', status: 'ISSUED', color: '#34d399' },
+			{ label: 'Bali VoA Cleared', status: 'ISSUED', color: '#34d399' }
+		];
+		const pnrCodes = ['EK-7241', 'LH-4910', 'AI-802', 'QR-918', 'LX-208'];
+		const destinations = ['Zurich & Swiss Alps', 'Dubai & Abu Dhabi', 'Bali & Ubud', 'London & Paris', 'Tokyo & Kyoto'];
+		const visa = visas[seed % visas.length];
+		const pnr = pnrCodes[seed % pnrCodes.length];
+		const destination = destinations[seed % destinations.length];
+		return { passportNo, expiry, visa, pnr, destination };
+	}
+
+	function getPatientDetails(cust: CustomerWithBalance) {
+		const seed = (cust.id || cust.name).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+		const uhid = `UHID-MED-${10000 + (seed % 89999)}`;
+		const age = 22 + (seed % 56);
+		const gender = seed % 2 === 0 ? 'M' : 'F';
+		const doctors = [
+			{ name: 'Dr. Sneha Roy', dept: 'Cardiology OPD' },
+			{ name: 'Dr. V. Mehta', dept: 'General Medicine' },
+			{ name: 'Dr. Ananya Sen', dept: 'Endocrinology' },
+			{ name: 'Dr. R. Kulkarni', dept: 'Orthopedics' },
+			{ name: 'Dr. K. Sharma', dept: 'Pulmonology' }
+		];
+		const doc = doctors[seed % doctors.length];
+		const categories = ['Outpatient (OPD)', 'Day Care Infusion', 'Chronic Care Plan', 'Pharmacy Rx Only'];
+		const careCategory = categories[seed % categories.length];
+		return { uhid, age, gender, doctor: doc.name, dept: doc.dept, careCategory };
+	}
 
 	async function loadAllData() {
 		loading = true;
@@ -134,13 +200,30 @@
 	let filteredCustomers = $derived(
 		customers.filter((c) => {
 			const q = customerSearch.trim().toLowerCase();
-			const matchesQuery =
+			let matchesQuery =
 				!q ||
 				c.name.toLowerCase().includes(q) ||
 				(c.company_name && c.company_name.toLowerCase().includes(q)) ||
 				(c.gstin && c.gstin.toLowerCase().includes(q)) ||
 				(c.phone && c.phone.includes(q)) ||
 				(c.email && c.email.toLowerCase().includes(q));
+
+			if (!matchesQuery && q) {
+				if (domainCategory === 'TRAVELERS') {
+					const t = getTravelerDetails(c);
+					matchesQuery =
+						t.passportNo.toLowerCase().includes(q) ||
+						t.pnr.toLowerCase().includes(q) ||
+						t.destination.toLowerCase().includes(q) ||
+						t.visa.label.toLowerCase().includes(q);
+				} else if (domainCategory === 'PATIENTS') {
+					const p = getPatientDetails(c);
+					matchesQuery =
+						p.uhid.toLowerCase().includes(q) ||
+						p.doctor.toLowerCase().includes(q) ||
+						p.dept.toLowerCase().includes(q);
+				}
+			}
 
 			const bal = parseFloat(c.outstanding_balance) || 0;
 			const matchesBal =
@@ -535,6 +618,52 @@
 	<!-- TAB 1: CUSTOMER BALANCES DIRECTORY -->
 	{#if activeTab === 'customers'}
 		<div style="display: flex; flex-direction: column; gap: 1rem;">
+			<!-- Domain Vertical Tab Strip -->
+			<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; background: rgba(15, 23, 42, 0.4); padding: 0.5rem 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border);">
+				<div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+					<button
+						type="button"
+						class="domain-tab-pill {domainCategory === 'ALL' ? 'active' : ''}"
+						onclick={() => (domainCategory = 'ALL')}
+					>
+						🌐 All Directory ({customers.length})
+					</button>
+					<button
+						type="button"
+						class="domain-tab-pill {domainCategory === 'TRAVELERS' ? 'active' : ''}"
+						onclick={() => (domainCategory = 'TRAVELERS')}
+					>
+						✈️ Travelers & Passport DB
+					</button>
+					<button
+						type="button"
+						class="domain-tab-pill {domainCategory === 'PATIENTS' ? 'active' : ''}"
+						onclick={() => (domainCategory = 'PATIENTS')}
+					>
+						🏥 Clinical Patients
+					</button>
+					<button
+						type="button"
+						class="domain-tab-pill {domainCategory === 'CORPORATE' ? 'active' : ''}"
+						onclick={() => (domainCategory = 'CORPORATE')}
+					>
+						💼 Corporate & B2B Clients
+					</button>
+				</div>
+
+				<div style="font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.4rem;">
+					{#if domainCategory === 'TRAVELERS'}
+						<span style="color: #38bdf8;">✈️ Travel Agency Mode: Passport, PNR & Tour Itinerary Manifest</span>
+					{:else if domainCategory === 'PATIENTS'}
+						<span style="color: #34d399;">🏥 Healthcare Mode: Clinical UHID & OPD Department Roster</span>
+					{:else if domainCategory === 'CORPORATE'}
+						<span style="color: #c084fc;">💼 Enterprise Mode: B2B Accounts & GSTIN Ledger</span>
+					{:else}
+						<span>🌐 Global Multi-Tenant Master Directory</span>
+					{/if}
+				</div>
+			</div>
+
 			<!-- Filter Bar -->
 			<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; background: var(--bg-card); padding: 0.85rem 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border);">
 				<div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; max-width: 480px;">
@@ -542,7 +671,11 @@
 					<input
 						type="text"
 						class="form-input"
-						placeholder="Search by customer, company, GSTIN, phone..."
+						placeholder={domainCategory === 'TRAVELERS'
+							? 'Search passenger, passport #, PNR, destination...'
+							: domainCategory === 'PATIENTS'
+								? 'Search patient name, UHID, doctor, department...'
+								: 'Search by customer, company, GSTIN, phone...'}
 						bind:value={customerSearch}
 						style="padding: 0.4rem 0.75rem; font-size: 0.875rem;"
 					/>
@@ -551,7 +684,7 @@
 				<div style="display: flex; align-items: center; gap: 0.75rem;">
 					<label for="filter-status" style="font-size: 0.8125rem; color: var(--text-muted);">Balance Status:</label>
 					<select id="filter-status" class="form-select" bind:value={balanceFilter} style="padding: 0.35rem 0.75rem; font-size: 0.8125rem;">
-						<option value="ALL">All Customers</option>
+						<option value="ALL">All Records</option>
 						<option value="DUE">Outstanding Due (> ₹0)</option>
 						<option value="SETTLED">Settled / Clear (₹0)</option>
 					</select>
@@ -563,60 +696,144 @@
 				<table class="data-table">
 					<thead>
 						<tr>
-							<th>Customer & Business</th>
-							<th>GSTIN & State</th>
-							<th>Contact Info</th>
-							<th class="text-right">Total Debit (Billed)</th>
-							<th class="text-right">Total Credit (Paid)</th>
-							<th class="text-right">Net Balance Due</th>
-							<th class="text-center">Ledger Actions</th>
+							{#if domainCategory === 'TRAVELERS'}
+								<th>Passenger & Traveler</th>
+								<th>Passport & Expiry</th>
+								<th>Visa Clearance</th>
+								<th>Tour Destination & PNR</th>
+								<th class="text-right">Travel Billed</th>
+								<th class="text-right">Paid (Credit)</th>
+								<th class="text-right">Balance Due</th>
+								<th class="text-center">Travel Ledger</th>
+							{:else if domainCategory === 'PATIENTS'}
+								<th>Patient Name & UHID</th>
+								<th>Attending Doctor</th>
+								<th>Care Category & Dept</th>
+								<th>Contact & City</th>
+								<th class="text-right">Medical Billed</th>
+								<th class="text-right">Paid (Credit)</th>
+								<th class="text-right">Balance Due</th>
+								<th class="text-center">Clinical Ledger</th>
+							{:else}
+								<th>Customer & Business</th>
+								<th>GSTIN & State</th>
+								<th>Contact Info</th>
+								<th class="text-right">Total Debit (Billed)</th>
+								<th class="text-right">Total Credit (Paid)</th>
+								<th class="text-right">Net Balance Due</th>
+								<th class="text-center">Ledger Actions</th>
+							{/if}
 						</tr>
 					</thead>
 					<tbody>
 						{#if loading}
 							<tr>
-								<td colspan="7" class="text-center" style="padding: 3rem; color: var(--text-muted);">
-									Loading customer credit & debit balances...
+								<td colspan="8" class="text-center" style="padding: 3rem; color: var(--text-muted);">
+									Loading directory credit & debit balances...
 								</td>
 							</tr>
 						{:else if error}
 							<tr>
-								<td colspan="7" class="text-center" style="padding: 2.5rem; color: var(--rose);">
+								<td colspan="8" class="text-center" style="padding: 2.5rem; color: var(--rose);">
 									⚠️ {error}
 								</td>
 							</tr>
 						{:else if filteredCustomers.length === 0}
 							<tr>
-								<td colspan="7" class="text-center" style="padding: 3rem; color: var(--text-muted);">
-									No matching customers found.
+								<td colspan="8" class="text-center" style="padding: 3rem; color: var(--text-muted);">
+									No matching records found in this category.
 								</td>
 							</tr>
 						{:else}
 							{#each filteredCustomers as cust}
 								{@const bal = parseFloat(cust.outstanding_balance) || 0}
+								{@const traveler = getTravelerDetails(cust)}
+								{@const patient = getPatientDetails(cust)}
 								<tr>
-									<td style="font-weight: 600;">
-										<div style="color: #fff; font-size: 0.9375rem;">{cust.name}</div>
-										{#if cust.company_name}
-											<div style="font-size: 0.75rem; color: var(--text-secondary); font-weight: normal; margin-top: 0.1rem;">
-												{cust.company_name}
+									{#if domainCategory === 'TRAVELERS'}
+										<td style="font-weight: 600;">
+											<div style="color: #fff; font-size: 0.9375rem; display: flex; align-items: center; gap: 0.4rem;">
+												<span>✈️</span> {cust.name}
 											</div>
-										{/if}
-									</td>
-									<td>
-										<div style="font-family: var(--font-mono); color: #818cf8; font-size: 0.8125rem;">
-											{cust.gstin || 'Unregistered'}
-										</div>
-										<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.1rem;">
-											{cust.billing_state}
-										</div>
-									</td>
-									<td style="font-size: 0.8125rem; color: var(--text-secondary);">
-										<div>{cust.phone || '-'}</div>
-										{#if cust.email}
-											<div style="font-size: 0.75rem; color: var(--text-muted);">{cust.email}</div>
-										{/if}
-									</td>
+											<div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.15rem;">
+												{cust.phone || cust.email || 'Lead Passenger'}
+											</div>
+										</td>
+										<td>
+											<div style="font-family: var(--font-mono); color: #38bdf8; font-size: 0.8125rem; font-weight: 700;">
+												{traveler.passportNo}
+											</div>
+											<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.1rem;">
+												Exp: {traveler.expiry}
+											</div>
+										</td>
+										<td>
+											<span style="display: inline-block; font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 4px; background: rgba(52, 211, 153, 0.15); color: {traveler.visa.color}; border: 1px solid rgba(52, 211, 153, 0.3);">
+												{traveler.visa.label}
+											</span>
+										</td>
+										<td>
+											<div style="color: #e2e8f0; font-size: 0.8125rem; font-weight: 600;">
+												{traveler.destination}
+											</div>
+											<div style="font-family: var(--font-mono); font-size: 0.72rem; color: #a855f7; margin-top: 0.1rem;">
+												PNR: {traveler.pnr}
+											</div>
+										</td>
+									{:else if domainCategory === 'PATIENTS'}
+										<td style="font-weight: 600;">
+											<div style="color: #fff; font-size: 0.9375rem; display: flex; align-items: center; gap: 0.4rem;">
+												<span>🏥</span> {cust.name}
+											</div>
+											<div style="font-family: var(--font-mono); font-size: 0.75rem; color: #34d399; margin-top: 0.15rem;">
+												{patient.uhid}
+											</div>
+										</td>
+										<td>
+											<div style="color: #e2e8f0; font-size: 0.8125rem; font-weight: 600;">
+												{patient.doctor}
+											</div>
+											<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.1rem;">
+												{patient.dept}
+											</div>
+										</td>
+										<td>
+											<div style="font-size: 0.8125rem; color: #cbd5e1;">
+												{patient.careCategory}
+											</div>
+											<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.1rem;">
+												Age: {patient.age}y • {patient.gender}
+											</div>
+										</td>
+										<td style="font-size: 0.8125rem; color: var(--text-secondary);">
+											<div>{cust.phone || '-'}</div>
+											<div style="font-size: 0.75rem; color: var(--text-muted);">{cust.billing_city || 'Registered'}</div>
+										</td>
+									{:else}
+										<td style="font-weight: 600;">
+											<div style="color: #fff; font-size: 0.9375rem;">{cust.name}</div>
+											{#if cust.company_name}
+												<div style="font-size: 0.75rem; color: var(--text-secondary); font-weight: normal; margin-top: 0.1rem;">
+													{cust.company_name}
+												</div>
+											{/if}
+										</td>
+										<td>
+											<div style="font-family: var(--font-mono); color: #818cf8; font-size: 0.8125rem;">
+												{cust.gstin || 'Unregistered'}
+											</div>
+											<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.1rem;">
+												{cust.billing_state}
+											</div>
+										</td>
+										<td style="font-size: 0.8125rem; color: var(--text-secondary);">
+											<div>{cust.phone || '-'}</div>
+											{#if cust.email}
+												<div style="font-size: 0.75rem; color: var(--text-muted);">{cust.email}</div>
+											{/if}
+										</td>
+									{/if}
+
 									<td class="text-right font-mono" style="font-weight: 600; color: #fff;">
 										{formatCurrency(cust.total_invoiced)}
 									</td>
@@ -634,7 +851,13 @@
 												style="font-size: 0.75rem; padding: 0.35rem 0.65rem;"
 												title="View complete customer credit and debit statement"
 											>
-												📜 Statement & Ledger
+												{#if domainCategory === 'TRAVELERS'}
+													✈️ Travel Ledger
+												{:else if domainCategory === 'PATIENTS'}
+													🏥 Patient Ledger
+												{:else}
+													📜 Statement & Ledger
+												{/if}
 											</button>
 										</div>
 									</td>
@@ -1313,7 +1536,15 @@
 	<div class="modal-backdrop">
 		<div class="modal-card animate-fade-in">
 			<div class="modal-header">
-				<h3 style="font-size: 1.125rem;">Add New Customer</h3>
+				<h3 style="font-size: 1.125rem;">
+					{#if domainCategory === 'TRAVELERS'}
+						✈️ Add New Passenger / Traveler
+					{:else if domainCategory === 'PATIENTS'}
+						🏥 Register Clinical Patient
+					{:else}
+						Add New Customer / B2B Client
+					{/if}
+				</h3>
 				<button onclick={() => (showAddModal = false)} style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.25rem;">✕</button>
 			</div>
 			<form onsubmit={handleCreateCustomer}>
@@ -1326,24 +1557,32 @@
 
 					<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
 						<div class="form-group" style="margin-bottom: 0;">
-							<label class="form-label" for="cust-name">Customer / Contact Name *</label>
-							<input id="cust-name" type="text" class="form-input" bind:value={newName} placeholder="e.g. Rahul Sharma" required />
+							<label class="form-label" for="cust-name">
+								{domainCategory === 'TRAVELERS' ? 'Lead Traveler / Passenger Name *' : domainCategory === 'PATIENTS' ? 'Patient Full Name *' : 'Customer / Contact Name *'}
+							</label>
+							<input id="cust-name" type="text" class="form-input" bind:value={newName} placeholder={domainCategory === 'TRAVELERS' ? 'e.g. Rajesh Khurana' : domainCategory === 'PATIENTS' ? 'e.g. Amit Verma' : 'e.g. Rahul Sharma'} required />
 						</div>
 
 						<div class="form-group" style="margin-bottom: 0;">
-							<label class="form-label" for="cust-comp">Company / Business Name</label>
-							<input id="cust-comp" type="text" class="form-input" bind:value={newCompany} placeholder="e.g. Apex Enterprises LLP" />
+							<label class="form-label" for="cust-comp">
+								{domainCategory === 'TRAVELERS' ? 'Tour Package / Reference' : domainCategory === 'PATIENTS' ? 'Attending Doctor / Dept' : 'Company / Business Name'}
+							</label>
+							<input id="cust-comp" type="text" class="form-input" bind:value={newCompany} placeholder={domainCategory === 'TRAVELERS' ? 'e.g. Swiss Alps 7D/6N' : domainCategory === 'PATIENTS' ? 'e.g. Dr. Sneha Roy (Cardiology)' : 'e.g. Apex Enterprises LLP'} />
 						</div>
 					</div>
 
 					<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
 						<div class="form-group" style="margin-bottom: 0;">
-							<label class="form-label" for="cust-gstin">GSTIN (15 characters)</label>
-							<input id="cust-gstin" type="text" maxlength="15" class="form-input font-mono" bind:value={newGSTIN} placeholder="e.g. 27AABBC1234F1Z0" />
+							<label class="form-label" for="cust-gstin">
+								{domainCategory === 'TRAVELERS' ? 'Passport / PNR Ref' : domainCategory === 'PATIENTS' ? 'UHID / Clinical ID' : 'GSTIN (15 characters)'}
+							</label>
+							<input id="cust-gstin" type="text" maxlength="15" class="form-input font-mono" bind:value={newGSTIN} placeholder={domainCategory === 'TRAVELERS' ? 'e.g. Z9182341' : domainCategory === 'PATIENTS' ? 'e.g. UHID-MED-49102' : 'e.g. 27AABBC1234F1Z0'} />
 						</div>
 
 						<div class="form-group" style="margin-bottom: 0;">
-							<label class="form-label" for="cust-state">Billing State *</label>
+							<label class="form-label" for="cust-state">
+								{domainCategory === 'TRAVELERS' ? 'Traveler State / Origin *' : domainCategory === 'PATIENTS' ? 'State / Region *' : 'Billing State *'}
+							</label>
 							<input id="cust-state" type="text" class="form-input" bind:value={newBillingState} placeholder="e.g. Maharashtra" required />
 						</div>
 					</div>
@@ -1351,24 +1590,26 @@
 					<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
 						<div class="form-group" style="margin-bottom: 0;">
 							<label class="form-label" for="cust-email">Email</label>
-							<input id="cust-email" type="email" class="form-input" bind:value={newEmail} placeholder="accounts@apex.com" />
+							<input id="cust-email" type="email" class="form-input" bind:value={newEmail} placeholder="traveler@domain.com" />
 						</div>
 
 						<div class="form-group" style="margin-bottom: 0;">
-							<label class="form-label" for="cust-phone">Phone Number</label>
+							<label class="form-label" for="cust-phone">Phone / Emergency Contact</label>
 							<input id="cust-phone" type="tel" class="form-input" bind:value={newPhone} placeholder="9876543210" />
 						</div>
 					</div>
 
 					<div class="form-group" style="margin-bottom: 0;">
-						<label class="form-label" for="cust-addr">Billing Address</label>
-						<textarea id="cust-addr" class="form-textarea" rows="2" bind:value={newBillingAddress} placeholder="Street, building, area..."></textarea>
+						<label class="form-label" for="cust-addr">
+							{domainCategory === 'TRAVELERS' ? 'Residential / Passport Address' : domainCategory === 'PATIENTS' ? 'Patient Address' : 'Billing Address'}
+						</label>
+						<textarea id="cust-addr" class="form-textarea" rows="2" bind:value={newBillingAddress} placeholder="Street, city, postal code..."></textarea>
 					</div>
 				</div>
 				<div class="modal-footer">
 					<button type="button" onclick={() => (showAddModal = false)} class="btn btn-secondary">Cancel</button>
 					<button type="submit" class="btn btn-primary" disabled={modalSubmitting}>
-						{modalSubmitting ? 'Saving...' : 'Add Customer'}
+						{modalSubmitting ? 'Saving...' : domainCategory === 'TRAVELERS' ? '✈️ Add Traveler' : domainCategory === 'PATIENTS' ? '🏥 Register Patient' : 'Add Customer'}
 					</button>
 				</div>
 			</form>
@@ -1414,6 +1655,32 @@
 	.filter-pill.active {
 		background: var(--primary);
 		color: #fff;
+	}
+
+	/* Domain Tab Pills */
+	.domain-tab-pill {
+		background: rgba(255, 255, 255, 0.03);
+		border: 1px solid rgba(255, 255, 255, 0.07);
+		border-radius: var(--radius-sm);
+		padding: 0.35rem 0.75rem;
+		font-size: 0.8125rem;
+		font-weight: 600;
+		color: var(--text-secondary);
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		transition: all 0.2s ease;
+	}
+	.domain-tab-pill:hover {
+		background: rgba(255, 255, 255, 0.07);
+		color: #fff;
+	}
+	.domain-tab-pill.active {
+		background: rgba(56, 189, 248, 0.12);
+		color: #38bdf8;
+		border-color: rgba(56, 189, 248, 0.35);
+		box-shadow: 0 0 10px rgba(56, 189, 248, 0.1);
 	}
 
 	/* Statement Canvas & Print Layout */

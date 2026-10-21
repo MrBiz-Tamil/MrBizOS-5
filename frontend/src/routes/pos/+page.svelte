@@ -42,6 +42,8 @@
 	let patientName = $state('');
 	let patientAge = $state<number | undefined>(undefined);
 	let showPharmacyFields = $state(false);
+	let isHealthcareMode = $derived(typeof localStorage !== 'undefined' && localStorage.getItem('mrbiz_active_unit') === 'healthcare');
+	let isTravelMode = $derived(typeof localStorage !== 'undefined' && localStorage.getItem('mrbiz_active_unit') === 'travel');
 
 	// Cart & Search
 	let searchQuery = $state('');
@@ -490,19 +492,21 @@
 			<span class="counter-chip">Counter {counterNumber} • {cashierName}</span>
 		</div>
 
-		<!-- Pharmacy Regulatory Alert Pill -->
-		<div class="pharmacy-toggle-wrap">
-			<button
-				type="button"
-				class="rx-btn"
-				class:active={showPharmacyFields}
-				onclick={() => (showPharmacyFields = !showPharmacyFields)}
-				id="btn-toggle-rx"
-			>
-				<span>🩺</span>
-				{showPharmacyFields ? 'Pharmacy Rx Mode (Active)' : 'Pharmacy Rx Metadata'}
-			</button>
-		</div>
+		<!-- Pharmacy Regulatory Alert Pill (Only in Healthcare Workspace) -->
+		{#if isHealthcareMode}
+			<div class="pharmacy-toggle-wrap">
+				<button
+					type="button"
+					class="rx-btn"
+					class:active={showPharmacyFields}
+					onclick={() => (showPharmacyFields = !showPharmacyFields)}
+					id="btn-toggle-rx"
+				>
+					<span>🩺</span>
+					{showPharmacyFields ? 'Pharmacy Rx Mode (Active)' : 'Pharmacy Rx Metadata'}
+				</button>
+			</div>
+		{/if}
 
 		<!-- Held Carts Pill -->
 		<div class="topbar-actions">
@@ -699,7 +703,15 @@
 
 			<!-- CUSTOMER SELECTION BAR -->
 			<div class="customer-strip">
-				<label for="pos-customer-select">Customer / Loyalty:</label>
+				<label for="pos-customer-select">
+					{#if isTravelMode}
+						✈️ Lead Passenger / Traveler:
+					{:else if isHealthcareMode}
+						🏥 Patient / Hospital Record:
+					{:else}
+						Customer / Loyalty:
+					{/if}
+				</label>
 				<select id="pos-customer-select" bind:value={selectedCustomerId}>
 					{#each customers as c}
 						<option value={c.id}>{c.name} {c.phone ? `(${c.phone})` : ''}</option>

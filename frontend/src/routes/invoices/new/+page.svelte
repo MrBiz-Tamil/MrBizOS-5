@@ -41,6 +41,10 @@
 	let doctorRegNo = $state('');
 	let patientName = $state('');
 	let patientAge = $state<number | undefined>(undefined);
+	let activeUnit = $state('travel');
+	let passportNumber = $state('');
+	let pnrCode = $state('');
+	let destinationCountry = $state('');
 
 	interface FormItem {
 		product_id: string;
@@ -67,6 +71,9 @@
 	]);
 
 	onMount(async () => {
+		if (typeof localStorage !== 'undefined') {
+			activeUnit = localStorage.getItem('mrbiz_active_unit') || 'travel';
+		}
 		try {
 			const [comp, custs, prods, uList] = await Promise.all([
 				api.getCompany(),
@@ -494,24 +501,56 @@
 						</div>
 					</div>
 
-					<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-						<div class="form-group" style="margin-bottom: 0;">
-							<label class="form-label" for="new-patient">Patient Name (Pharmacy)</label>
-							<input id="new-patient" type="text" class="form-input" bind:value={patientName} placeholder="e.g. Sunita Rao" />
+					{#if activeUnit === 'travel'}
+						<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; background: rgba(6, 182, 212, 0.06); padding: 0.85rem; border-radius: 8px; border: 1px solid rgba(6, 182, 212, 0.2);">
+							<div class="form-group" style="margin-bottom: 0;">
+								<label class="form-label" for="new-passenger" style="color: #06b6d4;">✈️ Lead Traveler / Passenger Name</label>
+								<input id="new-passenger" type="text" class="form-input" bind:value={patientName} placeholder="e.g. Rahul Sharma" />
+							</div>
+							<div class="form-group" style="margin-bottom: 0;">
+								<label class="form-label" for="new-passport" style="color: #06b6d4;">Passport Number</label>
+								<input id="new-passport" type="text" class="form-input font-mono" bind:value={passportNumber} placeholder="e.g. Z5829104" />
+							</div>
+							<div class="form-group" style="margin-bottom: 0;">
+								<label class="form-label" for="new-pnr" style="color: #06b6d4;">Airline PNR / Voucher Ref</label>
+								<input id="new-pnr" type="text" class="form-input font-mono" bind:value={pnrCode} placeholder="e.g. EK-521 / DMC-DXB-98421" />
+							</div>
+							<div class="form-group" style="margin-bottom: 0;">
+								<label class="form-label" for="new-dest" style="color: #06b6d4;">Destination Country / City</label>
+								<input id="new-dest" type="text" class="form-input" bind:value={destinationCountry} placeholder="e.g. Dubai, UAE" />
+							</div>
 						</div>
-						<div class="form-group" style="margin-bottom: 0;">
-							<label class="form-label" for="new-patient-age">Patient Age</label>
-							<input id="new-patient-age" type="number" min="0" max="130" class="form-input" bind:value={patientAge} placeholder="e.g. 54" />
+					{:else if activeUnit === 'healthcare'}
+						<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; background: rgba(16, 185, 129, 0.06); padding: 0.85rem; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.2);">
+							<div class="form-group" style="margin-bottom: 0;">
+								<label class="form-label" for="new-patient" style="color: #34d399;">🏥 Patient Full Name</label>
+								<input id="new-patient" type="text" class="form-input" bind:value={patientName} placeholder="e.g. Sunita Rao" />
+							</div>
+							<div class="form-group" style="margin-bottom: 0;">
+								<label class="form-label" for="new-patient-age" style="color: #34d399;">Patient Age</label>
+								<input id="new-patient-age" type="number" min="0" max="130" class="form-input font-mono" bind:value={patientAge} placeholder="e.g. 54" />
+							</div>
+							<div class="form-group" style="margin-bottom: 0;">
+								<label class="form-label" for="new-doctor" style="color: #34d399;">Prescribing Doctor</label>
+								<input id="new-doctor" type="text" class="form-input" bind:value={doctorName} placeholder="e.g. Dr. Anil Kulkarni, MD" />
+							</div>
+							<div class="form-group" style="margin-bottom: 0;">
+								<label class="form-label" for="new-doctor-reg" style="color: #34d399;">Doctor Reg. No</label>
+								<input id="new-doctor-reg" type="text" class="form-input font-mono" bind:value={doctorRegNo} placeholder="e.g. MMC-2014/08817" />
+							</div>
 						</div>
-						<div class="form-group" style="margin-bottom: 0;">
-							<label class="form-label" for="new-doctor">Prescribing Doctor (Pharmacy)</label>
-							<input id="new-doctor" type="text" class="form-input" bind:value={doctorName} placeholder="e.g. Dr. Anil Kulkarni, MD" />
+					{:else}
+						<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+							<div class="form-group" style="margin-bottom: 0;">
+								<label class="form-label" for="new-attn">Attention / Contact Person</label>
+								<input id="new-attn" type="text" class="form-input" bind:value={patientName} placeholder="e.g. Procurement Manager" />
+							</div>
+							<div class="form-group" style="margin-bottom: 0;">
+								<label class="form-label" for="new-ref">Client Ref / Department</label>
+								<input id="new-ref" type="text" class="form-input" placeholder="e.g. Operations / Logistics" />
+							</div>
 						</div>
-						<div class="form-group" style="margin-bottom: 0;">
-							<label class="form-label" for="new-doctor-reg">Doctor Reg. No</label>
-							<input id="new-doctor-reg" type="text" class="form-input" bind:value={doctorRegNo} placeholder="e.g. MMC-2014/08817" />
-						</div>
-					</div>
+					{/if}
 
 					<div style="margin-top: 0.25rem;">
 						<label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; cursor: pointer; color: var(--text-secondary);">

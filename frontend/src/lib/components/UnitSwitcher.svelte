@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 
 	interface BusinessUnit {
 		id: string;
@@ -9,34 +11,74 @@
 		color: string;
 		icon: string;
 		route: string;
+		preset: string;
 	}
 
 	const units: BusinessUnit[] = [
-		{ id: 'billing', name: 'Finance & Invoicing', code: 'FINANCE', tagline: 'GST Billing & Ledger', color: '#6366f1', icon: '💳', route: '/invoices' },
-		{ id: 'healthcare', name: 'Smart Healthcare', code: 'HEALTH', tagline: 'Doctors, Telehealth & EMR', color: '#10b981', icon: '🏥', route: '/healthcare' },
-		{ id: 'travel', name: 'Travel & Visa OS', code: 'TRAVEL', tagline: 'Tours & Immigration Checklists', color: '#3b82f6', icon: '✈️', route: '/travel' },
-		{ id: 'realestate', name: 'Real Estate Deals', code: 'REALESTATE', tagline: 'Properties & Site Visits', color: '#f59e0b', icon: '🏢', route: '/realestate' },
-		{ id: 'ecommerce', name: 'E-Commerce & POD', code: 'ECOM', tagline: 'Print-on-Demand & Orders', color: '#8b5cf6', icon: '🛍️', route: '/ecommerce' },
-		{ id: 'consulting', name: 'Software Consulting', code: 'CONSULTING', tagline: 'SOWs, Sprints & Timesheets', color: '#ec4899', icon: '💻', route: '/consulting' },
-		{ id: 'workflow', name: 'AI Missions & Approvals', code: 'APPROVALS', tagline: 'Autonomous Agents & Tasks', color: '#06b6d4', icon: '🤖', route: '/workflow' },
+		{ id: 'travel', name: 'Travel & Visa OS', code: 'TRAVEL', tagline: 'Tours, PNR & DMC Vouchers', color: '#06b6d4', icon: '✈️', route: '/travel', preset: 'TRAVEL' },
+		{ id: 'healthcare', name: 'Smart Healthcare', code: 'HEALTH', tagline: 'Doctors, Telehealth & EMR', color: '#10b981', icon: '🏥', route: '/healthcare', preset: 'HEALTHCARE' },
+		{ id: 'billing', name: 'Finance & Invoicing', code: 'FINANCE', tagline: 'GST Billing & Ledger', color: '#6366f1', icon: '💳', route: '/invoices', preset: 'FULL' },
+		{ id: 'realestate', name: 'Real Estate Deals', code: 'REALESTATE', tagline: 'Properties & Site Visits', color: '#f59e0b', icon: '🏢', route: '/realestate', preset: 'REALESTATE' },
+		{ id: 'ecommerce', name: 'E-Commerce & POD', code: 'ECOM', tagline: 'Print-on-Demand & Orders', color: '#8b5cf6', icon: '🛍️', route: '/ecommerce', preset: 'COMMERCE' },
+		{ id: 'consulting', name: 'Software Consulting', code: 'CONSULTING', tagline: 'SOWs, Sprints & Timesheets', color: '#ec4899', icon: '💻', route: '/consulting', preset: 'PROJECTS' },
+		{ id: 'workflow', name: 'AI Missions & Approvals', code: 'APPROVALS', tagline: 'Autonomous Agents & Tasks', color: '#38bdf8', icon: '🤖', route: '/workflow', preset: 'OPERATIONS' },
 	];
 
 	let isOpen = $state(false);
-	let currentUnitId = $state('billing');
+	let currentUnitId = $state('travel');
 	let currentUnit = $derived(units.find(u => u.id === currentUnitId) || units[0]);
+
+	// Route-aware synchronization
+	$effect(() => {
+		const path = $page.url.pathname;
+		if (path.startsWith('/travel') || path.startsWith('/journeys') || path.startsWith('/bpo-voice')) {
+			currentUnitId = 'travel';
+		} else if (path.startsWith('/healthcare')) {
+			currentUnitId = 'healthcare';
+		} else if (path.startsWith('/realestate')) {
+			currentUnitId = 'realestate';
+		} else if (path.startsWith('/ecommerce')) {
+			currentUnitId = 'ecommerce';
+		} else if (path.startsWith('/consulting')) {
+			currentUnitId = 'consulting';
+		} else if (path.startsWith('/workflow')) {
+			currentUnitId = 'workflow';
+		} else if (path.startsWith('/billing') || path.startsWith('/pos')) {
+			// Retain current unit or default to travel/billing
+			const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('mrbiz_active_unit') : null;
+			if (saved && units.some(u => u.id === saved)) {
+				currentUnitId = saved;
+			}
+		}
+	});
 
 	onMount(() => {
 		const saved = localStorage.getItem('mrbiz_active_unit');
 		if (saved && units.some(u => u.id === saved)) {
 			currentUnitId = saved;
 		}
+
+		const handleUnitChange = (e: any) => {
+			if (e.detail?.unit && units.some(u => u.id === e.detail.unit)) {
+				currentUnitId = e.detail.unit;
+			}
+		};
+
+		window.addEventListener('mrbiz_unit_changed', handleUnitChange);
+		return () => {
+			window.removeEventListener('mrbiz_unit_changed', handleUnitChange);
+		};
 	});
 
 	function selectUnit(u: BusinessUnit) {
 		currentUnitId = u.id;
-		localStorage.setItem('mrbiz_active_unit', u.id);
+		if (typeof localStorage !== 'undefined') {
+			localStorage.setItem('mrbiz_active_unit', u.id);
+			localStorage.setItem('mrbiz_workspace_preset', u.preset);
+			window.dispatchEvent(new CustomEvent('mrbiz_unit_changed', { detail: { unit: u.id, preset: u.preset } }));
+		}
 		isOpen = false;
-		window.location.href = u.route;
+		goto(u.route);
 	}
 </script>
 
