@@ -16,7 +16,7 @@
 	let currentPath = $derived($page.url.pathname);
 	// Pages shown without the app shell (signed-out flows)
 	// ?print=1 is the server-side PDF renderer: just the page, no app shell, no banners or dialogs
-	let isBarePage = $derived(['/login', '/forgot-password', '/reset-password', '/verify-email', '/terms', '/privacy', '/signup'].includes(currentPath) || currentPath.startsWith('/i/') || $page.url.searchParams.get('print') === '1');
+	let isBarePage = $derived(['/login', '/forgot-password', '/reset-password', '/verify-email', '/terms', '/privacy', '/signup', '/services'].includes(currentPath) || currentPath.startsWith('/i/') || $page.url.searchParams.get('print') === '1');
 
 	let dynamicTenantTheme = $derived(
 		currentTenant?.template_options?.primary_color
@@ -69,6 +69,7 @@
 
 	const commandItems: CommandItem[] = [
 		// Quick Actions
+		{ id: 'act-services', title: 'Services & Verticals Hub', subtitle: 'Explore all 16 business modules, POS, and templates', icon: '🌐', category: 'Actions', href: '/services' },
 		{ id: 'act-bill', title: 'New Express Bill', subtitle: 'Open 3-second quick billing counter with UPI QR', icon: '⚡', category: 'Actions', href: '/billing' },
 		{ id: 'act-pos', title: 'Retail POS Terminal', subtitle: 'Barcode scanner checkout screen', icon: '🛒', category: 'Actions', href: '/pos' },
 		{ id: 'act-inv', title: 'Create Tax Invoice', subtitle: 'Full GST sales invoice with logistics', icon: '📄', category: 'Actions', href: '/invoices/new' },
@@ -552,6 +553,10 @@
 					<div style="font-size: 0.6875rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.25rem 0.5rem;">
 						Enterprise ERP Suite
 					</div>
+
+					<a href="/services" class="nav-item" class:active={currentPath === '/services'} style="color: #38bdf8; font-weight: 700; background: rgba(56, 189, 248, 0.08); border-left: 3px solid #38bdf8;">
+						<span class="nav-icon">🌐</span> All 16 Services Hub
+					</a>
 
 					<a href="/inbox" class="nav-item" class:active={currentPath.startsWith('/inbox')} style="color: #f43f5e; font-weight: 700; background: rgba(244, 63, 94, 0.08); border-left: 3px solid #f43f5e;">
 						<span class="nav-icon">💬</span> Omnichannel Social Inbox

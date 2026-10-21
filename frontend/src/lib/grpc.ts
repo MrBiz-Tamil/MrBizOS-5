@@ -51,6 +51,18 @@ export async function callRpc<TReq = any, TRes = any>(
 	return (await res.json()) as TRes;
 }
 
+// 0. IAM & Identity Service Client
+export const iamGrpc = {
+	login: (req: { email: string; password?: string }) => callRpc('iam.v1.IAMService', 'Login', req),
+	logout: (req = {}) => callRpc('iam.v1.IAMService', 'Logout', req),
+	getMe: (req: { userId?: string; tenantId?: string } = {}) => callRpc('iam.v1.IAMService', 'GetMe', req),
+	validateSession: (req: { token: string }) => callRpc('iam.v1.IAMService', 'ValidateSession', req),
+	switchBusinessUnit: (req: { userId: string; targetBusinessUnitId: string }) => callRpc('iam.v1.IAMService', 'SwitchBusinessUnit', req),
+	listBusinessUnits: (params = {}) => callRpc('iam.v1.IAMService', 'ListBusinessUnits', params),
+	listTenants: (params = {}) => callRpc('iam.v1.IAMService', 'ListTenants', params),
+	createTenant: (req: any) => callRpc('iam.v1.IAMService', 'CreateTenant', req),
+};
+
 // 1. Healthcare Service Client
 export const healthcareGrpc = {
 	listDoctors: (params = {}) => callRpc('healthcare.v1.HealthcareService', 'ListDoctors', params),
