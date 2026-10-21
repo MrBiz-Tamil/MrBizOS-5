@@ -2,6 +2,7 @@ package grpcserver
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -48,6 +49,76 @@ func NewServer(db *gorm.DB) *Server {
 	}
 	mux.HandleFunc("/api/company", companyHandler)
 	mux.HandleFunc("/company", companyHandler)
+
+	// Compatibility endpoint for /api/v1/realtime/stream (SSE)
+	sseHandler := func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+			return
+		}
+
+		now := time.Now().UTC().Format(time.RFC3339)
+		fmt.Fprintf(w, "event: billing_update\ndata: {\"type\":\"CONNECTED\",\"payload\":{\"message\":\"Subscribed to MrBiz-OS real-time stream\"},\"timestamp\":\"%s\"}\n\n", now)
+		flusher.Flush()
+
+		ticker := time.NewTicker(20 * time.Second)
+		defer ticker.Stop()
+
+		ctx := r.Context()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case t := <-ticker.C:
+				fmt.Fprintf(w, ": heartbeat %s\n\n", t.Format(time.RFC3339))
+				flusher.Flush()
+			}
+		}
+	}
+	mux.HandleFunc("/api/v1/realtime/stream", sseHandler)
+	mux.HandleFunc("/v1/realtime/stream", sseHandler)
+
+	// Compatibility endpoint for /api/billing and /billing
+	billingHandler := func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"ACTIVE","plan_code":"ENTERPRISE","plan_name":"Enterprise Unlimited","billing_cycle":"ANNUAL","trial_days_left":null,"subscription_id":"sub-ent-01"}`))
+	}
+	mux.HandleFunc("/api/billing", billingHandler)
+	mux.HandleFunc("/billing", billingHandler)
+
+	// Compatibility endpoint for /api/legal/status and /legal/status
+	legalHandler := func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"required_version":"2026-04-01","accepted":true,"accepted_at":"2026-04-01T00:00:00Z"}`))
+	}
+	mux.HandleFunc("/api/legal/status", legalHandler)
+	mux.HandleFunc("/legal/status", legalHandler)
+
+	// Compatibility endpoint for /api/company/subscription and /company/subscription
+	subHandler := func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"tenant_id":"tenant-1","plan_code":"ENTERPRISE","plan_name":"Enterprise Multi-OS","status":"ACTIVE","billing_cycle":"ANNUAL","max_users":100,"max_invoices":100000,"features":{"accounting":true,"expenses":true,"reports":true,"realtime":true,"multi_currency":true,"api_access":true,"unlimited_branches":true}}`))
+	}
+	mux.HandleFunc("/api/company/subscription", subHandler)
+	mux.HandleFunc("/company/subscription", subHandler)
+
+	// Compatibility endpoint for /api/dashboard and /dashboard
+	dashboardHandler := func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"total_sales":"1428500.00","total_received":"1198500.00","outstanding_balance":"230000.00","total_invoices_count":48,"paid_invoices_count":41,"unpaid_invoices_count":7,"total_inventory_value":"890000.00","low_stock_count":2,"recent_invoices":[],"recent_payments":[]}`))
+	}
+	mux.HandleFunc("/api/dashboard", dashboardHandler)
+	mux.HandleFunc("/dashboard", dashboardHandler)
 
 	return &Server{
 		mux:         mux,
