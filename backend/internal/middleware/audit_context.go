@@ -1,14 +1,15 @@
+// Package middleware previously hosted the Fiber HTTP middleware layer, which
+// was removed together with the REST server. It now retains only the
+// request-scoped AuditContext plumbing: this metadata is carried on Go's
+// context.Context and consumed by the GORM audit plugin, independent of any
+// HTTP framework. Background workers, cron jobs and migrations attach it via
+// WithAuditContext; the ConnectRPC interceptors do the same per request.
 package middleware
 
-import (
-	"context"
-
-	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
-)
+import "context"
 
 // auditCtxKey is the private context key for audit metadata.
-// Use middleware.GetAuditContext(ctx) to read it.
+// Use GetAuditContext(ctx) to read it.
 type auditCtxKey struct{}
 
 // AuditContext carries the actor + request metadata into the GORM session via
@@ -38,44 +39,7 @@ func GetAuditContext(ctx context.Context) *AuditContext {
 }
 
 // WithAuditContext returns a new context with the given audit metadata attached.
-// Used by background workers / cron jobs that don't have a Fiber request.
+// Used by background workers / cron jobs that don't have an HTTP request.
 func WithAuditContext(ctx context.Context, ac *AuditContext) context.Context {
 	return context.WithValue(ctx, auditCtxKey{}, ac)
-}
-
-// AuditCtx is a Fiber middleware that builds an AuditContext from the current
-// request and stuffs it into the Go context. It is safe to mount globally
-// (before per-route Protected()) because it calls parseJWT itself — the same
-// idempotent helper used by Protected() — so actor_id is always populated for
-// authenticated requests regardless of middleware ordering.
-//
-// Every db.WithContext(c.UserContext()) call downstream will then carry the
-// audit metadata automatically — the GORM audit plugin reads it from there.
-func AuditCtx() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		// Parse the JWT now so actor_id/role are available even when AuditCtx
-		// runs before per-route Protected() in the middleware chain.
-		parseJWT(c)
-
-		actorID, _ := c.Locals("user_id").(uint)
-		role, _ := c.Locals("role").(string)
-
-		ac := &AuditContext{
-			ActorID:   actorID,
-			ActorRole: role,
-			IP:        c.IP(),
-			UserAgent: c.Get("User-Agent"),
-			RequestID: uuid.NewString(),
-			Path:      c.Path(),
-			Method:    c.Method(),
-		}
-
-		// Push into Go context so downstream db.WithContext() calls carry it.
-		goCtx := WithAuditContext(c.UserContext(), ac)
-		c.SetUserContext(goCtx)
-
-		// Echo request ID back so the frontend / Sentry / nginx can correlate.
-		c.Set("X-Request-ID", ac.RequestID)
-		return c.Next()
-	}
 }

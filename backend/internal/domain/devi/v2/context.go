@@ -1,28 +1,11 @@
 package v2
 
-import (
-	"context"
-	"time"
+import "context"
 
-	"github.com/gofiber/fiber/v2"
-)
-
-// contextWithTimeout returns a derived context that inherits the Fiber
-// request's UserContext (so audit metadata propagates to GORM) but with a
-// hard deadline. Cancel via the returned func to release resources.
-func contextWithTimeout(c *fiber.Ctx, d time.Duration) (context.Context, context.CancelFunc) {
-	parent := c.UserContext()
-	if parent == nil {
-		parent = context.Background()
-	}
-	return context.WithTimeout(parent, d)
-}
-
-// ─── Persona-in-context (used by tools to scope by user_id) ───────────────
-//
-// Tools NEVER trust the LLM to supply a user_id. The runtime injects the
-// resolved Persona into the request context before calling Execute; tools
-// read it via PersonaFromContext.
+// This file retains the request-scoped context helpers for the AI agent. The
+// Fiber-coupled request plumbing that used to live alongside them was removed
+// with the REST server; the persona/session context values below are pure Go
+// context and are threaded by the agent into each tool invocation.
 
 type personaCtxKey struct{}
 
