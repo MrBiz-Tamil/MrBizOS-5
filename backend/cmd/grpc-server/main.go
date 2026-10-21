@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"drayya-core/internal/automigrate"
 	"drayya-core/internal/database"
 	"drayya-core/internal/grpcserver"
 )
@@ -23,6 +24,9 @@ func main() {
 
 	// Connect to Database
 	database.Connect()
+
+	// Run domain schema migrations
+	automigrate.Run(database.DB)
 
 	server := grpcserver.NewServer(database.DB)
 	server.RegisterAllServices()

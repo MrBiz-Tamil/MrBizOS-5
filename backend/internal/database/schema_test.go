@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"drayya-core/internal/automigrate"
 	"drayya-core/internal/database"
-	"drayya-core/internal/server"
 
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
@@ -92,8 +92,8 @@ func TestSchemaSnapshot(t *testing.T) {
 
 	// Run all migrations to generate the schema
 	require.NotPanics(t, func() {
-		server.RunMigrations()
-	}, "RunMigrations should not panic or fail")
+		automigrate.Run(database.DB)
+	}, "automigrate.Run should not panic or fail")
 
 	// Dump the schema from SQLite
 	var tables []TableSchema

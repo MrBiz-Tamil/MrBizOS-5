@@ -17,8 +17,8 @@ RUN go mod tidy
 # Copy source code
 COPY . .
 
-# Build the main application
-RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/server
+# Build the main ConnectRPC application
+RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/grpc-server
 
 # Build the seeding tool
 RUN CGO_ENABLED=0 GOOS=linux go build -o seed ./cmd/seed
@@ -39,8 +39,8 @@ COPY --from=builder /app/main .
 COPY --from=builder /app/seed .
 COPY --from=builder /app/admin .
 
-# Expose port
-EXPOSE 8081
+# Expose pure gRPC / ConnectRPC port
+EXPOSE 8080
 
 # Command to run
 CMD ["./main"]
