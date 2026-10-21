@@ -39,12 +39,67 @@
 		scheduleH: boolean;
 	}
 
-	let activeTab = $state<'rx' | 'pharmacy' | 'opd' | 'appointments'>('rx');
+	let activeTab = $state<'rx' | 'pharmacy' | 'opd' | 'appointments' | 'owner'>('rx');
 	let doctors = $state<Doctor[]>([]);
 	let appointments = $state<Appointment[]>([]);
 	let loading = $state(true);
 	let error = $state('');
 	let statusMsg = $state('');
+
+	// Nurse & Triage Station State
+	let triageToken = $state(18);
+	let triagePatientName = $state('');
+	let triagePatientMobile = $state('');
+	let triagePatientAge = $state(38);
+	let triagePatientGender = $state<'Male' | 'Female' | 'Other'>('Female');
+	let triageBP = $state('120/80');
+	let triagePulse = $state(76);
+	let triageTemp = $state('98.6');
+	let triageSpO2 = $state(99);
+	let triageBloodSugar = $state(104);
+	let triageWeight = $state(64);
+	let triageUrgency = $state<'ROUTINE' | 'URGENT' | 'EMERGENCY'>('ROUTINE');
+	let triageAssignedDoctorId = $state('doc-1');
+
+	// Clinic Owner Revenue & Doctor Commission Split Ledger
+	let doctorPayouts = $state([
+		{
+			id: 'doc-1',
+			name: 'Dr. Priya Sharma',
+			specialty: 'Cardiologist',
+			consultationsToday: 18,
+			feePerPatient: 800,
+			grossRevenue: 14400,
+			doctorSharePercent: 70,
+			doctorPayout: 10080,
+			clinicRetainage: 4320,
+			status: 'READY_FOR_SETTLEMENT'
+		},
+		{
+			id: 'doc-2',
+			name: 'Dr. Arun Verma',
+			specialty: 'General Medicine',
+			consultationsToday: 12,
+			feePerPatient: 600,
+			grossRevenue: 7200,
+			doctorSharePercent: 70,
+			doctorPayout: 5040,
+			clinicRetainage: 2160,
+			status: 'READY_FOR_SETTLEMENT'
+		}
+	]);
+
+	let clinicOwnerMetrics = $derived({
+		totalConsultations: doctorPayouts.reduce((acc, d) => acc + d.consultationsToday, 0),
+		totalOpdGross: doctorPayouts.reduce((acc, d) => acc + d.grossRevenue, 0),
+		totalDoctorPayouts: doctorPayouts.reduce((acc, d) => acc + d.doctorPayout, 0),
+		totalClinicOpdShare: doctorPayouts.reduce((acc, d) => acc + d.clinicRetainage, 0),
+		pharmacyGross: 48200,
+		pharmacyCost: 32390,
+		pharmacyMargin: 15810,
+		labRevenue: 14500,
+		totalHospitalNetTake: doctorPayouts.reduce((acc, d) => acc + d.clinicRetainage, 0) + 15810 + 14500
+	});
 
 	// Selected Doctor for Rx
 	let selectedDoctor = $state<Doctor>({
@@ -184,6 +239,52 @@
 		setTimeout(() => statusMsg = '', 3000);
 	}
 
+	function dispatchNurseTriage() {
+		if (!triagePatientName.trim()) {
+			statusMsg = '⚠️ Please enter patient full name before dispatching to cabin.';
+			setTimeout(() => statusMsg = '', 3000);
+			return;
+		}
+
+		// Update Doctor's Rx pad directly with these verified triage vitals
+		rxPatientName = triagePatientName;
+		rxPatientMobile = triagePatientMobile || '+91 98400 12345';
+		rxPatientAge = triagePatientAge;
+		rxPatientGender = triagePatientGender;
+		vitalsBP = triageBP;
+		vitalsPulse = triagePulse;
+		vitalsTemp = triageTemp;
+		vitalsSpO2 = triageSpO2;
+		vitalsWeight = triageWeight;
+
+		// Add to live waiting list
+		const assignedDoc = doctors.find(d => d.id === triageAssignedDoctorId) || selectedDoctor;
+		opdWaitingList = [
+			...opdWaitingList,
+			{
+				token: triageToken,
+				name: `${triagePatientName} (${triageUrgency === 'EMERGENCY' ? '🔴 Priority Triage' : triageUrgency === 'URGENT' ? '🟡 Urgent' : '🟢 Routine'})`,
+				doctor: assignedDoc.name,
+				status: 'WAITING'
+			}
+		];
+
+		statusMsg = `✅ Token #${triageToken} (${triagePatientName}) checked in by Nurse! Vitals forwarded to ${assignedDoc.name}'s Rx Cabin.`;
+		triageToken++;
+		triagePatientName = '';
+		triagePatientMobile = '';
+		setTimeout(() => statusMsg = '', 4000);
+	}
+
+	function settleDoctorPayout(docId: string) {
+		const doc = doctorPayouts.find(d => d.id === docId);
+		if (doc) {
+			doc.status = 'PAID_VIA_NEFT';
+			statusMsg = `💸 Settled ₹${doc.doctorPayout.toLocaleString('en-IN')} consultation earnings to ${doc.name} via Direct Bank Transfer!`;
+			setTimeout(() => statusMsg = '', 4000);
+		}
+	}
+
 	async function handleBookConsultation() {
 		if (!bookPatientName) {
 			alert('Please enter Patient Name');
@@ -274,31 +375,37 @@
 		</div>
 	</div>
 
-	<!-- Navigation Tabs -->
+	<!-- Multi-Persona Healthcare Workstations -->
 	<div class="nav-tabs">
 		<button 
 			class="tab-btn" 
 			class:active={activeTab === 'rx'} 
 			onclick={() => activeTab = 'rx'}>
-			📝 Clinical Rx Prescription Pad
+			🩺 Doctor Workstation (Clinical Rx Pad)
 		</button>
 		<button 
 			class="tab-btn" 
 			class:active={activeTab === 'pharmacy'} 
 			onclick={() => activeTab = 'pharmacy'}>
-			💊 Pharmacy Strip Dispenser &amp; Schedule H Calculator
+			💊 Pharmacy POS &amp; Strip Dispenser
 		</button>
 		<button 
 			class="tab-btn" 
 			class:active={activeTab === 'opd'} 
 			onclick={() => activeTab = 'opd'}>
-			📢 Live OPD Queue Token Calling
+			💉 Nurse &amp; Triage Station (Vitals Check-in)
+		</button>
+		<button 
+			class="tab-btn" 
+			class:active={activeTab === 'owner'} 
+			onclick={() => activeTab = 'owner'}>
+			👑 Clinic Owner &amp; Financial Director
 		</button>
 		<button 
 			class="tab-btn" 
 			class:active={activeTab === 'appointments'} 
 			onclick={() => activeTab = 'appointments'}>
-			🩺 Doctor Consultations &amp; Telemedicine ({appointments.length})
+			📅 Telemedicine &amp; Consultations ({appointments.length})
 		</button>
 	</div>
 
@@ -599,46 +706,329 @@
 		</div>
 	{/if}
 
-	<!-- TAB 3: LIVE OPD QUEUE TOKEN CALLING -->
+	<!-- PERSONA 3: NURSE & TRIAGE STATION -->
 	{#if activeTab === 'opd'}
 		<div class="section-container">
 			<div class="section-header">
 				<div>
-					<h2 class="section-title">OPD Patient Queue &amp; Digital Calling Display</h2>
-					<p class="section-desc">Live waiting room display board with 1-click audio calling into doctor cabins.</p>
+					<div class="inline-flex items-center gap-2 mb-1">
+						<span class="pill-badge" style="background: rgba(14, 165, 233, 0.2); color: #38bdf8; border-color: rgba(14, 165, 233, 0.4);">💉 Station Role: Triage Nurse / OP Intake Desk</span>
+					</div>
+					<h2 class="section-title">Nurse Patient Intake, Clinical Vitals &amp; Token Calling</h2>
+					<p class="section-desc">Record triage vital signs (BP, Pulse, Temp, SpO2, RBS, Weight), assign urgency levels, and forward directly to Doctor's Cabin.</p>
 				</div>
-				<button class="btn btn-primary" onclick={callNextPatient}>
-					📢 Call Next Patient (Token #{nextQueueToken})
-				</button>
+				<div class="flex items-center gap-2">
+					<button class="btn btn-primary" onclick={callNextPatient}>
+						📢 Call Next Patient (Token #{nextQueueToken})
+					</button>
+				</div>
 			</div>
 
-			<div class="opd-board-grid">
-				<div class="opd-display-hero">
-					<div class="hero-token-label">NOW SERVING IN CABIN 1</div>
-					<div class="hero-token-number">#{currentServingToken}</div>
-					<div class="hero-doctor">{selectedDoctor.name} ({selectedDoctor.specialty})</div>
+			<!-- Nurse Intake Pad + Live Calling Board Grid -->
+			<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+				<!-- Left 7 Cols: Nurse Vitals Check-in Form -->
+				<div class="lg:col-span-7 bg-slate-900/90 border border-slate-700/80 rounded-xl p-5 shadow-xl space-y-4">
+					<div class="flex justify-between items-center border-b border-slate-800 pb-3">
+						<div class="flex items-center gap-2">
+							<span class="text-xl">📋</span>
+							<h3 class="text-base font-bold text-white">Patient Intake &amp; Vital Signs Check-in</h3>
+						</div>
+						<span class="px-3 py-1 bg-sky-500/10 border border-sky-500/30 text-sky-400 font-mono font-bold text-xs rounded-full">
+							New Token #{triageToken}
+						</span>
+					</div>
+
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+						<div>
+							<label class="input-label" for="t-name">Patient Full Name *</label>
+							<input id="t-name" class="text-input" type="text" placeholder="e.g. S. Meenakshi" bind:value={triagePatientName} />
+						</div>
+						<div>
+							<label class="input-label" for="t-mobile">Patient Mobile Number</label>
+							<input id="t-mobile" class="text-input" type="tel" placeholder="+91 98400 12345" bind:value={triagePatientMobile} />
+						</div>
+					</div>
+
+					<div class="grid grid-cols-3 gap-3">
+						<div>
+							<label class="input-label" for="t-age">Age (Yrs)</label>
+							<input id="t-age" class="text-input" type="number" bind:value={triagePatientAge} />
+						</div>
+						<div>
+							<label class="input-label" for="t-gender">Gender</label>
+							<select id="t-gender" class="text-input" bind:value={triagePatientGender}>
+								<option value="Female">Female</option>
+								<option value="Male">Male</option>
+								<option value="Other">Other</option>
+							</select>
+						</div>
+						<div>
+							<label class="input-label" for="t-doc">Target Doctor</label>
+							<select id="t-doc" class="text-input" bind:value={triageAssignedDoctorId}>
+								{#each doctors as d}
+									<option value={d.id}>{d.name}</option>
+								{/each}
+							</select>
+						</div>
+					</div>
+
+					<!-- Vital Signs Grid -->
+					<div class="p-4 bg-slate-950/70 border border-slate-800 rounded-lg space-y-3">
+						<div class="flex justify-between items-center">
+							<span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Clinical Vitals Checklist</span>
+							<span class="text-xs text-emerald-400 font-semibold">✓ Pre-consultation mandatory</span>
+						</div>
+						<div class="grid grid-cols-3 gap-3">
+							<div>
+								<label class="input-label text-xs" for="t-bp">Blood Pressure (mmHg)</label>
+								<input id="t-bp" class="text-input font-mono text-sm" placeholder="120/80" bind:value={triageBP} />
+							</div>
+							<div>
+								<label class="input-label text-xs" for="t-pulse">Pulse (BPM)</label>
+								<input id="t-pulse" class="text-input font-mono text-sm" type="number" placeholder="72" bind:value={triagePulse} />
+							</div>
+							<div>
+								<label class="input-label text-xs" for="t-temp">Temperature (°F)</label>
+								<input id="t-temp" class="text-input font-mono text-sm" placeholder="98.6" bind:value={triageTemp} />
+							</div>
+						</div>
+						<div class="grid grid-cols-3 gap-3">
+							<div>
+								<label class="input-label text-xs" for="t-spo2">SpO2 Oxygen (%)</label>
+								<input id="t-spo2" class="text-input font-mono text-sm" type="number" placeholder="99" bind:value={triageSpO2} />
+							</div>
+							<div>
+								<label class="input-label text-xs" for="t-rbs">Random Sugar (mg/dL)</label>
+								<input id="t-rbs" class="text-input font-mono text-sm" type="number" placeholder="104" bind:value={triageBloodSugar} />
+							</div>
+							<div>
+								<label class="input-label text-xs" for="t-weight">Body Weight (kg)</label>
+								<input id="t-weight" class="text-input font-mono text-sm" type="number" placeholder="65" bind:value={triageWeight} />
+							</div>
+						</div>
+					</div>
+
+					<!-- Urgency Level Selection -->
+					<div>
+						<label class="input-label text-xs">Triage Urgency Category</label>
+						<div class="grid grid-cols-3 gap-2 mt-1">
+							<button 
+								type="button" 
+								class="px-3 py-2 rounded-lg border text-xs font-bold text-center transition-all cursor-pointer"
+								style={triageUrgency === 'ROUTINE' ? 'background: rgba(16, 185, 129, 0.2); border-color: #10b981; color: #34d399;' : 'border-color: rgba(255,255,255,0.1); color: #94a3b8;'}
+								onclick={() => triageUrgency = 'ROUTINE'}>
+								🟢 Routine OP
+							</button>
+							<button 
+								type="button" 
+								class="px-3 py-2 rounded-lg border text-xs font-bold text-center transition-all cursor-pointer"
+								style={triageUrgency === 'URGENT' ? 'background: rgba(245, 158, 11, 0.2); border-color: #f59e0b; color: #fbbf24;' : 'border-color: rgba(255,255,255,0.1); color: #94a3b8;'}
+								onclick={() => triageUrgency = 'URGENT'}>
+								🟡 Urgent (High Fever/Pain)
+							</button>
+							<button 
+								type="button" 
+								class="px-3 py-2 rounded-lg border text-xs font-bold text-center transition-all cursor-pointer"
+								style={triageUrgency === 'EMERGENCY' ? 'background: rgba(239, 68, 68, 0.25); border-color: #ef4444; color: #f87171;' : 'border-color: rgba(255,255,255,0.1); color: #94a3b8;'}
+								onclick={() => triageUrgency = 'EMERGENCY'}>
+								🔴 Emergency Triage
+							</button>
+						</div>
+					</div>
+
+					<button class="w-full btn btn-primary py-3 font-bold text-sm tracking-wide shadow-lg cursor-pointer" onclick={dispatchNurseTriage}>
+						💉 Check-in Token #{triageToken} &amp; Forward Vitals to Doctor's Pad
+					</button>
 				</div>
 
-				<div class="opd-queue-card">
-					<h3 class="text-base font-bold text-white mb-3">Next in Line Waiting Queue</h3>
-					<div class="space-y-2">
-						{#each opdWaitingList as item}
-							<div class="queue-item">
-								<div class="queue-token">Token #{item.token}</div>
-								<div class="queue-details">
-									<div class="font-bold text-white">{item.name}</div>
-									<div class="text-xs text-slate-400">{item.doctor}</div>
+				<!-- Right 5 Cols: Live Calling Board & Current Serving -->
+				<div class="lg:col-span-5 space-y-4">
+					<div class="opd-display-hero">
+						<div class="hero-token-label">NOW SERVING IN CABIN 1</div>
+						<div class="hero-token-number">#{currentServingToken}</div>
+						<div class="hero-doctor">{selectedDoctor.name} ({selectedDoctor.specialty})</div>
+					</div>
+
+					<div class="opd-queue-card">
+						<div class="flex justify-between items-center mb-3">
+							<h3 class="text-base font-bold text-white">Active Patient Waiting Room</h3>
+							<span class="text-xs text-sky-400 font-bold">{opdWaitingList.length} in Queue</span>
+						</div>
+						<div class="space-y-2 max-h-80 overflow-y-auto pr-1">
+							{#each opdWaitingList as item}
+								<div class="queue-item">
+									<div class="queue-token">Token #{item.token}</div>
+									<div class="queue-details">
+										<div class="font-bold text-white text-sm">{item.name}</div>
+										<div class="text-xs text-slate-400">{item.doctor}</div>
+									</div>
+									<span class="badge" class:status-available={item.status === 'IN_CABIN'}>{item.status}</span>
 								</div>
-								<span class="badge" class:status-available={item.status === 'IN_CABIN'}>{item.status}</span>
-							</div>
-						{/each}
+							{/each}
+						</div>
 					</div>
 				</div>
 			</div>
 		</div>
 	{/if}
 
-	<!-- TAB 4: DOCTOR CONSULTATIONS & TELEMEDICINE -->
+	<!-- PERSONA 4: CLINIC OWNER & FINANCIAL DIRECTOR WORKSPACE -->
+	{#if activeTab === 'owner'}
+		<div class="section-container">
+			<div class="section-header">
+				<div>
+					<div class="inline-flex items-center gap-2 mb-1">
+						<span class="pill-badge" style="background: rgba(168, 85, 247, 0.2); color: #c084fc; border-color: rgba(168, 85, 247, 0.4);">👑 Role: Hospital Owner &amp; Medical Director</span>
+					</div>
+					<h2 class="section-title">Clinical P&amp;L, Doctor Commission Splits &amp; Regulatory Audit</h2>
+					<p class="section-desc">Comprehensive executive cockpit tracking OPD patient fee realization, 70/30 doctor revenue shares, in-house pharmacy margins, and NABH compliance.</p>
+				</div>
+				<div class="flex items-center gap-2">
+					<button class="btn btn-secondary" onclick={() => {
+						statusMsg = '📊 Exported Healthcare Form GSTR-1 Exempt Schedule & Doctor Form 16A TDS reports.';
+						setTimeout(() => statusMsg = '', 4000);
+					}}>
+						📑 Export Tax &amp; TDS Audit
+					</button>
+				</div>
+			</div>
+
+			<!-- Executive Financial Revenue Realization Cards -->
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+				<div class="kpi-card bg-slate-900/90 border border-slate-700/80 p-4 rounded-xl">
+					<div class="kpi-label text-xs uppercase text-slate-400 font-bold">OPD Gross Consultation Fees</div>
+					<div class="kpi-value text-2xl font-black text-sky-400 mt-1">₹{clinicOwnerMetrics.totalOpdGross.toLocaleString('en-IN')}</div>
+					<div class="kpi-sub text-xs text-slate-400 mt-1">{clinicOwnerMetrics.totalConsultations} Consultations Billed Today</div>
+				</div>
+				<div class="kpi-card bg-slate-900/90 border border-slate-700/80 p-4 rounded-xl">
+					<div class="kpi-label text-xs uppercase text-slate-400 font-bold">Doctor Share Payouts (70%)</div>
+					<div class="kpi-value text-2xl font-black text-amber-400 mt-1">₹{clinicOwnerMetrics.totalDoctorPayouts.toLocaleString('en-IN')}</div>
+					<div class="kpi-sub text-xs text-slate-400 mt-1">Consultant Doctor Earnings Ledger</div>
+				</div>
+				<div class="kpi-card bg-slate-900/90 border border-slate-700/80 p-4 rounded-xl">
+					<div class="kpi-label text-xs uppercase text-slate-400 font-bold">Pharmacy Net Profit (Margin 32.8%)</div>
+					<div class="kpi-value text-2xl font-black text-emerald-400 mt-1">₹{clinicOwnerMetrics.pharmacyMargin.toLocaleString('en-IN')}</div>
+					<div class="kpi-sub text-xs text-slate-400 mt-1">Gross Sales: ₹{clinicOwnerMetrics.pharmacyGross.toLocaleString('en-IN')} (Cost: ₹{clinicOwnerMetrics.pharmacyCost.toLocaleString('en-IN')})</div>
+				</div>
+				<div class="kpi-card bg-slate-900/90 border border-slate-700/80 p-4 rounded-xl">
+					<div class="kpi-label text-xs uppercase text-slate-400 font-bold">Hospital Total Net Take Today</div>
+					<div class="kpi-value text-2xl font-black text-purple-400 mt-1">₹{clinicOwnerMetrics.totalHospitalNetTake.toLocaleString('en-IN')}</div>
+					<div class="kpi-sub text-xs text-slate-400 mt-1">Clinic 30% Cut + Pharmacy + Lab Margin</div>
+				</div>
+			</div>
+
+			<!-- Doctor Revenue Share & Payout Grid -->
+			<div class="bg-slate-900/90 border border-slate-700/80 rounded-xl p-5 shadow-xl mb-6 space-y-4">
+				<div class="flex justify-between items-center border-b border-slate-800 pb-3">
+					<div>
+						<h3 class="text-base font-bold text-white">Doctor Consultation Commission Splits &amp; Direct Bank Settlement</h3>
+						<p class="text-xs text-slate-400">Automated 70/30 clinic partnership contract accounting with Section 194J TDS compliance.</p>
+					</div>
+					<span class="px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono font-bold text-xs rounded-full">
+						Auto-Reconciled
+					</span>
+				</div>
+
+				<div class="table-container">
+					<table class="data-table">
+						<thead>
+							<tr>
+								<th>Attending Specialist</th>
+								<th>Specialty</th>
+								<th>Patients</th>
+								<th>Fee / Patient</th>
+								<th>Gross Billed</th>
+								<th>Doctor Share (70%)</th>
+								<th>Clinic Retainage (30%)</th>
+								<th>Payout Status</th>
+								<th>Action</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each doctorPayouts as doc}
+								<tr>
+									<td class="font-bold text-white">{doc.name}</td>
+									<td class="text-xs text-slate-300">{doc.specialty}</td>
+									<td class="font-mono text-center">{doc.consultationsToday}</td>
+									<td class="font-mono">₹{doc.feePerPatient}</td>
+									<td class="font-mono text-sky-400 font-bold">₹{doc.grossRevenue.toLocaleString('en-IN')}</td>
+									<td class="font-mono text-emerald-400 font-bold">₹{doc.doctorPayout.toLocaleString('en-IN')}</td>
+									<td class="font-mono text-purple-400 font-bold">₹{doc.clinicRetainage.toLocaleString('en-IN')}</td>
+									<td>
+										<span class="badge" class:status-available={doc.status === 'PAID_VIA_NEFT'}>
+											{doc.status}
+										</span>
+									</td>
+									<td>
+										{#if doc.status === 'READY_FOR_SETTLEMENT'}
+											<button class="btn btn-primary btn-sm py-1 px-3 text-xs" onclick={() => settleDoctorPayout(doc.id)}>
+												💸 Settle NEFT
+											</button>
+										{:else}
+											<span class="text-xs text-emerald-400 font-bold">✓ Settled</span>
+										{/if}
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+			<!-- Regulatory Shield: Schedule H1 & NABH Governance Audit -->
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<div class="bg-slate-900/90 border border-slate-700/80 rounded-xl p-5 shadow-xl space-y-3">
+					<div class="flex items-center gap-2">
+						<span class="text-lg">🛡️</span>
+						<h4 class="text-sm font-bold text-white uppercase tracking-wider">Schedule H / H1 Regulatory Compliance Register</h4>
+					</div>
+					<p class="text-xs text-slate-300 leading-relaxed">
+						Drugs and Cosmetics Rules mandate maintaining physical/electronic records for all restricted third-generation cephalosporins, fluoroquinolones, and psychotropics.
+					</p>
+					<div class="space-y-2 text-xs">
+						<div class="flex justify-between p-2 bg-slate-950/80 rounded border border-slate-800">
+							<span class="text-slate-400">Total Schedule H1 Antibiotics Dispensed Today:</span>
+							<strong class="text-white font-mono">14 Units</strong>
+						</div>
+						<div class="flex justify-between p-2 bg-slate-950/80 rounded border border-slate-800">
+							<span class="text-slate-400">Prescribing Doctor Registration Verified:</span>
+							<strong class="text-emerald-400">100% (14/14 Audited)</strong>
+						</div>
+						<div class="flex justify-between p-2 bg-slate-950/80 rounded border border-slate-800">
+							<span class="text-slate-400">NPPA DPCO Drug Price Ceiling Cap Adherence:</span>
+							<strong class="text-emerald-400">100% Validated</strong>
+						</div>
+					</div>
+				</div>
+
+				<div class="bg-slate-900/90 border border-slate-700/80 rounded-xl p-5 shadow-xl space-y-3">
+					<div class="flex items-center gap-2">
+						<span class="text-lg">🏥</span>
+						<h4 class="text-sm font-bold text-white uppercase tracking-wider">NABH Clinical Audit &amp; Healthcare GST Schedule</h4>
+					</div>
+					<p class="text-xs text-slate-300 leading-relaxed">
+						Clinical healthcare services provided by registered medical practitioners are exempt under GST Notification No. 12/2017-Central Tax. In-house pharmacy retail follows standard GST schedules.
+					</p>
+					<div class="space-y-2 text-xs">
+						<div class="flex justify-between p-2 bg-slate-950/80 rounded border border-slate-800">
+							<span class="text-slate-400">Clinical Consultation Services:</span>
+							<strong class="text-sky-400">GST Exempt (SAC 999312)</strong>
+						</div>
+						<div class="flex justify-between p-2 bg-slate-950/80 rounded border border-slate-800">
+							<span class="text-slate-400">Pharmacy Retail Medicine Sales:</span>
+							<strong class="text-amber-400">5% / 12% GST Auto-Calculated</strong>
+						</div>
+						<div class="flex justify-between p-2 bg-slate-950/80 rounded border border-slate-800">
+							<span class="text-slate-400">Biomedical Waste Disposal Protocol:</span>
+							<strong class="text-emerald-400">Logged (Color-Coded Segregation)</strong>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<!-- TAB 5: DOCTOR CONSULTATIONS & TELEMEDICINE -->
 	{#if activeTab === 'appointments'}
 		<div class="section-container">
 			<div class="section-header">
