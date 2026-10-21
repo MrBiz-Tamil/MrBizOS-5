@@ -166,6 +166,76 @@ func (s *OmnichannelServiceServer) seedDefaults() {
 			DeliveryStatus: "READ",
 		},
 	}
+
+	// LinkedIn Direct Message Thread (InMail)
+	s.conversations["CONV-LI-005"] = &omnichannelv1.ConversationSummary{
+		Id:                 "CONV-LI-005",
+		Channel:            omnichannelv1.ChannelType_CHANNEL_TYPE_LINKEDIN,
+		CustomerName:       "Siddharth Mehta (VP of Procurement)",
+		CustomerIdentifier: "linkedin.com/in/siddharth-procure",
+		LastMessage:        "We are evaluating ERPs to replace SAP Business One. Can your platform handle 3-way matching and multi-entity?",
+		LastMessageTime:    "5 mins ago",
+		UnreadCount:        1,
+		Status:             "OPEN",
+		AssignedAgent:      "Divya (Enterprise Sales)",
+		BusinessUnit:       "CONSULTING",
+		Sentiment:          "URGENT",
+		InteractionType:    "DIRECT_MESSAGE",
+		PostTitleOrUrl:     "InMail: Enterprise ERP Evaluation",
+	}
+
+	s.messages["CONV-LI-005"] = []*omnichannelv1.MessageItem{
+		{
+			Id:              "MSG-LI-01",
+			ConversationId:  "CONV-LI-005",
+			SenderType:      "CUSTOMER",
+			SenderName:      "Siddharth Mehta",
+			Content:         "Hello Team MrBiz-OS, We are evaluating ERPs to replace SAP Business One for our 4 subsidiaries. Can your platform handle 3-way matching, multi-entity khata, and automated bank feeds?",
+			SentAt:          "12:35 PM",
+			DeliveryStatus:  "DELIVERED",
+			InteractionType: "DIRECT_MESSAGE",
+		},
+	}
+
+	// LinkedIn Post Comment Thread
+	s.conversations["CONV-LI-006"] = &omnichannelv1.ConversationSummary{
+		Id:                 "CONV-LI-006",
+		Channel:            omnichannelv1.ChannelType_CHANNEL_TYPE_LINKEDIN,
+		CustomerName:       "Kavita Raman (Hospital Director)",
+		CustomerIdentifier: "linkedin.com/in/kavita-raman-md",
+		LastMessage:        "Does your telehealth engine support HL7 / FHIR integration for clinic chains?",
+		LastMessageTime:    "15 mins ago",
+		UnreadCount:        0,
+		Status:             "OPEN",
+		AssignedAgent:      "AI Copilot (Auto-Replied)",
+		BusinessUnit:       "HEALTH",
+		Sentiment:          "POSITIVE",
+		InteractionType:    "POST_COMMENT",
+		PostTitleOrUrl:     "Post: How We Built a Sub-150MB Hospital OS in Go",
+	}
+
+	s.messages["CONV-LI-006"] = []*omnichannelv1.MessageItem{
+		{
+			Id:              "MSG-LI-02",
+			ConversationId:  "CONV-LI-006",
+			SenderType:      "CUSTOMER",
+			SenderName:      "Kavita Raman",
+			Content:         "Brilliant architecture! Does your telehealth engine support HL7 / FHIR integration for clinic chains?",
+			SentAt:          "12:20 PM",
+			DeliveryStatus:  "READ",
+			InteractionType: "POST_COMMENT",
+		},
+		{
+			Id:              "MSG-LI-03",
+			ConversationId:  "CONV-LI-006",
+			SenderType:      "AI_BOT",
+			SenderName:      "MrBiz-OS AI Copilot",
+			Content:         "Hi Dr. Kavita! Yes, MrBiz-OS includes native HL7 MLLP analyzers and FHIR bridges for lab, pharmacy, and doctor consultations. I have sent our technical architecture whitepaper directly to your LinkedIn messages!",
+			SentAt:          "12:21 PM",
+			DeliveryStatus:  "READ",
+			InteractionType: "POST_COMMENT",
+		},
+	}
 }
 
 func (s *OmnichannelServiceServer) ListConversations(ctx context.Context, req *connect.Request[omnichannelv1.ListConversationsRequest]) (*connect.Response[omnichannelv1.ListConversationsResponse], error) {
@@ -312,6 +382,14 @@ func (s *OmnichannelServiceServer) SuggestAIReply(ctx context.Context, req *conn
 	case "TRAVEL":
 		suggestion = fmt.Sprintf("Hello %s! Yes, our December Switzerland 7D/6N Glacier Express tour starts at ₹1,45,000 including 4-star hotels, Swiss Travel Pass, and visa appointment assistance. Would you like the complete itinerary?", c.CustomerName)
 		sources = []string{"Tour Package: Winter Swiss Explorer 2026", "Available Departure: Dec 14 & Dec 21"}
+	case "CONSULTING":
+		if c.Channel == omnichannelv1.ChannelType_CHANNEL_TYPE_LINKEDIN {
+			suggestion = fmt.Sprintf("Hi %s! Yes, MrBiz-OS fully supports 3-way matching, multi-subsidiary General Ledger, automated bank reconciliation, and real-time inventory at a fraction of SAP's cost. Shall I schedule a 15-minute executive walkthrough for your team?", c.CustomerName)
+			sources = []string{"MrBiz-OS SAP Replacement Benchmark", "Whitepaper: 3-Way Matching & Multi-Entity Ledger"}
+		} else {
+			suggestion = fmt.Sprintf("Hello %s! Thank you for contacting our Consulting Desk. How can our team assist you today?", c.CustomerName)
+			sources = []string{"Consulting Service Catalog"}
+		}
 	default:
 		suggestion = fmt.Sprintf("Hello %s! Thank you for contacting MrBiz-OS. How can our team assist you today?", c.CustomerName)
 		sources = []string{"General FAQ Knowledge Base"}

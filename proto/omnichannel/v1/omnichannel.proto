@@ -20,13 +20,14 @@ enum ChannelType {
   CHANNEL_TYPE_FACEBOOK = 3;
   CHANNEL_TYPE_EMAIL = 4;
   CHANNEL_TYPE_LIVECHAT = 5;
+  CHANNEL_TYPE_LINKEDIN = 6;
 }
 
 message ConversationSummary {
   string id = 1;
   ChannelType channel = 2;
   string customer_name = 3;
-  string customer_identifier = 4; // Phone, IG Handle, FB PSID, or Email
+  string customer_identifier = 4; // Phone, IG Handle, FB PSID, Email, or LinkedIn URL
   string last_message = 5;
   string last_message_time = 6;
   int32 unread_count = 7;
@@ -34,6 +35,8 @@ message ConversationSummary {
   string assigned_agent = 9;
   string business_unit = 10;
   string sentiment = 11; // POSITIVE, NEUTRAL, URGENT
+  string interaction_type = 12; // "DIRECT_MESSAGE", "POST_COMMENT", "LEAD_FORM"
+  string post_title_or_url = 13; // e.g. "Post: Why SaaS ERP is broken"
 }
 
 message MessageItem {
@@ -46,6 +49,7 @@ message MessageItem {
   string media_type = 7; // text, image, audio, document
   string sent_at = 8;
   string delivery_status = 9; // SENT, DELIVERED, READ, FAILED
+  string interaction_type = 10; // "DIRECT_MESSAGE", "POST_COMMENT"
 }
 
 message ListConversationsRequest {

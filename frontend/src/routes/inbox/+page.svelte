@@ -14,6 +14,8 @@
     assignedAgent: string;
     businessUnit: string;
     sentiment: string;
+    interactionType?: string;
+    postTitleOrUrl?: string;
   }
 
   interface MessageItem {
@@ -57,6 +59,8 @@
         return { label: 'Facebook', color: '#1877F2', icon: '🔵', bg: 'bg-blue-500/10 text-blue-400 border-blue-500/20' };
       case 4:
         return { label: 'Email', color: '#EA4335', icon: '📧', bg: 'bg-red-500/10 text-red-400 border-red-500/20' };
+      case 6:
+        return { label: 'LinkedIn', color: '#0A66C2', icon: '👔', bg: 'bg-sky-500/10 text-sky-400 border-sky-500/20' };
       default:
         return { label: 'Livechat', color: '#06B6D4', icon: '💬', bg: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' };
     }
@@ -247,6 +251,15 @@
       >
         📧 Email
       </button>
+      <button
+        onclick={() => {
+          channelFilter = 6;
+          loadConversations();
+        }}
+        class="px-3 py-1 text-xs font-semibold rounded-lg transition-colors {channelFilter === 6 ? 'bg-sky-700 text-white' : 'bg-muted/50 hover:bg-muted text-muted-foreground'}"
+      >
+        👔 LinkedIn
+      </button>
     </div>
   </div>
 
@@ -291,6 +304,12 @@
                 </span>
               {/if}
             </div>
+
+            {#if c.postTitleOrUrl}
+              <div class="text-[10px] text-primary/80 font-mono truncate">
+                💬 {c.postTitleOrUrl}
+              </div>
+            {/if}
 
             <p class="text-[11px] text-muted-foreground truncate">{c.lastMessage}</p>
 

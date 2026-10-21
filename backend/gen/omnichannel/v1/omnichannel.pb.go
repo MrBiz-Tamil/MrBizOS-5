@@ -30,6 +30,7 @@ const (
 	ChannelType_CHANNEL_TYPE_FACEBOOK    ChannelType = 3
 	ChannelType_CHANNEL_TYPE_EMAIL       ChannelType = 4
 	ChannelType_CHANNEL_TYPE_LIVECHAT    ChannelType = 5
+	ChannelType_CHANNEL_TYPE_LINKEDIN    ChannelType = 6
 )
 
 // Enum value maps for ChannelType.
@@ -41,6 +42,7 @@ var (
 		3: "CHANNEL_TYPE_FACEBOOK",
 		4: "CHANNEL_TYPE_EMAIL",
 		5: "CHANNEL_TYPE_LIVECHAT",
+		6: "CHANNEL_TYPE_LINKEDIN",
 	}
 	ChannelType_value = map[string]int32{
 		"CHANNEL_TYPE_UNSPECIFIED": 0,
@@ -49,6 +51,7 @@ var (
 		"CHANNEL_TYPE_FACEBOOK":    3,
 		"CHANNEL_TYPE_EMAIL":       4,
 		"CHANNEL_TYPE_LIVECHAT":    5,
+		"CHANNEL_TYPE_LINKEDIN":    6,
 	}
 )
 
@@ -84,14 +87,16 @@ type ConversationSummary struct {
 	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Channel            ChannelType            `protobuf:"varint,2,opt,name=channel,proto3,enum=omnichannel.v1.ChannelType" json:"channel,omitempty"`
 	CustomerName       string                 `protobuf:"bytes,3,opt,name=customer_name,json=customerName,proto3" json:"customer_name,omitempty"`
-	CustomerIdentifier string                 `protobuf:"bytes,4,opt,name=customer_identifier,json=customerIdentifier,proto3" json:"customer_identifier,omitempty"` // Phone, IG Handle, FB PSID, or Email
+	CustomerIdentifier string                 `protobuf:"bytes,4,opt,name=customer_identifier,json=customerIdentifier,proto3" json:"customer_identifier,omitempty"` // Phone, IG Handle, FB PSID, Email, or LinkedIn URL
 	LastMessage        string                 `protobuf:"bytes,5,opt,name=last_message,json=lastMessage,proto3" json:"last_message,omitempty"`
 	LastMessageTime    string                 `protobuf:"bytes,6,opt,name=last_message_time,json=lastMessageTime,proto3" json:"last_message_time,omitempty"`
 	UnreadCount        int32                  `protobuf:"varint,7,opt,name=unread_count,json=unreadCount,proto3" json:"unread_count,omitempty"`
 	Status             string                 `protobuf:"bytes,8,opt,name=status,proto3" json:"status,omitempty"` // OPEN, PENDING, RESOLVED
 	AssignedAgent      string                 `protobuf:"bytes,9,opt,name=assigned_agent,json=assignedAgent,proto3" json:"assigned_agent,omitempty"`
 	BusinessUnit       string                 `protobuf:"bytes,10,opt,name=business_unit,json=businessUnit,proto3" json:"business_unit,omitempty"`
-	Sentiment          string                 `protobuf:"bytes,11,opt,name=sentiment,proto3" json:"sentiment,omitempty"` // POSITIVE, NEUTRAL, URGENT
+	Sentiment          string                 `protobuf:"bytes,11,opt,name=sentiment,proto3" json:"sentiment,omitempty"`                                     // POSITIVE, NEUTRAL, URGENT
+	InteractionType    string                 `protobuf:"bytes,12,opt,name=interaction_type,json=interactionType,proto3" json:"interaction_type,omitempty"`  // "DIRECT_MESSAGE", "POST_COMMENT", "LEAD_FORM"
+	PostTitleOrUrl     string                 `protobuf:"bytes,13,opt,name=post_title_or_url,json=postTitleOrUrl,proto3" json:"post_title_or_url,omitempty"` // e.g. "Post: Why SaaS ERP is broken"
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -203,19 +208,34 @@ func (x *ConversationSummary) GetSentiment() string {
 	return ""
 }
 
+func (x *ConversationSummary) GetInteractionType() string {
+	if x != nil {
+		return x.InteractionType
+	}
+	return ""
+}
+
+func (x *ConversationSummary) GetPostTitleOrUrl() string {
+	if x != nil {
+		return x.PostTitleOrUrl
+	}
+	return ""
+}
+
 type MessageItem struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ConversationId string                 `protobuf:"bytes,2,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
-	SenderType     string                 `protobuf:"bytes,3,opt,name=sender_type,json=senderType,proto3" json:"sender_type,omitempty"` // CUSTOMER, AGENT, AI_BOT
-	SenderName     string                 `protobuf:"bytes,4,opt,name=sender_name,json=senderName,proto3" json:"sender_name,omitempty"`
-	Content        string                 `protobuf:"bytes,5,opt,name=content,proto3" json:"content,omitempty"`
-	MediaUrl       string                 `protobuf:"bytes,6,opt,name=media_url,json=mediaUrl,proto3" json:"media_url,omitempty"`
-	MediaType      string                 `protobuf:"bytes,7,opt,name=media_type,json=mediaType,proto3" json:"media_type,omitempty"` // text, image, audio, document
-	SentAt         string                 `protobuf:"bytes,8,opt,name=sent_at,json=sentAt,proto3" json:"sent_at,omitempty"`
-	DeliveryStatus string                 `protobuf:"bytes,9,opt,name=delivery_status,json=deliveryStatus,proto3" json:"delivery_status,omitempty"` // SENT, DELIVERED, READ, FAILED
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ConversationId  string                 `protobuf:"bytes,2,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
+	SenderType      string                 `protobuf:"bytes,3,opt,name=sender_type,json=senderType,proto3" json:"sender_type,omitempty"` // CUSTOMER, AGENT, AI_BOT
+	SenderName      string                 `protobuf:"bytes,4,opt,name=sender_name,json=senderName,proto3" json:"sender_name,omitempty"`
+	Content         string                 `protobuf:"bytes,5,opt,name=content,proto3" json:"content,omitempty"`
+	MediaUrl        string                 `protobuf:"bytes,6,opt,name=media_url,json=mediaUrl,proto3" json:"media_url,omitempty"`
+	MediaType       string                 `protobuf:"bytes,7,opt,name=media_type,json=mediaType,proto3" json:"media_type,omitempty"` // text, image, audio, document
+	SentAt          string                 `protobuf:"bytes,8,opt,name=sent_at,json=sentAt,proto3" json:"sent_at,omitempty"`
+	DeliveryStatus  string                 `protobuf:"bytes,9,opt,name=delivery_status,json=deliveryStatus,proto3" json:"delivery_status,omitempty"`     // SENT, DELIVERED, READ, FAILED
+	InteractionType string                 `protobuf:"bytes,10,opt,name=interaction_type,json=interactionType,proto3" json:"interaction_type,omitempty"` // "DIRECT_MESSAGE", "POST_COMMENT"
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *MessageItem) Reset() {
@@ -307,6 +327,13 @@ func (x *MessageItem) GetSentAt() string {
 func (x *MessageItem) GetDeliveryStatus() string {
 	if x != nil {
 		return x.DeliveryStatus
+	}
+	return ""
+}
+
+func (x *MessageItem) GetInteractionType() string {
+	if x != nil {
+		return x.InteractionType
 	}
 	return ""
 }
@@ -1035,7 +1062,7 @@ var File_omnichannel_v1_omnichannel_proto protoreflect.FileDescriptor
 
 const file_omnichannel_v1_omnichannel_proto_rawDesc = "" +
 	"\n" +
-	" omnichannel/v1/omnichannel.proto\x12\x0eomnichannel.v1\"\xa6\x03\n" +
+	" omnichannel/v1/omnichannel.proto\x12\x0eomnichannel.v1\"\xfc\x03\n" +
 	"\x13ConversationSummary\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x125\n" +
 	"\achannel\x18\x02 \x01(\x0e2\x1b.omnichannel.v1.ChannelTypeR\achannel\x12#\n" +
@@ -1048,7 +1075,9 @@ const file_omnichannel_v1_omnichannel_proto_rawDesc = "" +
 	"\x0eassigned_agent\x18\t \x01(\tR\rassignedAgent\x12#\n" +
 	"\rbusiness_unit\x18\n" +
 	" \x01(\tR\fbusinessUnit\x12\x1c\n" +
-	"\tsentiment\x18\v \x01(\tR\tsentiment\"\xa0\x02\n" +
+	"\tsentiment\x18\v \x01(\tR\tsentiment\x12)\n" +
+	"\x10interaction_type\x18\f \x01(\tR\x0finteractionType\x12)\n" +
+	"\x11post_title_or_url\x18\r \x01(\tR\x0epostTitleOrUrl\"\xcb\x02\n" +
 	"\vMessageItem\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0fconversation_id\x18\x02 \x01(\tR\x0econversationId\x12\x1f\n" +
@@ -1061,7 +1090,9 @@ const file_omnichannel_v1_omnichannel_proto_rawDesc = "" +
 	"\n" +
 	"media_type\x18\a \x01(\tR\tmediaType\x12\x17\n" +
 	"\asent_at\x18\b \x01(\tR\x06sentAt\x12'\n" +
-	"\x0fdelivery_status\x18\t \x01(\tR\x0edeliveryStatus\"\xb1\x01\n" +
+	"\x0fdelivery_status\x18\t \x01(\tR\x0edeliveryStatus\x12)\n" +
+	"\x10interaction_type\x18\n" +
+	" \x01(\tR\x0finteractionType\"\xb1\x01\n" +
 	"\x18ListConversationsRequest\x125\n" +
 	"\achannel\x18\x01 \x01(\x0e2\x1b.omnichannel.v1.ChannelTypeR\achannel\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12#\n" +
@@ -1113,14 +1144,15 @@ const file_omnichannel_v1_omnichannel_proto_rawDesc = "" +
 	"\x16SuggestAIReplyResponse\x12'\n" +
 	"\x0fsuggested_reply\x18\x01 \x01(\tR\x0esuggestedReply\x12)\n" +
 	"\x10confidence_score\x18\x02 \x01(\x01R\x0fconfidenceScore\x12+\n" +
-	"\x11reference_sources\x18\x03 \x03(\tR\x10referenceSources*\xb0\x01\n" +
+	"\x11reference_sources\x18\x03 \x03(\tR\x10referenceSources*\xcb\x01\n" +
 	"\vChannelType\x12\x1c\n" +
 	"\x18CHANNEL_TYPE_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15CHANNEL_TYPE_WHATSAPP\x10\x01\x12\x1a\n" +
 	"\x16CHANNEL_TYPE_INSTAGRAM\x10\x02\x12\x19\n" +
 	"\x15CHANNEL_TYPE_FACEBOOK\x10\x03\x12\x16\n" +
 	"\x12CHANNEL_TYPE_EMAIL\x10\x04\x12\x19\n" +
-	"\x15CHANNEL_TYPE_LIVECHAT\x10\x052\x8a\x05\n" +
+	"\x15CHANNEL_TYPE_LIVECHAT\x10\x05\x12\x19\n" +
+	"\x15CHANNEL_TYPE_LINKEDIN\x10\x062\x8a\x05\n" +
 	"\x12OmnichannelService\x12h\n" +
 	"\x11ListConversations\x12(.omnichannel.v1.ListConversationsRequest\x1a).omnichannel.v1.ListConversationsResponse\x12b\n" +
 	"\x0fGetConversation\x12&.omnichannel.v1.GetConversationRequest\x1a'.omnichannel.v1.GetConversationResponse\x12V\n" +
