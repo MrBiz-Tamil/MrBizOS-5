@@ -20,6 +20,16 @@ type Server struct {
 	httpServer  *http.Server
 }
 
+// writeDemoDisabled fails a demo/compatibility endpoint closed. These endpoints
+// return hardcoded sample payloads (super-admin identity, fixed financials) and
+// are only safe for local demos, so outside MRBIZ_DEV_AUTH they return 501 rather
+// than silently serving fabricated data as if it were real tenant data.
+func writeDemoDisabled(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNotImplemented)
+	_, _ = w.Write([]byte(`{"error":"This endpoint has no real-data implementation. Demo payloads are disabled; set MRBIZ_DEV_AUTH=1 for local demo mode."}`))
+}
+
 // NewServer initializes the ConnectRPC server with strict tenant interceptors
 func NewServer(db *gorm.DB) *Server {
 	mux := http.NewServeMux()
@@ -34,6 +44,10 @@ func NewServer(db *gorm.DB) *Server {
 
 	// Compatibility endpoint for /api/auth/me and /auth/me
 	meHandler := func(w http.ResponseWriter, r *http.Request) {
+		if !devAuthEnabled() {
+			writeDemoDisabled(w)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"user":{"id":"user-1","tenant_id":"tenant-1","email":"admin@mrbiz.local","full_name":"Executive Administrator","role":"admin","is_super_admin":true,"is_active":true,"current_business_unit_id":"travel","allowed_business_units":["travel","realestate","healthcare","trade","quarry","consulting"]},"tenant":{"id":"tenant-1","name":"Global Business Group","legal_name":"Global Business Group Ltd","gstin":"27AABCA1234F1Z6","address":"Skyline Commercial Towers, Anna Salai","city":"Chennai","state":"Tamil Nadu","country":"India","pincode":"600002","email":"admin@mrbiz.local","phone":"+91 98400 12345","currency":"INR","subscription_plan":"ENTERPRISE","subscription_status":"ACTIVE"}}`))
@@ -43,6 +57,10 @@ func NewServer(db *gorm.DB) *Server {
 
 	// Compatibility endpoint for /api/company and /company
 	companyHandler := func(w http.ResponseWriter, r *http.Request) {
+		if !devAuthEnabled() {
+			writeDemoDisabled(w)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"id":"tenant-1","name":"Global Business Group","legal_name":"Global Business Group Ltd","gstin":"27AABCA1234F1Z6","address":"Skyline Commercial Towers, Anna Salai","city":"Chennai","state":"Tamil Nadu","country":"India","pincode":"600002","email":"admin@mrbiz.local","phone":"+91 98400 12345","invoice_prefix":"INV-2026","financial_year_start":"2026-04-01","currency":"INR","subscription_plan":"ENTERPRISE","subscription_status":"ACTIVE","bank_name":"HDFC Bank Ltd","bank_account_no":"50200012345678","bank_ifsc":"HDFC0000240","bank_branch":"Mount Road","upi_id":"mrbiz@upi"}`))
@@ -86,6 +104,10 @@ func NewServer(db *gorm.DB) *Server {
 
 	// Compatibility endpoint for /api/billing and /billing
 	billingHandler := func(w http.ResponseWriter, r *http.Request) {
+		if !devAuthEnabled() {
+			writeDemoDisabled(w)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"status":"ACTIVE","plan_code":"ENTERPRISE","plan_name":"Enterprise Unlimited","billing_cycle":"ANNUAL","trial_days_left":null,"subscription_id":"sub-ent-01"}`))
@@ -95,6 +117,10 @@ func NewServer(db *gorm.DB) *Server {
 
 	// Compatibility endpoint for /api/legal/status and /legal/status
 	legalHandler := func(w http.ResponseWriter, r *http.Request) {
+		if !devAuthEnabled() {
+			writeDemoDisabled(w)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"required_version":"2026-04-01","accepted":true,"accepted_at":"2026-04-01T00:00:00Z"}`))
@@ -104,6 +130,10 @@ func NewServer(db *gorm.DB) *Server {
 
 	// Compatibility endpoint for /api/company/subscription and /company/subscription
 	subHandler := func(w http.ResponseWriter, r *http.Request) {
+		if !devAuthEnabled() {
+			writeDemoDisabled(w)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"tenant_id":"tenant-1","plan_code":"ENTERPRISE","plan_name":"Enterprise Multi-OS","status":"ACTIVE","billing_cycle":"ANNUAL","max_users":100,"max_invoices":100000,"features":{"accounting":true,"expenses":true,"reports":true,"realtime":true,"multi_currency":true,"api_access":true,"unlimited_branches":true}}`))
@@ -113,6 +143,10 @@ func NewServer(db *gorm.DB) *Server {
 
 	// Compatibility endpoint for /api/dashboard and /dashboard
 	dashboardHandler := func(w http.ResponseWriter, r *http.Request) {
+		if !devAuthEnabled() {
+			writeDemoDisabled(w)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"total_sales":"1428500.00","total_received":"1198500.00","outstanding_balance":"230000.00","total_invoices_count":48,"paid_invoices_count":41,"unpaid_invoices_count":7,"total_inventory_value":"890000.00","low_stock_count":2,"recent_invoices":[],"recent_payments":[]}`))
@@ -122,6 +156,10 @@ func NewServer(db *gorm.DB) *Server {
 
 	// Compatibility endpoint for /api/admin/billing/invoices
 	adminBillingInvoicesHandler := func(w http.ResponseWriter, r *http.Request) {
+		if !devAuthEnabled() {
+			writeDemoDisabled(w)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		status := r.URL.Query().Get("status")
 		w.WriteHeader(http.StatusOK)
@@ -151,6 +189,10 @@ func NewServer(db *gorm.DB) *Server {
 
 	// Compatibility endpoint for /api/admin/billing/run
 	adminRunHandler := func(w http.ResponseWriter, r *http.Request) {
+		if !devAuthEnabled() {
+			writeDemoDisabled(w)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"success":true,"cycle_timestamp":"2026-10-21T14:00:00Z","tenants_evaluated":14,"renewals_generated":1,"message":"Platform billing cycle completed. 14 tenants evaluated, generated PINV-2026-006."}`))
@@ -160,6 +202,10 @@ func NewServer(db *gorm.DB) *Server {
 
 	// Compatibility endpoint for /api/admin/billing/invoices/{id}/mark-paid
 	adminMarkPaidHandler := func(w http.ResponseWriter, r *http.Request) {
+		if !devAuthEnabled() {
+			writeDemoDisabled(w)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"success":true,"status":"PAID","message":"Subscription plan invoice marked as PAID. Tenant access activated."}`))

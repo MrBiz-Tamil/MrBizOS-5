@@ -1,8 +1,10 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { platformInvoicesStore, type PlatformInvoice } from '$lib/server/adminBillingStore';
+import { devAuthEnabled, demoDisabledResponse } from '$lib/server/devmode';
 
 export const POST: RequestHandler = async () => {
+	if (!devAuthEnabled()) return demoDisabledResponse();
 	// Simulate evaluating subscription tenures and generating upcoming renewal invoice
 	const nextIdNum = platformInvoicesStore.length + 101;
 	const newInvoice: PlatformInvoice = {

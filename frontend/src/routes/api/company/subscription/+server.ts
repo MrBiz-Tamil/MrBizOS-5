@@ -1,7 +1,9 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { devAuthEnabled, demoDisabledResponse } from '$lib/server/devmode';
 
 export const GET: RequestHandler = async () => {
+	if (!devAuthEnabled()) return demoDisabledResponse();
 	return json({
 		tenant_id: 'tenant-1',
 		plan_code: 'ENTERPRISE',

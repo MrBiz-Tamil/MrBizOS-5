@@ -1,8 +1,11 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { devAuthEnabled, demoDisabledResponse } from '$lib/server/devmode';
 
-export const GET: RequestHandler = async ({ cookies }) => {
-	// Return the current authenticated Super Admin session
+export const GET: RequestHandler = async () => {
+	if (!devAuthEnabled()) return demoDisabledResponse();
+	// Demo-only: a hardcoded super-admin session. Real sessions must be resolved
+	// from the session cookie by a real backend; this is gated behind MRBIZ_DEV_AUTH.
 	return json({
 		user: {
 			id: 'user-1',

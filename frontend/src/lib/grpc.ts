@@ -42,14 +42,32 @@ export async function callRpc<TReq = any, TRes = any>(
 		'Connect-Protocol-Version': '1',
 	};
 
-	const token = opts?.token || (typeof localStorage !== 'undefined' ? localStorage.getItem('saas_token') : '') || 'superadmin-session-active';
-	headers['Authorization'] = `Bearer ${token}`;
+	// Authentication rides on the HttpOnly `saas_session` cookie sent with
+	// `credentials: 'include'`; the backend interceptor validates it. We only attach
+	// an explicit bearer token when one is genuinely provided — never a forged
+	// "superadmin" fallback, which previously let any client act as super-admin.
+	const token = opts?.token || (typeof localStorage !== 'undefined' ? localStorage.getItem('saas_token') : '') || '';
+	if (token) {
+		headers['Authorization'] = `Bearer ${token}`;
+	}
 
-	const buId = opts?.businessUnitId || (typeof localStorage !== 'undefined' ? localStorage.getItem('mrbiz_active_unit') : '') || 'healthcare';
-	headers['X-Business-Unit-Id'] = buId;
+	// Business unit reflects the user's current workspace selection; send it only
+	// when one is actually set rather than defaulting to 'healthcare'.
+	const buId = opts?.businessUnitId || (typeof localStorage !== 'undefined' ? localStorage.getItem('mrbiz_active_unit') : '') || '';
+	if (buId) {
+		headers['X-Business-Unit-Id'] = buId;
+	}
 
-	const tenantId = opts?.tenantId || (typeof localStorage !== 'undefined' ? localStorage.getItem('saas_tenant_id') : '') || 'tenant-1';
-	headers['X-Tenant-Id'] = tenantId;
+	// Tenant comes from the active selection; never default to 'tenant-1', which
+	// would silently read another tenant's data when no tenant is in context.
+	const tenantId = opts?.tenantId
+		|| (typeof localStorage !== 'undefined'
+			? (localStorage.getItem('saas_selected_tenant_id') || localStorage.getItem('saas_tenant_id'))
+			: '')
+		|| '';
+	if (tenantId) {
+		headers['X-Tenant-Id'] = tenantId;
+	}
 
 	try {
 		const res = await fetch(url, {

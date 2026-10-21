@@ -1,8 +1,10 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { platformInvoicesStore, type PlatformInvoice } from '$lib/server/adminBillingStore';
+import { devAuthEnabled, demoDisabledResponse } from '$lib/server/devmode';
 
 export const POST: RequestHandler = async ({ params, request }) => {
+	if (!devAuthEnabled()) return demoDisabledResponse();
 	const { id } = params;
 	const body = await request.json().catch(() => ({}));
 	const { method = 'BANK_TRANSFER', reference = '' } = body;

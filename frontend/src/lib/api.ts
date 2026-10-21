@@ -953,20 +953,7 @@ export const api = {
 		request<{ message: string }>('/auth/verify-email', { method: 'POST', body: JSON.stringify({ token }) }),
 	signup: (body: { company_name: string; full_name: string; email: string; phone: string; state: string; password: string; accept_terms: boolean }) =>
 		request<{ message: string }>('/auth/signup', { method: 'POST', body: JSON.stringify(body) }),
-	getBilling: async () => {
-		try {
-			return await request<any>('/billing');
-		} catch {
-			return {
-				status: 'ACTIVE',
-				plan_code: 'ENTERPRISE',
-				plan_name: 'Enterprise Unlimited',
-				billing_cycle: 'ANNUAL',
-				trial_days_left: null,
-				subscription_id: 'sub-ent-01'
-			};
-		}
-	},
+	getBilling: () => request<any>('/billing'),
 	getBillingInvoices: () => request<any[]>('/billing/invoices'),
 	chooseBillingPlan: (plan_code: string, billing_cycle: string) =>
 		request<any>('/billing/plan', { method: 'POST', body: JSON.stringify({ plan_code, billing_cycle }) }),
@@ -1022,17 +1009,8 @@ export const api = {
 	deleteShipmentCost: (id: string, costId: string) => request<any>(`/trade/shipments/${id}/costs/${costId}`, { method: 'DELETE' }),
 	getShipmentDocData: (id: string) => request<any>(`/trade/shipments/${id}/doc-data`),
 	shipmentLandedCost: (id: string) => request<any>(`/trade/shipments/${id}/landed-cost`),
-	getLegalStatus: async () => {
-		try {
-			return await request<{ required_version: string; accepted: boolean; accepted_at?: string }>('/legal/status');
-		} catch {
-			return {
-				required_version: '2026-04-01',
-				accepted: true,
-				accepted_at: '2026-04-01T00:00:00Z'
-			};
-		}
-	},
+	getLegalStatus: () =>
+		request<{ required_version: string; accepted: boolean; accepted_at?: string }>('/legal/status'),
 	acceptLegal: (version: string) =>
 		request<{ message: string }>('/legal/accept', { method: 'POST', body: JSON.stringify({ version }) }),
 	resendVerification: () => request<{ message: string }>('/auth/resend-verification', { method: 'POST' }),
@@ -1053,71 +1031,13 @@ export const api = {
 			setSelectedTenantId(null);
 		}
 	},
-	getMe: async () => {
-		try {
-			return await request<{ user: User; tenant?: Tenant }>('/auth/me');
-		} catch {
-			return {
-				user: {
-					id: 'user-1',
-					tenant_id: 'tenant-1',
-					email: 'admin@mrbiz.local',
-					full_name: 'Executive Administrator',
-					role: 'admin',
-					is_super_admin: true,
-					is_active: true
-				},
-				tenant: {
-					id: 'tenant-1',
-					name: 'Global Business Group',
-					legal_name: 'Global Business Group Ltd',
-					gstin: '27AABCA1234F1Z6',
-					address: 'Skyline Commercial Towers, Anna Salai',
-					city: 'Chennai',
-					state: 'Tamil Nadu',
-					country: 'India',
-					pincode: '600002',
-					email: 'admin@mrbiz.local',
-					phone: '+91 98400 12345',
-					invoice_prefix: 'INV-2026',
-					financial_year_start: '2026-04-01',
-					currency: 'INR',
-					subscription_plan: 'ENTERPRISE',
-					subscription_status: 'ACTIVE',
-					is_active: true,
-					created_at: '2026-01-01T00:00:00Z'
-				}
-			};
-		}
-	},
+	// The session is validated server-side on every call; a failure here means the
+	// caller is not authenticated. We propagate the error so the shell redirects to
+	// /login instead of silently fabricating a super-admin identity (fail-closed).
+	getMe: () => request<{ user: User; tenant?: Tenant }>('/auth/me'),
 
 	// Company / Tenant
-	getCompany: async () => {
-		try {
-			return await request<Tenant>('/company');
-		} catch {
-			return {
-				id: 'tenant-1',
-				name: 'Global Business Group',
-				legal_name: 'Global Business Group Ltd',
-				gstin: '27AABCA1234F1Z6',
-				address: 'Skyline Commercial Towers, Anna Salai',
-				city: 'Chennai',
-				state: 'Tamil Nadu',
-				country: 'India',
-				pincode: '600002',
-				email: 'admin@mrbiz.local',
-				phone: '+91 98400 12345',
-				invoice_prefix: 'INV-2026',
-				financial_year_start: '2026-04-01',
-				currency: 'INR',
-				subscription_plan: 'ENTERPRISE',
-				subscription_status: 'ACTIVE',
-				is_active: true,
-				created_at: '2026-01-01T00:00:00Z'
-			} as Tenant;
-		}
-	},
+	getCompany: () => request<Tenant>('/company'),
 	updateCompany: (data: Partial<Tenant>) =>
 		request<Tenant>('/company', { method: 'PATCH', body: JSON.stringify(data) }),
 
@@ -1131,33 +1051,7 @@ export const api = {
 	listAuditLogs: () => request<AuditLog[]>('/admin/audit'),
 
 	// Subscriptions & Plan Tiers
-	getCompanySubscription: async () => {
-		try {
-			return await request<TenantSubscriptionInfo>('/company/subscription');
-		} catch {
-			return {
-				tenant_id: 'tenant-1',
-				tenant_name: 'Global Business Group',
-				plan_code: 'ENTERPRISE',
-				plan_name: 'Enterprise Multi-OS',
-				status: 'ACTIVE',
-				billing_cycle: 'ANNUAL',
-				max_users: 100,
-				active_users_count: 5,
-				max_invoices_per_month: 100000,
-				invoices_this_month: 48,
-				features: {
-					accounting: true,
-					expenses: true,
-					reports: true,
-					realtime: true,
-					multi_currency: true,
-					api_access: true,
-					unlimited_branches: true
-				}
-			} as TenantSubscriptionInfo;
-		}
-	},
+	getCompanySubscription: () => request<TenantSubscriptionInfo>('/company/subscription'),
 	listSubscriptionPlans: () => request<SubscriptionPlan[]>('/admin/subscriptions/plans'),
 	updateTenantSubscription: (tenantId: string, data: {
 		plan_id?: string;
@@ -1321,24 +1215,7 @@ export const api = {
 		}),
 
 	// Dashboard
-	getDashboard: async () => {
-		try {
-			return await request<DashboardMetrics>('/dashboard');
-		} catch {
-			return {
-				total_sales: '1428500.00',
-				total_received: '1198500.00',
-				outstanding_balance: '230000.00',
-				total_invoices_count: 48,
-				paid_invoices_count: 41,
-				unpaid_invoices_count: 7,
-				total_inventory_value: '890000.00',
-				low_stock_count: 2,
-				recent_invoices: [],
-				recent_payments: []
-			};
-		}
-	},
+	getDashboard: () => request<DashboardMetrics>('/dashboard'),
 
 	// Accounting & Financial Ledger
 	listAccounts: () => request<Account[]>('/accounting/accounts'),

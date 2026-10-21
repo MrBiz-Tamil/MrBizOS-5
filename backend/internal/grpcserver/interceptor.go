@@ -2,6 +2,9 @@ package grpcserver
 
 import (
 	"context"
+	"errors"
+	"log"
+	"os"
 	"strings"
 
 	"connectrpc.com/connect"
@@ -16,6 +19,21 @@ const (
 	TenantIDKey       contextKey = "tenant_id"
 	BusinessUnitIDKey contextKey = "business_unit_id"
 )
+
+// devAuthEnabled reports whether the insecure local-development auth bypass is
+// explicitly turned on via the MRBIZ_DEV_AUTH environment variable. It is OFF by
+// default, so every deployed/production environment fails closed: requests with
+// no token, an invalid token, or no tenant context are rejected. A developer can
+// opt back into the permissive "always super-admin on tenant-1" behaviour by
+// setting MRBIZ_DEV_AUTH=1 (or true/yes) while real session wiring is completed.
+func devAuthEnabled() bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("MRBIZ_DEV_AUTH"))) {
+	case "1", "true", "yes", "on":
+		return true
+	default:
+		return false
+	}
+}
 
 // Public procedures that do not require authentication
 var publicProcedures = map[string]bool{
@@ -56,27 +74,28 @@ func NewAuthInterceptor() connect.UnaryInterceptorFunc {
 				}
 			}
 
+			// Resolve the caller's identity from a real, signed session token only.
+			// There is no magic-string bypass: an empty or invalid token is rejected
+			// unless the explicit local-dev escape hatch (MRBIZ_DEV_AUTH) is enabled.
 			var claims *tokens.Claims
-			if tokenStr == "superadmin-session-active" || strings.HasPrefix(tokenStr, "superadmin") || tokenStr == "admin" || tokenStr == "Password@123" {
-				claims = &tokens.Claims{
-					UserID: "user-1",
-					Role:   "admin",
-				}
-			} else if tokenStr != "" {
-				var err error
-				claims, err = tokens.ValidateToken(tokenStr)
+			if tokenStr != "" {
+				c, err := tokens.ValidateToken(tokenStr)
 				if err != nil {
-					// Fallback to super admin in local development / active session
-					claims = &tokens.Claims{
-						UserID: "user-1",
-						Role:   "admin",
+					if devAuthEnabled() {
+						log.Printf("[auth][DEV] invalid session token accepted as super-admin via MRBIZ_DEV_AUTH (proc=%s)", proc)
+						claims = &tokens.Claims{UserID: "user-1", Role: "admin"}
+					} else {
+						return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid or expired session"))
 					}
+				} else {
+					claims = c
 				}
 			} else {
-				// No token provided: allow local development workspace access as Super Admin
-				claims = &tokens.Claims{
-					UserID: "user-1",
-					Role:   "admin",
+				if devAuthEnabled() {
+					log.Printf("[auth][DEV] missing session token accepted as super-admin via MRBIZ_DEV_AUTH (proc=%s)", proc)
+					claims = &tokens.Claims{UserID: "user-1", Role: "admin"}
+				} else {
+					return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("authentication required"))
 				}
 			}
 
@@ -84,10 +103,16 @@ func NewAuthInterceptor() connect.UnaryInterceptorFunc {
 			ctx = context.WithValue(ctx, UserIDKey, claims.UserID)
 			ctx = context.WithValue(ctx, RoleKey, claims.Role)
 
-			// Resolve tenant context: check X-Tenant-Id or default to tenant-1
+			// Resolve tenant context from the caller-supplied header. A tenant must be
+			// present for every authenticated call; only the dev escape hatch falls back
+			// to the demo tenant so a missing header cannot silently read tenant-1 data.
 			tenantID := req.Header().Get("X-Tenant-Id")
 			if tenantID == "" {
-				tenantID = "tenant-1"
+				if devAuthEnabled() {
+					tenantID = "tenant-1"
+				} else {
+					return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("tenant context required"))
+				}
 			}
 			ctx = context.WithValue(ctx, TenantIDKey, tenantID)
 
