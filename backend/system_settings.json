@@ -1,0 +1,33 @@
+{
+  "general": {
+    "siteDescription": "Your trusted assessment platform",
+    "siteName": "Dr.Ayya Test 1781621632619",
+    "supportEmail": "support@sithcare.com",
+    "supportPhone": "+91 1800-XXX-XXXX",
+    "timezone": "Asia/Kolkata"
+  },
+  "notifications": {
+    "appointmentReminders": true,
+    "emailNotifications": true,
+    "reminderTime": 30,
+    "smsNotifications": true
+  },
+  "security": {
+    "maxLoginAttempts": 5,
+    "passwordMinLength": 8,
+    "sessionTimeout": 30,
+    "twoFactorAuth": false
+  },
+  "payments": {
+    "currency": "INR",
+    "minConsultationFee": 200,
+    "platformCommission": 15,
+    "taxRate": 20
+  },
+  "growth": {
+    "dailyFreeLimit": 10,
+    "enableAlgorithmBoost": true,
+    "patientFreeLimit": 10,
+    "subsidyAmount": 40000
+  }
+}

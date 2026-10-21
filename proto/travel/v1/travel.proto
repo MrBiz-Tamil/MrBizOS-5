@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+package travel.v1;
+
+option go_package = "drayya-core/gen/travel/v1;travelv1";
+
+service TravelService {
+  rpc ListTourPackages(ListTourPackagesRequest) returns (ListTourPackagesResponse);
+  rpc GetTourPackage(GetTourPackageRequest) returns (GetTourPackageResponse);
+  rpc CreateTourPackage(CreateTourPackageRequest) returns (CreateTourPackageResponse);
+  rpc ListVisaApplications(ListVisaApplicationsRequest) returns (ListVisaApplicationsResponse);
+  rpc SubmitVisaApplication(SubmitVisaApplicationRequest) returns (SubmitVisaApplicationResponse);
+  rpc UpdateVisaStatus(UpdateVisaStatusRequest) returns (UpdateVisaStatusResponse);
+}
+
+message TourPackageProto {
+  string id = 1;
+  string tenant_id = 2;
+  string title = 3;
+  string destination = 4;
+  int32 duration_days = 5;
+  string price = 6;
+  string itinerary_json = 7;
+  bool is_active = 8;
+}
+
+message VisaApplicationProto {
+  string id = 1;
+  string tenant_id = 2;
+  string applicant_name = 3;
+  string passport_number = 4;
+  string country = 5;
+  string visa_type = 6;
+  string status = 7; // SUBMITTED, UNDER_REVIEW, APPROVED, REJECTED
+  string checklist_json = 8;
+  string submitted_at = 9;
+}
+
+message ListTourPackagesRequest {
+  string destination = 1;
+}
+
+message ListTourPackagesResponse {
+  repeated TourPackageProto packages = 1;
+}
+
+message GetTourPackageRequest {
+  string id = 1;
+}
+
+message GetTourPackageResponse {
+  TourPackageProto package = 1;
+}
+
+message CreateTourPackageRequest {
+  string title = 1;
+  string destination = 2;
+  int32 duration_days = 3;
+  string price = 4;
+  string itinerary_json = 5;
+}
+
+message CreateTourPackageResponse {
+  TourPackageProto package = 1;
+}
+
+message ListVisaApplicationsRequest {
+  string country = 1;
+  string status = 2;
+}
+
+message ListVisaApplicationsResponse {
+  repeated VisaApplicationProto applications = 1;
+}
+
+message SubmitVisaApplicationRequest {
+  string applicant_name = 1;
+  string passport_number = 2;
+  string country = 3;
+  string visa_type = 4;
+  string checklist_json = 5;
+}
+
+message SubmitVisaApplicationResponse {
+  VisaApplicationProto application = 1;
+}
+
+message UpdateVisaStatusRequest {
+  string id = 1;
+  string status = 2;
+  string notes = 3;
+}
+
+message UpdateVisaStatusResponse {
+  VisaApplicationProto application = 1;
+}

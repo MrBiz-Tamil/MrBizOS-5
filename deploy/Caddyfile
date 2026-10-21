@@ -1,0 +1,32 @@
+# Reverse Proxy & Automated TLS for MrBiz-OS
+{$DOMAIN:localhost} {
+    # Route ConnectRPC / gRPC calls to backend
+    handle /iam.v1.* {
+        reverse_proxy backend:8080
+    }
+    handle /billing.v1.* {
+        reverse_proxy backend:8080
+    }
+    handle /healthcare.v1.* {
+        reverse_proxy backend:8080
+    }
+    handle /travel.v1.* {
+        reverse_proxy backend:8080
+    }
+    handle /realestate.v1.* {
+        reverse_proxy backend:8080
+    }
+    handle /workflow.v1.* {
+        reverse_proxy backend:8080
+    }
+    handle /healthz {
+        reverse_proxy backend:8080
+    }
+
+    # All web views routed to SvelteKit BFF
+    handle {
+        reverse_proxy frontend:3000
+    }
+
+    encode gzip zstd
+}

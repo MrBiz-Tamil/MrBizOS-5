@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+package workflow.v1;
+
+option go_package = "drayya-core/gen/workflow/v1;workflowv1";
+
+service WorkflowService {
+  rpc ListTasks(ListTasksRequest) returns (ListTasksResponse);
+  rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse);
+  rpc UpdateTaskStatus(UpdateTaskStatusRequest) returns (UpdateTaskStatusResponse);
+  rpc ListApprovalQueue(ListApprovalQueueRequest) returns (ListApprovalQueueResponse);
+  rpc ApproveAction(ApproveActionRequest) returns (ApproveActionResponse);
+  rpc RejectAction(RejectActionRequest) returns (RejectActionResponse);
+}
+
+message TaskProto {
+  string id = 1;
+  string tenant_id = 2;
+  string business_unit_id = 3;
+  string title = 4;
+  string description = 5;
+  string priority = 6; // LOW, MEDIUM, HIGH, URGENT
+  string status = 7; // PENDING, IN_PROGRESS, COMPLETED, CANCELLED
+  string assignee_id = 8;
+  string due_date = 9;
+}
+
+message ApprovalItemProto {
+  string id = 1;
+  string tenant_id = 2;
+  string business_unit_id = 3;
+  string source = 4; // AI_AGENT, LOGISTICS, FINANCE, SYSTEM
+  string title = 5;
+  string action_type = 6;
+  string payload_json = 7;
+  string requested_by = 8;
+  string status = 9; // PENDING, APPROVED, REJECTED
+  string created_at = 10;
+}
+
+message ListTasksRequest {
+  string business_unit_id = 1;
+  string status = 2;
+}
+
+message ListTasksResponse {
+  repeated TaskProto tasks = 1;
+}
+
+message CreateTaskRequest {
+  string business_unit_id = 1;
+  string title = 2;
+  string description = 3;
+  string priority = 4;
+  string assignee_id = 5;
+  string due_date = 6;
+}
+
+message CreateTaskResponse {
+  TaskProto task = 1;
+}
+
+message UpdateTaskStatusRequest {
+  string id = 1;
+  string status = 2;
+}
+
+message UpdateTaskStatusResponse {
+  TaskProto task = 1;
+}
+
+message ListApprovalQueueRequest {
+  string business_unit_id = 1;
+}
+
+message ListApprovalQueueResponse {
+  repeated ApprovalItemProto items = 1;
+}
+
+message ApproveActionRequest {
+  string id = 1;
+  string reason = 2;
+}
+
+message ApproveActionResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message RejectActionRequest {
+  string id = 1;
+  string reason = 2;
+}
+
+message RejectActionResponse {
+  bool success = 1;
+  string message = 2;
+}

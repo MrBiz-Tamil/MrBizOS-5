@@ -1,0 +1,119 @@
+syntax = "proto3";
+
+package realestate.v1;
+
+option go_package = "drayya-core/gen/realestate/v1;realestatev1";
+
+service RealEstateService {
+  rpc ListProperties(ListPropertiesRequest) returns (ListPropertiesResponse);
+  rpc GetProperty(GetPropertyRequest) returns (GetPropertyResponse);
+  rpc CreateProperty(CreatePropertyRequest) returns (CreatePropertyResponse);
+  rpc ScheduleSiteVisit(ScheduleSiteVisitRequest) returns (ScheduleSiteVisitResponse);
+  rpc ListSiteVisits(ListSiteVisitsRequest) returns (ListSiteVisitsResponse);
+  rpc CreatePropertyDeal(CreatePropertyDealRequest) returns (CreatePropertyDealResponse);
+  rpc ListPropertyDeals(ListPropertyDealsRequest) returns (ListPropertyDealsResponse);
+}
+
+message PropertyProto {
+  string id = 1;
+  string tenant_id = 2;
+  string title = 3;
+  string property_type = 4; // APARTMENT, VILLA, COMMERCIAL, PLOT
+  string location = 5;
+  string price = 6;
+  string area_sqft = 7;
+  int32 bedrooms = 8;
+  string status = 9; // AVAILABLE, UNDER_OFFER, SOLD
+  string amenities_json = 10;
+}
+
+message SiteVisitProto {
+  string id = 1;
+  string tenant_id = 2;
+  string property_id = 3;
+  string client_name = 4;
+  string client_phone = 5;
+  string scheduled_time = 6;
+  string status = 7; // SCHEDULED, COMPLETED, CANCELLED
+  string feedback = 8;
+}
+
+message PropertyDealProto {
+  string id = 1;
+  string tenant_id = 2;
+  string property_id = 3;
+  string buyer_name = 4;
+  string seller_name = 5;
+  string deal_amount = 6;
+  string commission_amount = 7;
+  string status = 8; // NEGOTIATION, TOKEN_PAID, AGREEMENT, REGISTERED, CLOSED
+}
+
+message ListPropertiesRequest {
+  string property_type = 1;
+  string status = 2;
+}
+
+message ListPropertiesResponse {
+  repeated PropertyProto properties = 1;
+}
+
+message GetPropertyRequest {
+  string id = 1;
+}
+
+message GetPropertyResponse {
+  PropertyProto property = 1;
+}
+
+message CreatePropertyRequest {
+  string title = 1;
+  string property_type = 2;
+  string location = 3;
+  string price = 4;
+  string area_sqft = 5;
+  int32 bedrooms = 6;
+}
+
+message CreatePropertyResponse {
+  PropertyProto property = 1;
+}
+
+message ScheduleSiteVisitRequest {
+  string property_id = 1;
+  string client_name = 2;
+  string client_phone = 3;
+  string scheduled_time = 4;
+}
+
+message ScheduleSiteVisitResponse {
+  SiteVisitProto site_visit = 1;
+}
+
+message ListSiteVisitsRequest {
+  string property_id = 1;
+}
+
+message ListSiteVisitsResponse {
+  repeated SiteVisitProto site_visits = 1;
+}
+
+message CreatePropertyDealRequest {
+  string property_id = 1;
+  string buyer_name = 2;
+  string seller_name = 3;
+  string deal_amount = 4;
+  string commission_amount = 5;
+}
+
+message CreatePropertyDealResponse {
+  PropertyDealProto deal = 1;
+}
+
+message ListPropertyDealsRequest {
+  string status = 1;
+}
+
+message ListPropertyDealsResponse {
+  repeated PropertyDealProto deals = 1;
+}

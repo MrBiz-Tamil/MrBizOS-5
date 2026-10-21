@@ -1,0 +1,112 @@
+syntax = "proto3";
+
+package consulting.v1;
+
+option go_package = "drayya-core/gen/consulting/v1;consultingv1";
+
+service ConsultingService {
+  rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
+  rpc GetProject(GetProjectRequest) returns (GetProjectResponse);
+  rpc CreateProject(CreateProjectRequest) returns (CreateProjectResponse);
+  rpc LogTimesheet(LogTimesheetRequest) returns (LogTimesheetResponse);
+  rpc ListTimesheets(ListTimesheetsRequest) returns (ListTimesheetsResponse);
+  rpc CreateSOWContract(CreateSOWContractRequest) returns (CreateSOWContractResponse);
+  rpc ListSOWContracts(ListSOWContractsRequest) returns (ListSOWContractsResponse);
+}
+
+message ProjectProto {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string client_name = 4;
+  string start_date = 5;
+  string end_date = 6;
+  string budget = 7;
+  string status = 8; // PLANNING, ACTIVE, ON_HOLD, COMPLETED
+}
+
+message TimesheetProto {
+  string id = 1;
+  string tenant_id = 2;
+  string project_id = 3;
+  string consultant_name = 4;
+  string date = 5;
+  double hours = 6;
+  string task_description = 7;
+  bool is_billable = 8;
+}
+
+message SOWContractProto {
+  string id = 1;
+  string tenant_id = 2;
+  string project_id = 3;
+  string client_name = 4;
+  string contract_value = 5;
+  string terms = 6;
+  string status = 7; // DRAFT, SENT, SIGNED, EXPIRED
+}
+
+message ListProjectsRequest {
+  string status = 1;
+}
+
+message ListProjectsResponse {
+  repeated ProjectProto projects = 1;
+}
+
+message GetProjectRequest {
+  string id = 1;
+}
+
+message GetProjectResponse {
+  ProjectProto project = 1;
+}
+
+message CreateProjectRequest {
+  string name = 1;
+  string client_name = 2;
+  string start_date = 3;
+  string end_date = 4;
+  string budget = 5;
+}
+
+message CreateProjectResponse {
+  ProjectProto project = 1;
+}
+
+message LogTimesheetRequest {
+  string project_id = 1;
+  string date = 2;
+  double hours = 3;
+  string task_description = 4;
+  bool is_billable = 5;
+}
+
+message LogTimesheetResponse {
+  TimesheetProto timesheet = 1;
+}
+
+message ListTimesheetsRequest {
+  string project_id = 1;
+}
+
+message ListTimesheetsResponse {
+  repeated TimesheetProto timesheets = 1;
+}
+
+message CreateSOWContractRequest {
+  string project_id = 1;
+  string client_name = 2;
+  string contract_value = 3;
+  string terms = 4;
+}
+
+message CreateSOWContractResponse {
+  SOWContractProto sow = 1;
+}
+
+message ListSOWContractsRequest {}
+
+message ListSOWContractsResponse {
+  repeated SOWContractProto sows = 1;
+}

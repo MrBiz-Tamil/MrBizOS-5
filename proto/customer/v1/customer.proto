@@ -1,0 +1,118 @@
+syntax = "proto3";
+
+package customer.v1;
+
+option go_package = "drayya-core/gen/customer/v1;customerv1";
+
+service CustomerService {
+  rpc ListCustomers(ListCustomersRequest) returns (ListCustomersResponse);
+  rpc ListCustomersWithBalances(ListCustomersWithBalancesRequest) returns (ListCustomersWithBalancesResponse);
+  rpc CreateCustomer(CreateCustomerRequest) returns (CreateCustomerResponse);
+  rpc GetCustomerStatement(GetCustomerStatementRequest) returns (GetCustomerStatementResponse);
+}
+
+message CustomerProto {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string email = 4;
+  string phone = 5;
+  string gstin = 6;
+  string pan = 7;
+  string billing_address = 8;
+  string billing_city = 9;
+  string billing_state = 10;
+  string billing_country = 11;
+  string billing_pincode = 12;
+  string shipping_address = 13;
+  string shipping_city = 14;
+  string shipping_state = 15;
+  string shipping_pincode = 16;
+  string opening_balance = 17;
+  string current_balance = 18;
+  bool is_active = 19;
+  string company_name = 20;
+}
+
+message CustomerWithBalanceProto {
+  CustomerProto customer = 1;
+  string total_invoiced = 2;
+  string total_paid = 3;
+  string current_balance = 4;
+}
+
+message StatementItemProto {
+  string date = 1;
+  string voucher_type = 2;
+  string voucher_number = 3;
+  string reference_number = 4;
+  string narration = 5;
+  string debit_amount = 6;
+  string credit_amount = 7;
+  string balance = 8;
+}
+
+message CustomerStatementProto {
+  string customer_id = 1;
+  string customer_name = 2;
+  string customer_gstin = 3;
+  string customer_phone = 4;
+  string customer_address = 5;
+  string opening_balance = 6;
+  string closing_balance = 7;
+  string total_invoiced = 8;
+  string total_paid = 9;
+  repeated StatementItemProto items = 10;
+}
+
+message ListCustomersRequest {
+  string tenant_id = 1;
+}
+
+message ListCustomersResponse {
+  repeated CustomerProto customers = 1;
+}
+
+message ListCustomersWithBalancesRequest {
+  string tenant_id = 1;
+}
+
+message ListCustomersWithBalancesResponse {
+  repeated CustomerWithBalanceProto customers = 1;
+}
+
+message CreateCustomerRequest {
+  string tenant_id = 1;
+  string name = 2;
+  string email = 3;
+  string phone = 4;
+  string gstin = 5;
+  string pan = 6;
+  string billing_address = 7;
+  string billing_city = 8;
+  string billing_state = 9;
+  string billing_country = 10;
+  string billing_pincode = 11;
+  string shipping_address = 12;
+  string shipping_city = 13;
+  string shipping_state = 14;
+  string shipping_pincode = 15;
+  string opening_balance = 16;
+  string company_name = 17;
+}
+
+message CreateCustomerResponse {
+  CustomerProto customer = 1;
+}
+
+message GetCustomerStatementRequest {
+  string tenant_id = 1;
+  string customer_id = 2;
+  string from_date = 3;
+  string to_date = 4;
+}
+
+message GetCustomerStatementResponse {
+  CustomerStatementProto statement = 1;
+}
+

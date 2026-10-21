@@ -1,0 +1,101 @@
+syntax = "proto3";
+
+package ecommerce.v1;
+
+option go_package = "drayya-core/gen/ecommerce/v1;ecommercev1";
+
+service ECommerceService {
+  rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse);
+  rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
+  rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+  rpc UpdateShipmentStatus(UpdateShipmentStatusRequest) returns (UpdateShipmentStatusResponse);
+  rpc ListInventoryItems(ListInventoryItemsRequest) returns (ListInventoryItemsResponse);
+  rpc SyncEtsyOrders(SyncEtsyOrdersRequest) returns (SyncEtsyOrdersResponse);
+}
+
+message OrderItemProto {
+  string product_id = 1;
+  string title = 2;
+  int32 quantity = 3;
+  string unit_price = 4;
+  string total = 5;
+}
+
+message OrderProto {
+  string id = 1;
+  string tenant_id = 2;
+  string channel = 3; // ETSY, DIRECT_STORE, WHOLESALE
+  string customer_name = 4;
+  string customer_email = 5;
+  repeated OrderItemProto items = 6;
+  string total_amount = 7;
+  string payment_status = 8;
+  string fulfillment_status = 9;
+  string tracking_number = 10;
+  string created_at = 11;
+}
+
+message InventoryItemProto {
+  string id = 1;
+  string tenant_id = 2;
+  string sku = 3;
+  string name = 4;
+  int32 available_stock = 5;
+  int32 reserved_stock = 6;
+  string location = 7;
+}
+
+message ListOrdersRequest {
+  string channel = 1;
+  string status = 2;
+}
+
+message ListOrdersResponse {
+  repeated OrderProto orders = 1;
+}
+
+message GetOrderRequest {
+  string id = 1;
+}
+
+message GetOrderResponse {
+  OrderProto order = 1;
+}
+
+message CreateOrderRequest {
+  string channel = 1;
+  string customer_name = 2;
+  string customer_email = 3;
+  repeated OrderItemProto items = 4;
+  string total_amount = 5;
+}
+
+message CreateOrderResponse {
+  OrderProto order = 1;
+}
+
+message UpdateShipmentStatusRequest {
+  string order_id = 1;
+  string tracking_number = 2;
+  string carrier = 3;
+  string status = 4;
+}
+
+message UpdateShipmentStatusResponse {
+  OrderProto order = 1;
+}
+
+message ListInventoryItemsRequest {}
+
+message ListInventoryItemsResponse {
+  repeated InventoryItemProto items = 1;
+}
+
+message SyncEtsyOrdersRequest {
+  string shop_id = 1;
+}
+
+message SyncEtsyOrdersResponse {
+  int32 synced_count = 1;
+  string message = 2;
+}

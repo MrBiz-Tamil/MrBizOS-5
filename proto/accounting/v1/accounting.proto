@@ -1,0 +1,152 @@
+syntax = "proto3";
+
+package accounting.v1;
+
+option go_package = "drayya-core/gen/accounting/v1;accountingv1";
+
+service AccountingService {
+  rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse);
+  rpc PostJournalEntry(PostJournalEntryRequest) returns (PostJournalEntryResponse);
+  rpc GetGeneralLedger(GetGeneralLedgerRequest) returns (GetGeneralLedgerResponse);
+  rpc GetTrialBalance(GetTrialBalanceRequest) returns (GetTrialBalanceResponse);
+  rpc GetProfitAndLoss(GetProfitAndLossRequest) returns (GetProfitAndLossResponse);
+  rpc GetJournalByReference(GetJournalByReferenceRequest) returns (GetJournalByReferenceResponse);
+}
+
+message AccountProto {
+  string id = 1;
+  string tenant_id = 2;
+  string code = 3;
+  string name = 4;
+  string type = 5;
+  string sub_type = 6;
+  bool is_system = 7;
+  bool is_active = 8;
+}
+
+message JournalLineProto {
+  string id = 1;
+  string account_id = 2;
+  string account_code = 3;
+  string account_name = 4;
+  string debit_amount = 5;
+  string credit_amount = 6;
+  string narration = 7;
+}
+
+message JournalEntryProto {
+  string id = 1;
+  string tenant_id = 2;
+  string entry_number = 3;
+  string entry_date = 4;
+  string reference_type = 5;
+  string reference_id = 6;
+  string narration = 7;
+  string total_debit = 8;
+  string total_credit = 9;
+  string status = 10;
+  repeated JournalLineProto lines = 11;
+  string created_at = 12;
+}
+
+message GeneralLedgerEntryProto {
+  string entry_id = 1;
+  string entry_number = 2;
+  string entry_date = 3;
+  string reference_type = 4;
+  string reference_id = 5;
+  string account_id = 6;
+  string account_code = 7;
+  string account_name = 8;
+  string customer_name = 9;
+  string debit_amount = 10;
+  string credit_amount = 11;
+  string line_narration = 12;
+  string running_balance = 13;
+}
+
+message TrialBalanceRowProto {
+  string account_code = 1;
+  string account_name = 2;
+  string account_type = 3;
+  string debit_amount = 4;
+  string credit_amount = 5;
+}
+
+message ListAccountsRequest {
+  string tenant_id = 1;
+}
+
+message ListAccountsResponse {
+  repeated AccountProto accounts = 1;
+}
+
+message CreateJournalLineInputProto {
+  string account_id = 1;
+  string debit_amount = 2;
+  string credit_amount = 3;
+  string narration = 4;
+}
+
+message PostJournalEntryRequest {
+  string tenant_id = 1;
+  string entry_date = 2;
+  string reference_type = 3;
+  string reference_id = 4;
+  string narration = 5;
+  repeated CreateJournalLineInputProto lines = 6;
+}
+
+message PostJournalEntryResponse {
+  JournalEntryProto entry = 1;
+}
+
+message GetGeneralLedgerRequest {
+  string tenant_id = 1;
+  string account_id = 2;
+  string from_date = 3;
+  string to_date = 4;
+}
+
+message GetGeneralLedgerResponse {
+  repeated GeneralLedgerEntryProto entries = 1;
+}
+
+message GetTrialBalanceRequest {
+  string tenant_id = 1;
+  string as_of_date = 2;
+}
+
+message GetTrialBalanceResponse {
+  string as_of_date = 1;
+  string total_debit = 2;
+  string total_credit = 3;
+  bool is_balanced = 4;
+  string difference = 5;
+  repeated TrialBalanceRowProto accounts = 6;
+}
+
+message GetProfitAndLossRequest {
+  string tenant_id = 1;
+  string from_date = 2;
+  string to_date = 3;
+}
+
+message GetProfitAndLossResponse {
+  string total_revenue = 1;
+  string total_expense = 2;
+  string net_profit = 3;
+  repeated TrialBalanceRowProto revenues = 4;
+  repeated TrialBalanceRowProto expenses = 5;
+}
+
+message GetJournalByReferenceRequest {
+  string tenant_id = 1;
+  string reference_type = 2;
+  string reference_id = 3;
+}
+
+message GetJournalByReferenceResponse {
+  JournalEntryProto entry = 1;
+}
+

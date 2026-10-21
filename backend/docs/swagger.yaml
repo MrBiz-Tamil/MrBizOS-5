@@ -1,0 +1,3630 @@
+basePath: /api/v1
+definitions:
+  drayya-core_internal_auth.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  drayya-core_internal_auth.MFAResponse:
+    properties:
+      message:
+        type: string
+      mfa_token:
+        type: string
+    type: object
+  drayya-core_internal_auth.TokenResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+      user:
+        $ref: '#/definitions/drayya-core_internal_domain_identity.User'
+    type: object
+  drayya-core_internal_domain_appointment.Appointment:
+    properties:
+      appointment_type:
+        description: consultation, emergency, follow_up
+        type: string
+      consultation_fee:
+        type: integer
+      consultation_mode:
+        description: video, chat, in_person
+        type: string
+      created_at:
+        type: string
+      doctor:
+        $ref: '#/definitions/drayya-core_internal_domain_appointment.DoctorProfile'
+      doctor_id:
+        type: integer
+      end_time:
+        type: string
+      family_member_id:
+        type: integer
+      id:
+        type: integer
+      is_priority:
+        type: boolean
+      latitude:
+        type: number
+      longitude:
+        type: number
+      notes:
+        type: string
+      patient:
+        allOf:
+        - $ref: '#/definitions/drayya-core_internal_domain_appointment.PatientProfile'
+        description: Relationships
+      patient_id:
+        type: integer
+      payout_status:
+        description: Payment & payout tracking
+        type: string
+      start_time:
+        type: string
+      status:
+        $ref: '#/definitions/drayya-core_internal_domain_appointment.AppointmentStatus'
+      updated_at:
+        type: string
+      version:
+        type: integer
+    type: object
+  drayya-core_internal_domain_appointment.AppointmentStatus:
+    enum:
+    - pending
+    - confirmed
+    - in_consultation
+    - completed
+    - cancelled
+    - no_show
+    - rescheduled
+    - declined
+    - doctor_en_route
+    - doctor_arrived
+    type: string
+    x-enum-varnames:
+    - StatusPending
+    - StatusConfirmed
+    - StatusInConsult
+    - StatusCompleted
+    - StatusCancelled
+    - StatusNoShow
+    - StatusRescheduled
+    - StatusDeclined
+    - StatusDoctorEnRoute
+    - StatusDoctorArrived
+  drayya-core_internal_domain_appointment.DoctorProfile:
+    properties:
+      admin_boost_score:
+        type: number
+      average_rating:
+        type: number
+      bank_account_number:
+        type: string
+      bank_ifsc:
+        type: string
+      bio:
+        type: string
+      completion_rate:
+        type: number
+      consultation_fees:
+        $ref: '#/definitions/drayya-core_internal_money.RegionalPricing'
+      created_at:
+        type: string
+      current_status:
+        type: string
+      daily_free_consult_limit:
+        type: integer
+      doctor_type_id:
+        type: integer
+      free_consults_given_today:
+        type: integer
+      free_day_of_week:
+        type: integer
+      free_type:
+        type: string
+      gender:
+        type: string
+      id:
+        type: integer
+      is_featured:
+        type: boolean
+      is_online:
+        type: boolean
+      is_verified:
+        type: boolean
+      languages_spoken:
+        type: string
+      last_ping:
+        type: string
+      latitude:
+        type: number
+      license_number:
+        type: string
+      longitude:
+        type: number
+      offers_free_consultation:
+        type: boolean
+      payout_upi:
+        description: Payout details — set by doctor in profile settings
+        type: string
+      performance_score:
+        type: number
+      profile_completion_percent:
+        type: integer
+      qualification:
+        type: string
+      specialization:
+        type: string
+      total_consultations:
+        type: integer
+      total_consultations_today:
+        type: integer
+      total_reviews:
+        description: Discovery & ranking fields
+        type: integer
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+      weekly_consultations:
+        type: integer
+      years_of_experience:
+        type: integer
+    type: object
+  drayya-core_internal_domain_appointment.PatientProfile:
+    properties:
+      address:
+        type: string
+      allergies:
+        type: string
+      blood_group:
+        type: string
+      chronic_conditions:
+        type: string
+      created_at:
+        type: string
+      date_of_birth:
+        type: string
+      emergency_contact:
+        type: string
+      gender:
+        type: string
+      height:
+        type: number
+      id:
+        type: integer
+      updated_at:
+        type: string
+      user:
+        $ref: '#/definitions/drayya-core_internal_domain_identity.User'
+      user_id:
+        type: integer
+      weight:
+        type: number
+    type: object
+  drayya-core_internal_domain_identity.User:
+    properties:
+      average_rating:
+        type: number
+      created_at:
+        type: string
+      current_status:
+        type: string
+      email:
+        type: string
+      fcm_token:
+        description: Firebase push token
+        type: string
+      free_consults_used:
+        type: integer
+      full_name:
+        type: string
+      gender:
+        type: string
+      hospital_id:
+        type: integer
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      is_online:
+        description: Shadow fields for joined data
+        type: boolean
+      is_verified:
+        type: boolean
+      is_verified_premium:
+        type: boolean
+      last_login:
+        type: string
+      phone_number:
+        type: string
+      prakriti_score:
+        type: string
+      preferred_language:
+        type: string
+      profile_picture:
+        type: string
+      role:
+        type: string
+      secondary_languages:
+        type: string
+      specialization:
+        type: string
+      subscription_auto_renew:
+        type: boolean
+      subscription_end_date:
+        type: string
+      subscription_payment_method:
+        type: string
+      subscription_start_date:
+        type: string
+      tier:
+        type: string
+      uheid:
+        type: string
+      updated_at:
+        type: string
+      wallet_balance:
+        type: integer
+    type: object
+  drayya-core_internal_domain_pharmacy.CourierDelivery:
+    properties:
+      actual_delivery_time:
+        type: string
+      batch_id:
+        description: groups multiple stops for one courier trip
+        type: string
+      battery_level:
+        description: device battery %
+        type: integer
+      courier_id:
+        description: UserID representing the courier
+        type: integer
+      created_at:
+        type: string
+      current_address:
+        type: string
+      current_latitude:
+        type: number
+      current_longitude:
+        type: number
+      delivery_notes:
+        type: string
+      dest_latitude:
+        description: patient delivery lat
+        type: number
+      dest_longitude:
+        description: patient delivery lng
+        type: number
+      distance_traveled:
+        description: in KM
+        type: number
+      estimated_arrival:
+        type: string
+      estimated_delivery_time:
+        type: string
+      id:
+        type: integer
+      order_id:
+        description: ID of the PharmacyOrder or WellnessOrder
+        type: integer
+      pickup_latitude:
+        description: pharmacy lat
+        type: number
+      pickup_longitude:
+        description: pharmacy lng
+        type: number
+      proof_photo_url:
+        description: POD image URL
+        type: string
+      provider_name:
+        description: e.g. "Shiprocket", "Delhivery"
+        type: string
+      sla_breached_at:
+        type: string
+      sla_deadline:
+        description: hard cutoff; breaching triggers auto-escalation
+        type: string
+      status:
+        description: assigned, picked_up, en_route, arrived, completed, failed
+        type: string
+      tracking_id:
+        description: AWB from provider
+        type: string
+      updated_at:
+        type: string
+    type: object
+  drayya-core_internal_domain_pharmacy.DeliveryZone:
+    properties:
+      city:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      is_quick_enabled:
+        type: boolean
+      max_radius_km:
+        type: number
+      updated_at:
+        type: string
+    type: object
+  drayya-core_internal_domain_pharmacy.Medicine:
+    properties:
+      avg_rating:
+        description: Ratings — aggregate populated at query time, not stored.
+        type: number
+      brand:
+        type: string
+      category:
+        type: string
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      description:
+        type: string
+      generic_name:
+        description: GenericName is the INN (International Non-proprietary Name) of
+          the drug.
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      is_prescription_required:
+        type: boolean
+      manufacturer:
+        type: string
+      molecule_code:
+        description: |-
+          MoleculeCode is the active pharmaceutical ingredient (API) identifier.
+          Medicines sharing the same MoleculeCode are therapeutically equivalent
+          and can be shown as cheaper generic alternatives to each other.
+          Example: "metformin-500", "amoxicillin-500", "omeprazole-20".
+        type: string
+      name:
+        type: string
+      prices:
+        allOf:
+        - $ref: '#/definitions/drayya-core_internal_money.RegionalPricing'
+        description: Replaces unit_price
+      requires_cold_chain:
+        type: boolean
+      review_count:
+        type: integer
+      rx_validation_level:
+        $ref: '#/definitions/drayya-core_internal_domain_pharmacy.RxValidationLevel'
+      synonyms:
+        description: Synonyms holds brand names and common names for smart search.
+        type: string
+      updated_at:
+        type: string
+      variants:
+        items:
+          $ref: '#/definitions/drayya-core_internal_domain_pharmacy.ProductVariant'
+        type: array
+    type: object
+  drayya-core_internal_domain_pharmacy.PharmacyInventory:
+    properties:
+      batch_number:
+        type: string
+      expiry_date:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      medicine:
+        allOf:
+        - $ref: '#/definitions/drayya-core_internal_domain_pharmacy.Medicine'
+        description: Relations
+      medicine_id:
+        type: integer
+      pharmacy_id:
+        type: integer
+      reorder_level:
+        type: integer
+      stock_quantity:
+        type: integer
+    type: object
+  drayya-core_internal_domain_pharmacy.ProductVariant:
+    properties:
+      compare_at_prices:
+        allOf:
+        - $ref: '#/definitions/drayya-core_internal_money.RegionalPricing'
+        description: For discounts
+      created_at:
+        type: string
+      id:
+        type: integer
+      medicine_id:
+        type: integer
+      pack_size:
+        description: e.g., "Strip of 10"
+        type: string
+      physical_weight_grams:
+        type: integer
+      prices:
+        $ref: '#/definitions/drayya-core_internal_money.RegionalPricing'
+      sku:
+        type: string
+      strength:
+        description: e.g., "500mg"
+        type: string
+      updated_at:
+        type: string
+    type: object
+  drayya-core_internal_domain_pharmacy.RxValidationLevel:
+    enum:
+    - OTC
+    - RX_STANDARD
+    - RX_STRICT
+    type: string
+    x-enum-comments:
+      RxLevelStandard: Basic prescription required
+      RxLevelStrict: High regulation (e.g., narcotics)
+    x-enum-descriptions:
+    - ""
+    - Basic prescription required
+    - High regulation (e.g., narcotics)
+    x-enum-varnames:
+    - RxLevelOTC
+    - RxLevelStandard
+    - RxLevelStrict
+  drayya-core_internal_money.RegionalPricing:
+    additionalProperties:
+      format: int64
+      type: integer
+    type: object
+  drayya-core_internal_utils_response.ErrorDetail:
+    properties:
+      code:
+        type: string
+      details: {}
+      message:
+        type: string
+    type: object
+  drayya-core_internal_utils_response.StandardError:
+    properties:
+      error:
+        $ref: '#/definitions/drayya-core_internal_utils_response.ErrorDetail'
+      success:
+        type: boolean
+    type: object
+  drayya-core_internal_utils_response.StandardResponse:
+    properties:
+      data: {}
+      message:
+        type: string
+      meta: {}
+      success:
+        type: boolean
+    type: object
+  fiber.Map:
+    additionalProperties: true
+    type: object
+  internal_domain_appointment.Appointment:
+    properties:
+      appointment_type:
+        description: consultation, emergency, follow_up
+        type: string
+      consultation_fee:
+        type: integer
+      consultation_mode:
+        description: video, chat, in_person
+        type: string
+      created_at:
+        type: string
+      doctor:
+        $ref: '#/definitions/internal_domain_appointment.DoctorProfile'
+      doctor_id:
+        type: integer
+      end_time:
+        type: string
+      family_member_id:
+        type: integer
+      id:
+        type: integer
+      is_priority:
+        type: boolean
+      latitude:
+        type: number
+      longitude:
+        type: number
+      notes:
+        type: string
+      patient:
+        allOf:
+        - $ref: '#/definitions/internal_domain_appointment.PatientProfile'
+        description: Relationships
+      patient_id:
+        type: integer
+      payout_status:
+        description: Payment & payout tracking
+        type: string
+      start_time:
+        type: string
+      status:
+        $ref: '#/definitions/internal_domain_appointment.AppointmentStatus'
+      updated_at:
+        type: string
+      version:
+        type: integer
+    type: object
+  internal_domain_appointment.AppointmentStatus:
+    enum:
+    - pending
+    - confirmed
+    - in_consultation
+    - completed
+    - cancelled
+    - no_show
+    - rescheduled
+    - declined
+    - doctor_en_route
+    - doctor_arrived
+    type: string
+    x-enum-varnames:
+    - StatusPending
+    - StatusConfirmed
+    - StatusInConsult
+    - StatusCompleted
+    - StatusCancelled
+    - StatusNoShow
+    - StatusRescheduled
+    - StatusDeclined
+    - StatusDoctorEnRoute
+    - StatusDoctorArrived
+  internal_domain_appointment.DoctorProfile:
+    properties:
+      admin_boost_score:
+        type: number
+      average_rating:
+        type: number
+      bank_account_number:
+        type: string
+      bank_ifsc:
+        type: string
+      bio:
+        type: string
+      completion_rate:
+        type: number
+      consultation_fees:
+        $ref: '#/definitions/drayya-core_internal_money.RegionalPricing'
+      created_at:
+        type: string
+      current_status:
+        type: string
+      daily_free_consult_limit:
+        type: integer
+      doctor_type_id:
+        type: integer
+      free_consults_given_today:
+        type: integer
+      free_day_of_week:
+        type: integer
+      free_type:
+        type: string
+      gender:
+        type: string
+      id:
+        type: integer
+      is_featured:
+        type: boolean
+      is_online:
+        type: boolean
+      is_verified:
+        type: boolean
+      languages_spoken:
+        type: string
+      last_ping:
+        type: string
+      latitude:
+        type: number
+      license_number:
+        type: string
+      longitude:
+        type: number
+      offers_free_consultation:
+        type: boolean
+      payout_upi:
+        description: Payout details — set by doctor in profile settings
+        type: string
+      performance_score:
+        type: number
+      profile_completion_percent:
+        type: integer
+      qualification:
+        type: string
+      specialization:
+        type: string
+      total_consultations:
+        type: integer
+      total_consultations_today:
+        type: integer
+      total_reviews:
+        description: Discovery & ranking fields
+        type: integer
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+      weekly_consultations:
+        type: integer
+      years_of_experience:
+        type: integer
+    type: object
+  internal_domain_appointment.PatientProfile:
+    properties:
+      address:
+        type: string
+      allergies:
+        type: string
+      blood_group:
+        type: string
+      chronic_conditions:
+        type: string
+      created_at:
+        type: string
+      date_of_birth:
+        type: string
+      emergency_contact:
+        type: string
+      gender:
+        type: string
+      height:
+        type: number
+      id:
+        type: integer
+      updated_at:
+        type: string
+      user:
+        $ref: '#/definitions/drayya-core_internal_domain_identity.User'
+      user_id:
+        type: integer
+      weight:
+        type: number
+    type: object
+  internal_domain_billing.CreateInvoiceRequest:
+    properties:
+      amount:
+        type: number
+      appointment_id:
+        type: integer
+      patient_id:
+        type: integer
+    type: object
+  internal_domain_billing.RazorpayOrderRequest:
+    properties:
+      amount:
+        type: integer
+      receipt:
+        type: string
+    type: object
+  internal_domain_billing.VerifyPaymentRequest:
+    properties:
+      invoice_id:
+        type: integer
+      razorpay_order_id:
+        type: string
+      razorpay_payment_id:
+        type: string
+      signature:
+        type: string
+    type: object
+  internal_domain_communication.ChatRoomRequest:
+    properties:
+      appointment_id:
+        type: integer
+      chat_type:
+        type: string
+      doctor_id:
+        type: integer
+      patient_id:
+        type: integer
+    type: object
+  internal_domain_communication.SendMessageRequest:
+    properties:
+      file_url:
+        type: string
+      message:
+        type: string
+      message_type:
+        type: string
+      receiver_id:
+        type: integer
+      room_id:
+        type: integer
+      sender_id:
+        type: integer
+    type: object
+  internal_domain_emr.CreatePrescriptionRequest:
+    properties:
+      appointment_id:
+        type: integer
+      diagnosis:
+        type: string
+      instructions:
+        type: string
+      medicines:
+        items:
+          type: integer
+        type: array
+      symptoms:
+        type: string
+    type: object
+  internal_domain_emr.Diagnosis:
+    properties:
+      appointment_id:
+        type: integer
+      condition:
+        type: string
+      created_at:
+        type: string
+      doctor:
+        allOf:
+        - $ref: '#/definitions/drayya-core_internal_domain_identity.User'
+        description: Relations
+      doctor_id:
+        type: integer
+      id:
+        type: integer
+      notes:
+        type: string
+      patient:
+        $ref: '#/definitions/drayya-core_internal_domain_identity.User'
+      patient_id:
+        type: integer
+      severity:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  internal_domain_emr.MedicalRecord:
+    properties:
+      created_at:
+        type: string
+      diagnosis:
+        type: string
+      doctor:
+        allOf:
+        - $ref: '#/definitions/drayya-core_internal_domain_identity.User'
+        description: Relations
+      doctor_id:
+        type: integer
+      file_type:
+        type: string
+      file_url:
+        type: string
+      id:
+        type: integer
+      notes:
+        type: string
+      patient:
+        $ref: '#/definitions/drayya-core_internal_domain_identity.User'
+      patient_id:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  internal_domain_hr.ClockInRequest:
+    properties:
+      shift_id:
+        type: integer
+      user_id:
+        type: integer
+    type: object
+  internal_domain_hr.ClockOutRequest:
+    properties:
+      user_id:
+        type: integer
+    type: object
+  internal_domain_hr.HRDashboardOverview:
+    properties:
+      active_doctors:
+        type: integer
+      active_lab_techs:
+        type: integer
+      active_nurses:
+        type: integer
+      active_recruitment:
+        type: integer
+      attendance_today:
+        type: number
+      pending_leaves:
+        type: integer
+      recent_staff:
+        items:
+          $ref: '#/definitions/internal_domain_hr.RecentStaff'
+        type: array
+      shifts_today:
+        type: integer
+      staff_by_department:
+        additionalProperties:
+          format: int64
+          type: integer
+        type: object
+      total_staff:
+        type: integer
+    type: object
+  internal_domain_hr.RecentStaff:
+    properties:
+      created_at:
+        type: string
+      full_name:
+        type: string
+      id:
+        type: integer
+      role:
+        type: string
+    type: object
+  internal_domain_identity.FamilyMember:
+    properties:
+      allergies:
+        type: string
+      blood_group:
+        type: string
+      created_at:
+        type: string
+      date_of_birth:
+        type: string
+      full_name:
+        type: string
+      gender:
+        type: string
+      id:
+        type: integer
+      medical_conditions:
+        type: string
+      profile_photo_url:
+        type: string
+      relationship:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  internal_domain_identity.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  internal_domain_identity.MFAResponse:
+    properties:
+      message:
+        type: string
+      mfa_token:
+        type: string
+    type: object
+  internal_domain_identity.TokenResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+      user:
+        $ref: '#/definitions/internal_domain_identity.User'
+    type: object
+  internal_domain_identity.User:
+    properties:
+      average_rating:
+        type: number
+      created_at:
+        type: string
+      current_status:
+        type: string
+      email:
+        type: string
+      fcm_token:
+        description: Firebase push token
+        type: string
+      free_consults_used:
+        type: integer
+      full_name:
+        type: string
+      gender:
+        type: string
+      hospital_id:
+        type: integer
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      is_online:
+        description: Shadow fields for joined data
+        type: boolean
+      is_verified:
+        type: boolean
+      is_verified_premium:
+        type: boolean
+      last_login:
+        type: string
+      phone_number:
+        type: string
+      prakriti_score:
+        type: string
+      preferred_language:
+        type: string
+      profile_picture:
+        type: string
+      role:
+        type: string
+      secondary_languages:
+        type: string
+      specialization:
+        type: string
+      subscription_auto_renew:
+        type: boolean
+      subscription_end_date:
+        type: string
+      subscription_payment_method:
+        type: string
+      subscription_start_date:
+        type: string
+      tier:
+        type: string
+      uheid:
+        type: string
+      updated_at:
+        type: string
+      wallet_balance:
+        type: integer
+    type: object
+  internal_domain_pharmacy.Medicine:
+    properties:
+      avg_rating:
+        description: Ratings — aggregate populated at query time, not stored.
+        type: number
+      brand:
+        type: string
+      category:
+        type: string
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      description:
+        type: string
+      generic_name:
+        description: GenericName is the INN (International Non-proprietary Name) of
+          the drug.
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      is_prescription_required:
+        type: boolean
+      manufacturer:
+        type: string
+      molecule_code:
+        description: |-
+          MoleculeCode is the active pharmaceutical ingredient (API) identifier.
+          Medicines sharing the same MoleculeCode are therapeutically equivalent
+          and can be shown as cheaper generic alternatives to each other.
+          Example: "metformin-500", "amoxicillin-500", "omeprazole-20".
+        type: string
+      name:
+        type: string
+      prices:
+        allOf:
+        - $ref: '#/definitions/drayya-core_internal_money.RegionalPricing'
+        description: Replaces unit_price
+      requires_cold_chain:
+        type: boolean
+      review_count:
+        type: integer
+      rx_validation_level:
+        $ref: '#/definitions/internal_domain_pharmacy.RxValidationLevel'
+      synonyms:
+        description: Synonyms holds brand names and common names for smart search.
+        type: string
+      updated_at:
+        type: string
+      variants:
+        items:
+          $ref: '#/definitions/internal_domain_pharmacy.ProductVariant'
+        type: array
+    type: object
+  internal_domain_pharmacy.Pharmacy:
+    properties:
+      address:
+        type: string
+      city:
+        type: string
+      created_at:
+        type: string
+      hub_tier:
+        description: global, regional, local
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      is_central_warehouse:
+        type: boolean
+      latitude:
+        type: number
+      longitude:
+        type: number
+      name:
+        type: string
+      parent_hub_id:
+        type: integer
+      pincode:
+        type: string
+      region:
+        description: State or wider area
+        type: string
+      service_radius:
+        description: KM
+        type: number
+      updated_at:
+        type: string
+    type: object
+  internal_domain_pharmacy.PharmacyInventory:
+    properties:
+      batch_number:
+        type: string
+      expiry_date:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      medicine:
+        allOf:
+        - $ref: '#/definitions/internal_domain_pharmacy.Medicine'
+        description: Relations
+      medicine_id:
+        type: integer
+      pharmacy_id:
+        type: integer
+      reorder_level:
+        type: integer
+      stock_quantity:
+        type: integer
+    type: object
+  internal_domain_pharmacy.ProductVariant:
+    properties:
+      compare_at_prices:
+        allOf:
+        - $ref: '#/definitions/drayya-core_internal_money.RegionalPricing'
+        description: For discounts
+      created_at:
+        type: string
+      id:
+        type: integer
+      medicine_id:
+        type: integer
+      pack_size:
+        description: e.g., "Strip of 10"
+        type: string
+      physical_weight_grams:
+        type: integer
+      prices:
+        $ref: '#/definitions/drayya-core_internal_money.RegionalPricing'
+      sku:
+        type: string
+      strength:
+        description: e.g., "500mg"
+        type: string
+      updated_at:
+        type: string
+    type: object
+  internal_domain_pharmacy.RxValidationLevel:
+    enum:
+    - OTC
+    - RX_STANDARD
+    - RX_STRICT
+    type: string
+    x-enum-comments:
+      RxLevelStandard: Basic prescription required
+      RxLevelStrict: High regulation (e.g., narcotics)
+    x-enum-descriptions:
+    - ""
+    - Basic prescription required
+    - High regulation (e.g., narcotics)
+    x-enum-varnames:
+    - RxLevelOTC
+    - RxLevelStandard
+    - RxLevelStrict
+  internal_handlers_admin.SystemOverview:
+    properties:
+      active_doctors_now:
+        description: Mocked for now (needs Redis presence)
+        type: integer
+      active_users_today:
+        type: integer
+      appointments_today:
+        type: integer
+      critical_inventory_items:
+        type: integer
+      new_users_this_week:
+        type: integer
+      ongoing_consultations:
+        type: integer
+      pending_doctor_verifications:
+        type: integer
+      pending_pharmacy_orders:
+        type: integer
+      revenue_today:
+        type: number
+      total_users:
+        type: integer
+      users_by_role:
+        additionalProperties:
+          format: int64
+          type: integer
+        type: object
+    type: object
+  internal_handlers_admin.UserReq:
+    properties:
+      average_rating:
+        type: number
+      created_at:
+        type: string
+      current_status:
+        type: string
+      email:
+        type: string
+      fcm_token:
+        description: Firebase push token
+        type: string
+      free_consults_used:
+        type: integer
+      full_name:
+        type: string
+      gender:
+        type: string
+      hospital_id:
+        type: integer
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      is_online:
+        description: Shadow fields for joined data
+        type: boolean
+      is_verified:
+        type: boolean
+      is_verified_premium:
+        type: boolean
+      last_login:
+        type: string
+      password:
+        type: string
+      phone_number:
+        type: string
+      prakriti_score:
+        type: string
+      preferred_language:
+        type: string
+      profile_picture:
+        type: string
+      role:
+        type: string
+      secondary_languages:
+        type: string
+      specialization:
+        type: string
+      subscription_auto_renew:
+        type: boolean
+      subscription_end_date:
+        type: string
+      subscription_payment_method:
+        type: string
+      subscription_start_date:
+        type: string
+      tier:
+        type: string
+      uheid:
+        type: string
+      updated_at:
+        type: string
+      wallet_balance:
+        type: integer
+    type: object
+  internal_handlers_dispatch.CourierAssignmentRequest:
+    properties:
+      courier_id:
+        type: integer
+      order_id:
+        type: integer
+    type: object
+  internal_handlers_dispatch.CourierLocationUpdateRequest:
+    properties:
+      latitude:
+        type: number
+      longitude:
+        type: number
+      status:
+        description: allow updating status e.g., "en_route", "arrived", "completed"
+        type: string
+    type: object
+  internal_handlers_dispatch.ManualAssignRequest:
+    properties:
+      appointment_id:
+        type: integer
+      doctor_id:
+        type: integer
+    type: object
+  internal_handlers_sos.TriggerRequest:
+    properties:
+      consultation_mode:
+        type: string
+      latitude:
+        type: number
+      longitude:
+        type: number
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@Dr.Ayya.com
+    name: API Support
+    url: http://www.Dr.Ayya.com/support
+  description: This is the API documentation for the Dr.Ayya Core Service.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Dr.Ayya Core API
+  version: "1.0"
+paths:
+  /api/v1/admin/activity-logs:
+    get:
+      description: Fetch a paginated list of system activity and audit logs
+      parameters:
+      - description: Filter by user ID
+        in: query
+        name: user_id
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Logs fetched
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get Activity Logs
+      tags:
+      - Admin Users
+  /api/v1/admin/activity-logs/stats:
+    get:
+      description: Fetch metrics on total logs, active users, and system actions
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Stats fetched
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get Activity Log Stats
+      tags:
+      - Admin Users
+  /api/v1/admin/dashboard/active-sessions:
+    get:
+      description: Fetch a list of current active user sessions for system monitoring
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Active sessions fetched
+          schema:
+            items:
+              $ref: '#/definitions/fiber.Map'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: Get Active Sessions
+      tags:
+      - Admin Dashboard
+  /api/v1/admin/dashboard/alerts:
+    get:
+      description: Fetch all active system warnings, errors, and informational alerts
+        for admins
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: System alerts fetched
+          schema:
+            items:
+              $ref: '#/definitions/fiber.Map'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: Get System Alerts
+      tags:
+      - Admin Dashboard
+  /api/v1/admin/dashboard/appointments:
+    get:
+      description: Fetch a list of the last 100 appointments across the system for
+        administrative review
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Appointments list fetched
+          schema:
+            items:
+              $ref: '#/definitions/drayya-core_internal_domain_appointment.Appointment'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: Get Admin Appointments List
+      tags:
+      - Admin Dashboard
+  /api/v1/admin/dashboard/courier:
+    get:
+      description: Fetch stats related to active deliveries and courier performance
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Courier dashboard fetched
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get Courier Dashboard
+      tags:
+      - Admin Dashboard
+  /api/v1/admin/dashboard/dispatch:
+    get:
+      description: Fetch key metrics for the dispatcher dashboard (queue length, wait
+        times)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Dispatch dashboard fetched
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get Dispatch Dashboard
+      tags:
+      - Admin Dashboard
+  /api/v1/admin/dashboard/hospital:
+    get:
+      description: Fetch operational metrics like active appointments and patient
+        counts
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Hospital operations fetched
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get Hospital Operations
+      tags:
+      - Admin Dashboard
+  /api/v1/admin/dashboard/labs:
+    get:
+      description: Fetch stats on pending tests and completed reports for the chief
+        doctor
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Lab dashboard fetched
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get Lab Dashboard
+      tags:
+      - Admin Dashboard
+  /api/v1/admin/dashboard/notifications:
+    get:
+      description: Fetch metrics on sent, pending, and failed notifications
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Notifications dashboard fetched
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get Notifications Dashboard
+      tags:
+      - Admin Dashboard
+  /api/v1/admin/dashboard/overview:
+    get:
+      description: Fetch key system metrics including user counts, doctor activity,
+        revenue, and pending tasks
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: System overview fetched
+          schema:
+            $ref: '#/definitions/internal_handlers_admin.SystemOverview'
+      security:
+      - ApiKeyAuth: []
+      summary: Get System Overview
+      tags:
+      - Admin Dashboard
+  /api/v1/admin/dashboard/pharmacy:
+    get:
+      description: Fetch pharmacy-specific stats including sales, order status, and
+        inventory alerts
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Pharmacy dashboard fetched
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get Pharmacy Dashboard
+      tags:
+      - Admin Dashboard
+  /api/v1/admin/dashboard/revenue:
+    get:
+      description: Fetch detailed revenue stats including monthly growth and total
+        earnings
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Revenue analytics fetched
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get Revenue Analytics
+      tags:
+      - Admin Dashboard
+  /api/v1/admin/dashboard/users/stats:
+    get:
+      description: Fetch statistics on total users, active sessions, and verified
+        roles
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User management stats fetched
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get User Management Stats
+      tags:
+      - Admin Dashboard
+  /api/v1/admin/finance/ledger/stream:
+    get:
+      description: Fetch a list of recent ledger entries for the finance dashboard
+        stream
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ledger stream fetched
+          schema:
+            items:
+              $ref: '#/definitions/fiber.Map'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: Get Finance Ledger Stream
+      tags:
+      - Admin Finance
+  /api/v1/admin/finance/stats:
+    get:
+      description: Fetch detailed financial stats including platform fees and escrow
+        balances
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Finance stats fetched
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get Finance Stats
+      tags:
+      - Admin Finance
+  /api/v1/admin/users:
+    get:
+      description: Fetch a list of all users with optional role filtering and name
+        search
+      parameters:
+      - description: Filter by role
+        in: query
+        name: role
+        type: string
+      - description: Search by name or email
+        in: query
+        name: q
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Users fetched
+          schema:
+            items:
+              $ref: '#/definitions/drayya-core_internal_domain_identity.User'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: List Users
+      tags:
+      - Admin Users
+    post:
+      consumes:
+      - application/json
+      description: Register a new user with administrative privileges
+      parameters:
+      - description: User data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers_admin.UserReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User created
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Create Single User
+      tags:
+      - Admin Users
+  /api/v1/admin/users/{id}/{action}:
+    post:
+      description: Activate or deactivate a user account by ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Action (activate/deactivate)
+        in: path
+        name: action
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Status updated
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Toggle User Status
+      tags:
+      - Admin Users
+  /api/v1/admin/users/bulk:
+    post:
+      consumes:
+      - application/json
+      description: Register multiple users at once (Batch process)
+      parameters:
+      - description: List of users to create
+        in: body
+        name: users
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/internal_handlers_admin.UserReq'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Result summary
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Bulk Create Users
+      tags:
+      - Admin Users
+  /api/v1/appointments:
+    post:
+      consumes:
+      - application/json
+      description: Book a new appointment for a patient
+      parameters:
+      - description: Appointment Data
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Appointment created
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_domain_appointment.Appointment'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardError'
+      security:
+      - ApiKeyAuth: []
+      summary: Create Appointment
+      tags:
+      - Appointment
+  /api/v1/appointments/{id}:
+    get:
+      description: Get full details of a specific appointment
+      parameters:
+      - description: Appointment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Details fetched
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_domain_appointment.Appointment'
+              type: object
+        "404":
+          description: Not found
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardError'
+      security:
+      - ApiKeyAuth: []
+      summary: Get Appointment Details
+      tags:
+      - Appointment
+  /api/v1/appointments/{id}/accept:
+    post:
+      description: Doctor accepts a pending appointment, assigning themselves to it
+      parameters:
+      - description: Appointment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Appointment accepted
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+        "400":
+          description: Invalid status
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardError'
+        "404":
+          description: Not found
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardError'
+      security:
+      - ApiKeyAuth: []
+      summary: Accept Appointment
+      tags:
+      - Appointment
+  /api/v1/appointments/upcoming:
+    get:
+      description: Get all upcoming appointments for the authenticated patient/doctor
+      parameters:
+      - description: User ID (optional if authenticated)
+        in: query
+        name: user_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Appointments fetched
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/internal_domain_appointment.Appointment'
+                  type: array
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: List Upcoming Appointments
+      tags:
+      - Appointment
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user and return tokens
+      parameters:
+      - description: Login Credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_domain_identity.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Login successful
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_domain_identity.TokenResponse'
+              type: object
+        "401":
+          description: Invalid credentials
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardError'
+      summary: User Login
+      tags:
+      - Auth
+  /api/v1/auth/profile:
+    get:
+      consumes:
+      - application/json
+      description: Fetch current authenticated user profile
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Profile details
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_domain_identity.User'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardError'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardError'
+      summary: Get User Profile
+      tags:
+      - Profile
+    put:
+      consumes:
+      - application/json
+      description: Update profile details of authenticated user
+      parameters:
+      - description: Profile Updates
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Profile updated successfully
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardError'
+        "500":
+          description: Update failed
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardError'
+      summary: Update User Profile
+      tags:
+      - Profile
+  /api/v1/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new patient or doctor account
+      parameters:
+      - description: User Data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_domain_identity.User'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Registration successful
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_domain_identity.TokenResponse'
+              type: object
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardError'
+        "409":
+          description: User already exists
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardError'
+      summary: Register User
+      tags:
+      - Auth
+  /api/v1/auth/staff/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate staff and initiate MFA
+      parameters:
+      - description: Staff Credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_domain_identity.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: MFA code sent
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_domain_identity.MFAResponse'
+              type: object
+        "401":
+          description: Invalid staff credentials
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardError'
+      summary: Staff Login
+      tags:
+      - Auth
+  /api/v1/billing/config:
+    get:
+      description: Fetch billing configuration including Razorpay keys and test mode
+        status
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Config fetched
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  additionalProperties: true
+                  type: object
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get Billing Config
+      tags:
+      - Billing
+  /api/v1/billing/corporate-pay:
+    post:
+      consumes:
+      - application/json
+      description: Process a billing payment against a corporate account or credit
+        limit
+      parameters:
+      - description: Corporate Payment Request
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Payment processed
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  additionalProperties: true
+                  type: object
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Corporate Payment
+      tags:
+      - Billing
+  /api/v1/billing/invoices:
+    post:
+      consumes:
+      - application/json
+      description: Generate a new billing invoice for a specific appointment
+      parameters:
+      - description: Invoice Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_domain_billing.CreateInvoiceRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Invoice created
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  additionalProperties: true
+                  type: object
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Create Invoice
+      tags:
+      - Billing
+  /api/v1/billing/invoices/{id}/pay:
+    post:
+      description: Process a payment for an invoice using mock credit card data
+      parameters:
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Payment successful
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  additionalProperties: true
+                  type: object
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Pay Invoice (Mock)
+      tags:
+      - Billing
+  /api/v1/billing/orders:
+    post:
+      description: Create a new payment order for Razorpay integration
+      parameters:
+      - description: Order Request (amount, receipt)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_domain_billing.RazorpayOrderRequest'
+      responses:
+        "200":
+          description: Order created
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  additionalProperties: true
+                  type: object
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Create Payment Order
+      tags:
+      - Billing
+  /api/v1/billing/payments/{id}/refund:
+    post:
+      description: Issues a refund for a previously completed appointment payment
+        back to the patient's wallet
+      parameters:
+      - description: Appointment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Refund successful
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  additionalProperties: true
+                  type: object
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Refund Payment
+      tags:
+      - Billing
+  /api/v1/billing/verify:
+    post:
+      consumes:
+      - application/json
+      description: Verify the authenticity of a completed Razorpay transaction via
+        signature
+      parameters:
+      - description: Verification Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_domain_billing.VerifyPaymentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Payment verified
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  additionalProperties: true
+                  type: object
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Verify Payment
+      tags:
+      - Billing
+  /api/v1/communication/chat/consultations:
+    get:
+      description: Fetch all ongoing consultation chat rooms for the current doctor
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Consultations fetched
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  items:
+                    additionalProperties: true
+                    type: object
+                  type: array
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get Active Consultations
+      tags:
+      - Communication
+  /api/v1/communication/chat/history/{roomID}:
+    get:
+      description: Fetch past messages for a chat room with pagination
+      parameters:
+      - description: Room ID
+        in: path
+        name: roomID
+        required: true
+        type: string
+      - description: Number of messages (default 50)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: History fetched
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  items:
+                    additionalProperties: true
+                    type: object
+                  type: array
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get Chat History
+      tags:
+      - Communication
+  /api/v1/communication/chat/messages:
+    post:
+      consumes:
+      - application/json
+      description: Send a text or file message to a specific chat room
+      parameters:
+      - description: Message Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_domain_communication.SendMessageRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Message sent
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  additionalProperties: true
+                  type: object
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Send Chat Message
+      tags:
+      - Communication
+  /api/v1/communication/chat/rooms:
+    post:
+      consumes:
+      - application/json
+      description: Fetch an existing chat room or initialize a new one between a doctor
+        and a patient
+      parameters:
+      - description: Room Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_domain_communication.ChatRoomRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Room fetched
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  additionalProperties: true
+                  type: object
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get or Create Chat Room
+      tags:
+      - Communication
+  /api/v1/communication/notifications:
+    get:
+      description: Fetch all notifications (read and unread) for the current user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Notifications fetched
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  items:
+                    additionalProperties: true
+                    type: object
+                  type: array
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get User Notifications
+      tags:
+      - Communication
+  /api/v1/communication/notifications/{id}/read:
+    put:
+      description: Update the status of a specific notification to 'read'
+      parameters:
+      - description: Notification ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Mark Notification as Read
+      tags:
+      - Communication
+  /api/v1/dispatch/accept:
+    post:
+      consumes:
+      - application/json
+      description: Accept a broadcast delivery request via Redis distributed lock
+        (courier JWT required)
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - ApiKeyAuth: []
+      summary: Accept Delivery
+      tags:
+      - Shipping
+  /api/v1/dispatch/assign-courier:
+    post:
+      consumes:
+      - application/json
+      description: Manually link a courier to a specific pharmacy delivery order
+      parameters:
+      - description: Assignment Request (order_id, courier_id)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers_dispatch.CourierAssignmentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Courier assigned
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/drayya-core_internal_domain_pharmacy.CourierDelivery'
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Assign Courier
+      tags:
+      - Shipping
+  /api/v1/dispatch/autopilot/toggle:
+    post:
+      description: Enable or disable the automated dispatch worker loop
+      parameters:
+      - description: Enable autopilot
+        in: query
+        name: enabled
+        required: true
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Autopilot status updated
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  additionalProperties: true
+                  type: object
+              type: object
+      summary: Toggle Dispatch Autopilot
+      tags:
+      - Dispatch
+  /api/v1/dispatch/complete:
+    post:
+      consumes:
+      - application/json
+      description: Courier marks order as delivered, triggering payouts
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - ApiKeyAuth: []
+      summary: Complete Delivery
+      tags:
+      - Shipping
+  /api/v1/dispatch/courier-location/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Log the current GPS coordinates and operational status of a courier
+      parameters:
+      - description: Delivery ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Location Data (latitude, longitude, status)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers_dispatch.CourierLocationUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Location updated
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/drayya-core_internal_domain_pharmacy.CourierDelivery'
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Update Courier Location
+      tags:
+      - Shipping
+  /api/v1/dispatch/deliveries:
+    get:
+      description: Fetch all active and past courier deliveries for monitoring
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Deliveries fetched
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/drayya-core_internal_domain_pharmacy.CourierDelivery'
+                  type: array
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get Courier Deliveries
+      tags:
+      - Shipping
+  /api/v1/dispatch/manual/assign:
+    post:
+      consumes:
+      - application/json
+      description: Manually assign a doctor to a pending appointment to resolve escalations
+      parameters:
+      - description: Manual Assignment Request (appointment_id, doctor_id)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers_dispatch.ManualAssignRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Doctor assigned
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  additionalProperties: true
+                  type: object
+              type: object
+      summary: Manual Doctor Assignment
+      tags:
+      - Dispatch
+  /api/v1/dispatch/manual/escalations:
+    get:
+      description: Fetch list of appointment IDs that have exceeded timeout and need
+        manual intervention
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Escalated items fetched
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  items:
+                    type: integer
+                  type: array
+              type: object
+      summary: Get Escalated Items
+      tags:
+      - Dispatch
+  /api/v1/dispatch/queue:
+    get:
+      description: Fetch list of pending or prioritized appointments in the dispatch
+        queue
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Queue fetched
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/drayya-core_internal_domain_appointment.Appointment'
+                  type: array
+              type: object
+      summary: Get Current Dispatch Queue
+      tags:
+      - Dispatch
+  /api/v1/dispatch/stats:
+    get:
+      description: Fetch real-time statistics for the dispatch dashboard (pending
+        counts, active deliveries, stuck orders)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Queue stats fetched
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  additionalProperties: true
+                  type: object
+              type: object
+      summary: Get Dispatch Queue Stats
+      tags:
+      - Dispatch
+  /api/v1/dispatch/trigger:
+    post:
+      description: Manually trigger a dispatch processing cycle (diagnostic/emergency
+        use)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Dispatch cycle triggered
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+      summary: Force Dispatch Cycle
+      tags:
+      - Dispatch
+  /api/v1/dispatch/zones:
+    get:
+      description: Fetch all available delivery zones and their operational boundaries
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Zones fetched
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/drayya-core_internal_domain_pharmacy.DeliveryZone'
+                  type: array
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get Delivery Zones
+      tags:
+      - Shipping
+  /api/v1/dispatch/zones/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Update the geometry or metadata of an existing delivery zone
+      parameters:
+      - description: Zone ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Zone Data
+        in: body
+        name: zone
+        required: true
+        schema:
+          $ref: '#/definitions/drayya-core_internal_domain_pharmacy.DeliveryZone'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Zone updated
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/drayya-core_internal_domain_pharmacy.DeliveryZone'
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Update Delivery Zone
+      tags:
+      - Shipping
+  /api/v1/emr/diagnosis:
+    post:
+      consumes:
+      - application/json
+      description: Save a clinical diagnosis for a patient during or after an appointment
+      parameters:
+      - description: Diagnosis Data
+        in: body
+        name: diagnosis
+        required: true
+        schema:
+          $ref: '#/definitions/internal_domain_emr.Diagnosis'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Diagnosis saved
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Create Diagnosis
+      tags:
+      - EMR
+  /api/v1/emr/diagnosis/history:
+    get:
+      description: Fetch all past diagnoses recorded for a specific patient
+      parameters:
+      - description: Patient ID
+        in: query
+        name: patient_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: History fetched
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get Diagnosis History
+      tags:
+      - EMR
+  /api/v1/emr/medical-records:
+    get:
+      description: Fetch medical records filtered by patient or doctor ID
+      parameters:
+      - description: Patient ID
+        in: query
+        name: patient_id
+        type: string
+      - description: Doctor ID
+        in: query
+        name: doctor_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Records fetched
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: List Medical Records
+      tags:
+      - EMR
+    post:
+      consumes:
+      - application/json
+      description: Save a general medical record (e.g., notes, clinical summaries)
+        for a patient
+      parameters:
+      - description: Record Data
+        in: body
+        name: record
+        required: true
+        schema:
+          $ref: '#/definitions/internal_domain_emr.MedicalRecord'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Record created
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Create Medical Record
+      tags:
+      - EMR
+  /api/v1/emr/medical-records/{id}:
+    delete:
+      description: Soft-delete or remove a specific medical record from the system
+      parameters:
+      - description: Record ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Record deleted
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Delete Medical Record
+      tags:
+      - EMR
+    get:
+      description: Fetch full details of a single medical record by ID
+      parameters:
+      - description: Record ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Details fetched
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get Medical Record Details
+      tags:
+      - EMR
+    put:
+      consumes:
+      - application/json
+      description: Update the content or metadata of an existing medical record
+      parameters:
+      - description: Record ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: updates
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Record updated
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Update Medical Record
+      tags:
+      - EMR
+  /api/v1/emr/medical-records/me:
+    get:
+      description: Fetch all medical records belonging to the current authenticated
+        patient
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Records fetched
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get My Medical Records
+      tags:
+      - EMR
+  /api/v1/emr/medical-records/timeline/{id}:
+    get:
+      description: Fetch a chronological list of all medical encounters and events
+        for a patient
+      parameters:
+      - description: Patient ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Timeline fetched
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get Patient Timeline
+      tags:
+      - EMR
+  /api/v1/emr/prescriptions:
+    get:
+      description: Fetch all prescriptions written by the current logged-in doctor
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Prescriptions fetched
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get Doctor Prescriptions
+      tags:
+      - EMR
+    post:
+      consumes:
+      - application/json
+      description: Issue a new digital prescription for a patient including medication
+        and dosage instructions
+      parameters:
+      - description: Prescription Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_domain_emr.CreatePrescriptionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Prescription created
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Create Prescription
+      tags:
+      - EMR
+  /api/v1/family/members:
+    get:
+      consumes:
+      - application/json
+      description: Fetch list of family members for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of family members
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/internal_domain_identity.FamilyMember'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardError'
+        "500":
+          description: Fetch failed
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardError'
+      summary: List Family Members
+      tags:
+      - Family
+    post:
+      consumes:
+      - application/json
+      description: Add a new family member to user account
+      parameters:
+      - description: Family Member Details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_domain_identity.FamilyMember'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Family member added
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_domain_identity.FamilyMember'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardError'
+        "500":
+          description: Add failed
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardError'
+      summary: Add Family Member
+      tags:
+      - Family
+  /api/v1/family/members/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a family member from user account
+      parameters:
+      - description: Family Member ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Member deleted successfully
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardError'
+        "500":
+          description: Delete failed
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardError'
+      summary: Delete Family Member
+      tags:
+      - Family
+    put:
+      consumes:
+      - application/json
+      description: Update specific family member details
+      parameters:
+      - description: Family Member ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updates
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Member updated successfully
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardError'
+        "500":
+          description: Update failed
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardError'
+      summary: Update Family Member
+      tags:
+      - Family
+  /api/v1/hr/attendance/clock-in:
+    post:
+      consumes:
+      - application/json
+      description: Record the start of a staff member's shift
+      parameters:
+      - description: Clock-in Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_domain_hr.ClockInRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Clocked in
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Staff Clock-In
+      tags:
+      - HR
+  /api/v1/hr/attendance/clock-out/{attendanceId}:
+    post:
+      consumes:
+      - application/json
+      description: Record the end of a staff member's shift
+      parameters:
+      - description: Attendance Entry ID
+        in: path
+        name: attendanceId
+        required: true
+        type: string
+      - description: Clock-out Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_domain_hr.ClockOutRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Clocked out
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Staff Clock-Out
+      tags:
+      - HR
+  /api/v1/hr/dashboard/doctors/online:
+    get:
+      description: Fetch all doctors currently marked as 'online' for video consultations
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Doctors fetched
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/drayya-core_internal_domain_identity.User'
+                  type: array
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get Online Doctors
+      tags:
+      - HR
+  /api/v1/hr/dashboard/hospitals/staff:
+    get:
+      description: Fetch a breakdown of staff counts across different hospital IDs
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Distribution fetched
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  additionalProperties: true
+                  type: object
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get Hospital Staff Distribution
+      tags:
+      - HR
+  /api/v1/hr/dashboard/overview:
+    get:
+      description: Fetch key HR metrics including staff counts, department distribution,
+        and attendance stats
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Overview fetched
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_domain_hr.HRDashboardOverview'
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get HR Dashboard Overview
+      tags:
+      - HR
+  /api/v1/hr/dashboard/pharmacy/staff:
+    get:
+      description: Fetch all staff members assigned to pharmacy roles (managers, pharmacists)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Pharmacy staff fetched
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/drayya-core_internal_domain_identity.User'
+                  type: array
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get Pharmacy Staff
+      tags:
+      - HR
+  /api/v1/hr/dashboard/staff:
+    get:
+      description: Fetch a complete directory of all non-patient users (staff members)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Staff directory fetched
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/drayya-core_internal_domain_identity.User'
+                  type: array
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get Staff Directory
+      tags:
+      - HR
+  /api/v1/hr/payroll/{userId}:
+    get:
+      description: Calculate monthly earnings for a specific staff member
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      - description: Month (1-12)
+        in: query
+        name: month
+        required: true
+        type: integer
+      - description: Year
+        in: query
+        name: year
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Payroll calculated
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  additionalProperties: true
+                  type: object
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Calculate Payroll
+      tags:
+      - HR
+  /api/v1/hr/roster:
+    get:
+      description: Fetch shift assignments and availability for all staff in a hospital
+      parameters:
+      - description: Hospital ID
+        in: query
+        name: hospitalId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Roster fetched
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  additionalProperties: true
+                  type: object
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get HR Roster
+      tags:
+      - HR
+  /api/v1/labs/districts:
+    get:
+      description: Fetch list of Tamil Nadu districts supported by labs
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Districts list
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+      summary: List Districts
+      tags:
+      - Labs
+  /api/v1/labs/districts/{id}/taluks:
+    get:
+      description: Fetch list of taluks belonging to a specific district ID
+      parameters:
+      - description: District ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Taluks list
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+      summary: List Taluks
+      tags:
+      - Labs
+  /api/v1/patient/{id}/history:
+    get:
+      description: Fetch comprehensive chronological history for a patient
+      parameters:
+      - description: Patient ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: History fetched
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get Patient History
+      tags:
+      - EMR
+  /api/v1/pharmacy:
+    get:
+      description: Get all active pharmacies with basic details
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Pharmacies fetched
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/internal_domain_pharmacy.Pharmacy'
+                  type: array
+              type: object
+      summary: List Pharmacies
+      tags:
+      - Pharmacy
+  /api/v1/pharmacy/admin:
+    post:
+      consumes:
+      - application/json
+      description: Add a new pharmacy to the network
+      parameters:
+      - description: Pharmacy Data
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Pharmacy created
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_domain_pharmacy.Pharmacy'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardError'
+      security:
+      - ApiKeyAuth: []
+      summary: Create Pharmacy
+      tags:
+      - Pharmacy
+  /api/v1/pharmacy/inventory:
+    get:
+      description: Get all medicine stock levels for a specific pharmacy
+      parameters:
+      - description: Pharmacy ID (optional)
+        in: query
+        name: pharmacy_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Inventory fetched
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/internal_domain_pharmacy.PharmacyInventory'
+                  type: array
+              type: object
+        "500":
+          description: Fetch failed
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardError'
+      summary: Get Inventory
+      tags:
+      - Pharmacy
+  /api/v1/shipping/webhook:
+    post:
+      consumes:
+      - application/json
+      description: Webhook endpoint for third-party logistics tracking updates with
+        idempotency
+      produces:
+      - application/json
+      responses: {}
+      summary: 3PL Shipping Webhook
+      tags:
+      - Shipping
+  /api/v1/sos/{id}/accept:
+    post:
+      description: Transition an emergency appointment from pending to confirmed by
+        an assigned doctor
+      parameters:
+      - description: Appointment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: SOS accepted
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  additionalProperties: true
+                  type: object
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Accept SOS Request
+      tags:
+      - SOS
+  /api/v1/sos/pending:
+    get:
+      description: Fetch all emergency appointments with 'pending' status for staff/dispatchers
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Pending requests fetched
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  additionalProperties: true
+                  type: object
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get Pending SOS Requests
+      tags:
+      - SOS
+  /api/v1/sos/recent-requests:
+    get:
+      description: Fetch last 5 emergency appointments for historical tracking
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: SOS history fetched
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  additionalProperties: true
+                  type: object
+              type: object
+      summary: Get Recent SOS History
+      tags:
+      - SOS
+  /api/v1/sos/trigger:
+    post:
+      consumes:
+      - application/json
+      description: Create a high-priority emergency appointment with location data
+      parameters:
+      - description: SOS Trigger Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers_sos.TriggerRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: SOS triggered successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/drayya-core_internal_utils_response.StandardResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/drayya-core_internal_domain_appointment.Appointment'
+              type: object
+        "400":
+          description: Invalid Request
+          schema:
+            $ref: '#/definitions/drayya-core_internal_utils_response.StandardError'
+      security:
+      - ApiKeyAuth: []
+      summary: Trigger Emergency SOS
+      tags:
+      - SOS
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate a user and return JWT tokens
+      parameters:
+      - description: Login Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/drayya-core_internal_auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/drayya-core_internal_auth.TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: User Login
+      tags:
+      - Auth
+  /auth/staff/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate a staff member and return JWT tokens
+      parameters:
+      - description: Staff Login Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/drayya-core_internal_auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/drayya-core_internal_auth.MFAResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Staff Login
+      tags:
+      - Auth
+  /hospital/dashboard:
+    get:
+      description: Fetch statistics for the hospital dashboard
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get hospital dashboard stats
+      tags:
+      - Hospital
+  /hospitals:
+    get:
+      description: Fetch a list of all hospitals, optionally filtered by type
+      parameters:
+      - description: Hospital Type (e.g., all, private, public)
+        in: query
+        name: type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: object
+            type: array
+      summary: List all hospitals
+      tags:
+      - Hospital
+  /store/products:
+    get:
+      description: Search products with filters like category, search term, brand,
+        and price range
+      parameters:
+      - description: Category
+        in: query
+        name: category
+        type: string
+      - description: Search query
+        in: query
+        name: q
+        type: string
+      - description: Brand
+        in: query
+        name: brand
+        type: string
+      - description: Min Price
+        in: query
+        name: min_price
+        type: number
+      - description: Max Price
+        in: query
+        name: max_price
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/drayya-core_internal_domain_pharmacy.PharmacyInventory'
+            type: array
+      summary: Search for products
+      tags:
+      - Store
+  /store/products/{id}:
+    get:
+      description: Fetch details of a single product by ID
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/drayya-core_internal_domain_pharmacy.PharmacyInventory'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get product details
+      tags:
+      - Store
+swagger: "2.0"

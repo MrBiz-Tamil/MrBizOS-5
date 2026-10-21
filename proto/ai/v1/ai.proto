@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package ai.v1;
+
+option go_package = "drayya-core/gen/ai/v1;aiv1";
+
+service AIService {
+  rpc SendPrompt(PromptRequest) returns (PromptResponse);
+  rpc StreamChat(PromptRequest) returns (stream ChatStreamResponse);
+  rpc ProposeAutonomousAction(AutonomousActionProposalRequest) returns (AutonomousActionProposalResponse);
+  rpc ListActiveMissions(ListActiveMissionsRequest) returns (ListActiveMissionsResponse);
+}
+
+message MessageProto {
+  string role = 1; // system, user, assistant
+  string content = 2;
+  int64 timestamp = 3;
+}
+
+message PromptRequest {
+  string business_unit_id = 1;
+  string prompt = 2;
+  repeated MessageProto history = 3;
+}
+
+message PromptResponse {
+  string reply = 1;
+  string model = 2;
+  int64 tokens_used = 3;
+}
+
+message ChatStreamResponse {
+  string delta = 1;
+  bool is_finished = 2;
+}
+
+message AutonomousActionProposalRequest {
+  string agent_name = 1;
+  string mission_id = 2;
+  string business_unit_id = 3;
+  string title = 4;
+  string action_type = 5;
+  string payload_json = 6;
+}
+
+message AutonomousActionProposalResponse {
+  string approval_id = 1;
+  string status = 2;
+}
+
+message MissionProto {
+  string id = 1;
+  string name = 2; // e.g. SKYLINE, GREEN_GOLD, DESERT_EDGE
+  string sector = 3;
+  string status = 4;
+  string progress_summary = 5;
+}
+
+message ListActiveMissionsRequest {}
+
+message ListActiveMissionsResponse {
+  repeated MissionProto missions = 1;
+}

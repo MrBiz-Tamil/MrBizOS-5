@@ -1,0 +1,221 @@
+syntax = "proto3";
+
+package billing.v1;
+
+option go_package = "drayya-core/gen/billing/v1;billingv1";
+
+service BillingService {
+  rpc ListInvoices(ListInvoicesRequest) returns (ListInvoicesResponse);
+  rpc GetInvoice(GetInvoiceRequest) returns (GetInvoiceResponse);
+  rpc CreateInvoice(CreateInvoiceRequest) returns (CreateInvoiceResponse);
+  rpc CancelInvoice(CancelInvoiceRequest) returns (CancelInvoiceResponse);
+  rpc UpdateLogistics(UpdateLogisticsRequest) returns (UpdateLogisticsResponse);
+  rpc GenerateInvoicePDF(GenerateInvoicePDFRequest) returns (GenerateInvoicePDFResponse);
+}
+
+message InvoiceItemProto {
+  string id = 1;
+  string product_id = 2;
+  string item_description = 3;
+  string hsn_sac = 4;
+  string quantity = 5;
+  string unit_code = 6;
+  string unit_price = 7;
+  string discount_rate = 8;
+  string tax_rate = 9;
+  string taxable_amount = 10;
+  string cgst_amount = 11;
+  string sgst_amount = 12;
+  string igst_amount = 13;
+  string total_amount = 14;
+  string batch_id = 15;
+  string batch_number = 16;
+  string expiry_date = 17;
+  string mrp = 18;
+  string rack_location = 19;
+  // Fields the web client and invoice templates read (same names as the REST model).
+  string taxable_value = 20;
+  string discount_amount = 21;
+  string cgst_rate = 22;
+  string sgst_rate = 23;
+  string igst_rate = 24;
+}
+
+message InvoiceProto {
+  string id = 1;
+  string tenant_id = 2;
+  string invoice_number = 3;
+  string customer_id = 4;
+  string customer_name = 5;
+  string invoice_date = 6;
+  string due_date = 7;
+  string status = 8;
+  string subtotal = 9;
+  string discount_total = 10;
+  string tax_total = 11;
+  string round_off = 12;
+  string grand_total = 13;
+  string amount_paid = 14;
+  string balance_due = 15;
+  string supply_state = 16;
+  string billing_address = 17;
+  string shipping_address = 18;
+  string notes = 19;
+  string payment_mode = 20;
+  string vehicle_number = 21;
+  string delivery_place = 22;
+  string po_number = 23;
+  string eway_bill = 24;
+  string transporter_name = 25;
+  string lr_number = 26;
+  string jurisdiction_city = 27;
+  string interest_rate = 28;
+  string return_policy = 29;
+  bool reverse_charge = 30;
+  string gross_weight = 31;
+  string net_weight = 32;
+  string cashier_name = 33;
+  string counter_number = 34;
+  string project_name = 35;
+  string doctor_name = 36;
+  string doctor_reg_no = 37;
+  string patient_name = 38;
+  int32 patient_age = 39;
+  string tendered_cash = 40;
+  string change_amount = 41;
+  repeated InvoiceItemProto items = 42;
+  string created_at = 43;
+  string subscription_period_start = 44;
+  string subscription_period_end = 45;
+  string taxable_amount = 46;
+  string cgst_total = 47;
+  string sgst_total = 48;
+  string igst_total = 49;
+  string utgst_total = 50;
+  bool is_inter_state = 51;
+  string customer_gstin = 52;
+}
+
+message ListInvoicesRequest {
+  string tenant_id = 1;
+}
+
+message ListInvoicesResponse {
+  repeated InvoiceProto invoices = 1;
+}
+
+message GetInvoiceRequest {
+  string tenant_id = 1;
+  string invoice_id = 2;
+}
+
+message GetInvoiceResponse {
+  InvoiceProto invoice = 1;
+}
+
+message CreateInvoiceItemInputProto {
+  string product_id = 1;
+  string item_description = 2;
+  string hsn_sac = 3;
+  string quantity = 4;
+  string unit_code = 5;
+  string unit_price = 6;
+  string discount_rate = 7;
+  string tax_rate = 8;
+  string batch_id = 9;
+  string batch_number = 10;
+  string expiry_date = 11;
+  string mrp = 12;
+  string rack_location = 13;
+}
+
+message CreateInvoiceRequest {
+  string tenant_id = 1;
+  string user_id = 2;
+  string customer_id = 3;
+  string invoice_date = 4;
+  string due_date = 5;
+  string billing_address = 6;
+  string shipping_address = 7;
+  string supply_state = 8;
+  string notes = 9;
+  string vehicle_number = 10;
+  string delivery_place = 11;
+  string payment_mode = 12;
+  string po_number = 13;
+  string eway_bill = 14;
+  string transporter_name = 15;
+  string lr_number = 16;
+  string jurisdiction_city = 17;
+  string interest_rate = 18;
+  string return_policy = 19;
+  bool reverse_charge = 20;
+  string gross_weight = 21;
+  string net_weight = 22;
+  string cashier_name = 23;
+  string counter_number = 24;
+  string project_name = 25;
+  string doctor_name = 26;
+  string doctor_reg_no = 27;
+  string patient_name = 28;
+  int32 patient_age = 29;
+  string tendered_cash = 30;
+  string change_amount = 31;
+  repeated CreateInvoiceItemInputProto items = 32;
+  string subscription_period_start = 33; // service period / hostel check-in (RFC3339 or YYYY-MM-DD)
+  string subscription_period_end = 34;   // service period / hostel check-out
+}
+
+message CreateInvoiceResponse {
+  InvoiceProto invoice = 1;
+}
+
+message CancelInvoiceRequest {
+  string tenant_id = 1;
+  string user_id = 2;
+  string invoice_id = 3;
+  string reason = 4;
+}
+
+message CancelInvoiceResponse {
+  string message = 1;
+}
+
+message UpdateLogisticsRequest {
+  string tenant_id = 1;
+  string invoice_id = 2;
+  string vehicle_number = 3;
+  string delivery_place = 4;
+  string payment_mode = 5;
+  string po_number = 6;
+  string eway_bill = 7;
+  string transporter_name = 8;
+  string lr_number = 9;
+  string jurisdiction_city = 10;
+  string interest_rate = 11;
+  string return_policy = 12;
+  bool reverse_charge = 13;
+  string gross_weight = 14;
+  string net_weight = 15;
+  string cashier_name = 16;
+  string counter_number = 17;
+  string project_name = 18;
+}
+
+message UpdateLogisticsResponse {
+  InvoiceProto invoice = 1;
+}
+
+message GenerateInvoicePDFRequest {
+  string tenant_id = 1;
+  string invoice_id = 2;
+  string copy_type = 3;
+  bool is_gst = 4;
+  string paper_size = 5;
+}
+
+message GenerateInvoicePDFResponse {
+  bytes pdf_bytes = 1;
+  string filename = 2;
+}
+

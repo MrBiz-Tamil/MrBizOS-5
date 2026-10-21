@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  # 1. Primary Relational Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: mrbiz-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: mrbiz_os
+      POSTGRES_USER: mrbiz
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-mrbiz_secret_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mrbiz -d mrbiz_os"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Redis Message Bus & Cache
+  redis:
+    image: redis:7-alpine
+    container_name: mrbiz-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 3. Unified Go Modular Monolith (100% gRPC / ConnectRPC)
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: mrbiz-backend
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      PORT: "8080"
+      GRPC_PORT: "8080"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: mrbiz_os
+      DB_USER: mrbiz
+      DB_PASSWORD: ${DB_PASSWORD:-mrbiz_secret_password}
+      REDIS_HOST: redis:6379
+      JWT_SECRET: ${JWT_SECRET:-mrbiz_ultra_secure_jwt_token_key_32bytes}
+      ENV: production
+    ports:
+      - "8080:8080"
+
+  # 4. Unified SvelteKit (Svelte 5) Client Application
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: mrbiz-frontend
+    restart: always
+    depends_on:
+      - backend
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      BACKEND_URL: http://backend:8080
+    ports:
+      - "3000:3000"
+
+  # 5. AI Autonomous Mission Worker
+  ai-workers:
+    build:
+      context: ../ai-workers
+      dockerfile: Dockerfile
+    container_name: mrbiz-ai-workers
+    restart: always
+    depends_on:
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    environment:
+      REDIS_URL: redis://redis:6379
+      GRPC_HOST: http://backend:8080
+
+volumes:
+  postgres_data:
+  redis_data:

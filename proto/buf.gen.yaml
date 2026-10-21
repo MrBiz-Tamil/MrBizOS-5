@@ -1,0 +1,11 @@
+version: v1
+plugins:
+  - plugin: go
+    out: ../backend/gen
+    opt: paths=source_relative
+  - plugin: go-grpc
+    out: ../backend/gen
+    opt: paths=source_relative
+  - plugin: connect-go
+    out: ../backend/gen
+    opt: paths=source_relative

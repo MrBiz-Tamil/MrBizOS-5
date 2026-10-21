@@ -1,0 +1,180 @@
+syntax = "proto3";
+
+package catalog.v1;
+
+option go_package = "drayya-core/gen/catalog/v1;catalogv1";
+
+service CatalogService {
+  rpc ListProducts(ListProductsRequest) returns (ListProductsResponse);
+  rpc GetProduct(GetProductRequest) returns (GetProductResponse);
+  rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse);
+  rpc SearchPOSProducts(SearchPOSProductsRequest) returns (SearchPOSProductsResponse);
+  rpc ListBatches(ListBatchesRequest) returns (ListBatchesResponse);
+  rpc CreateBatch(CreateBatchRequest) returns (CreateBatchResponse);
+  rpc ListUnits(ListUnitsRequest) returns (ListUnitsResponse);
+  rpc DeductStock(DeductStockRequest) returns (DeductStockResponse);
+  rpc AdjustInventory(AdjustInventoryRequest) returns (AdjustInventoryResponse);
+}
+
+message ProductBatchProto {
+  string id = 1;
+  string tenant_id = 2;
+  string product_id = 3;
+  string batch_number = 4;
+  string expiry_date = 5;
+  string mrp = 6;
+  string selling_price = 7;
+  string purchase_price = 8;
+  string current_stock = 9;
+}
+
+message ProductProto {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string sku = 4;
+  string hsn_sac = 5;
+  string category = 6;
+  string description = 7;
+  string product_type = 8;
+  string fulfillment_mode = 9;
+  string digital_asset_url = 10;
+  string tax_rate = 11;
+  string purchase_price = 12;
+  string selling_price = 13;
+  string mrp = 14;
+  string discount_rate = 15;
+  string min_stock = 16;
+  string current_stock = 17;
+  string barcode = 18;
+  string generic_name = 19;
+  string rack_location = 20;
+  bool is_prescription_required = 21;
+  repeated ProductBatchProto batches = 22;
+  bool is_active = 23;
+}
+
+message UnitProto {
+  string id = 1;
+  string code = 2;
+  string name = 3;
+  string symbol = 4;
+  string category = 5;
+  string base_unit_code = 6;
+  string conversion_factor = 7;
+  int32 decimal_precision = 8;
+}
+
+message ListProductsRequest {
+  string tenant_id = 1;
+}
+
+message ListProductsResponse {
+  repeated ProductProto products = 1;
+}
+
+message GetProductRequest {
+  string tenant_id = 1;
+  string product_id = 2;
+}
+
+message GetProductResponse {
+  ProductProto product = 1;
+}
+
+message CreateProductRequest {
+  string tenant_id = 1;
+  string name = 2;
+  string sku = 3;
+  string hsn_sac = 4;
+  string category = 5;
+  string product_type = 6;
+  string fulfillment_mode = 7;
+  string digital_asset_url = 8;
+  string tax_rate = 9;
+  string selling_price = 10;
+  string purchase_price = 11;
+  string mrp = 12;
+  string discount_rate = 13;
+  string barcode = 14;
+  string generic_name = 15;
+  string rack_location = 16;
+  bool is_prescription_required = 17;
+  string purchase_unit_id = 18;
+  string sales_unit_id = 19;
+  string stock_unit_id = 20;
+  string base_unit_id = 21;
+  string current_stock = 22;
+  string min_stock = 23;
+}
+
+message CreateProductResponse {
+  ProductProto product = 1;
+}
+
+message SearchPOSProductsRequest {
+  string tenant_id = 1;
+  string query = 2;
+}
+
+message SearchPOSProductsResponse {
+  repeated ProductProto products = 1;
+}
+
+message ListBatchesRequest {
+  string tenant_id = 1;
+  string product_id = 2;
+}
+
+message ListBatchesResponse {
+  repeated ProductBatchProto batches = 1;
+}
+
+message CreateBatchRequest {
+  string tenant_id = 1;
+  string product_id = 2;
+  string batch_number = 3;
+  string expiry_date = 4;
+  string mrp = 5;
+  string selling_price = 6;
+  string purchase_price = 7;
+  string current_stock = 8;
+}
+
+message CreateBatchResponse {
+  ProductBatchProto batch = 1;
+}
+
+message ListUnitsRequest {}
+
+message ListUnitsResponse {
+  repeated UnitProto units = 1;
+}
+
+message DeductStockItem {
+  string product_id = 1;
+  string quantity = 2;
+  string batch_id = 3;
+}
+
+message DeductStockRequest {
+  string tenant_id = 1;
+  repeated DeductStockItem items = 2;
+}
+
+message DeductStockResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message AdjustInventoryRequest {
+  string tenant_id = 1;
+  string product_id = 2;
+  string new_stock = 3;
+  string reason = 4;
+}
+
+message AdjustInventoryResponse {
+  string message = 1;
+}
+

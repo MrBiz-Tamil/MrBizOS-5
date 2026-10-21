@@ -1,0 +1,165 @@
+syntax = "proto3";
+
+package iam.v1;
+
+option go_package = "drayya-core/gen/iam/v1;iamv1";
+
+service IAMService {
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+  rpc GetMe(GetMeRequest) returns (GetMeResponse);
+  rpc ValidateSession(ValidateSessionRequest) returns (ValidateSessionResponse);
+  rpc SwitchBusinessUnit(SwitchBusinessUnitRequest) returns (SwitchBusinessUnitResponse);
+  rpc ListAccessibleUnits(ListAccessibleUnitsRequest) returns (ListAccessibleUnitsResponse);
+  rpc GetCompany(GetCompanyRequest) returns (GetCompanyResponse);
+  rpc UpdateCompany(UpdateCompanyRequest) returns (UpdateCompanyResponse);
+  rpc ListTenants(ListTenantsRequest) returns (ListTenantsResponse);
+  rpc CreateTenant(CreateTenantRequest) returns (CreateTenantResponse);
+}
+
+message UserProto {
+  string id = 1;
+  string tenant_id = 2;
+  string email = 3;
+  string full_name = 4;
+  string role = 5;
+  bool is_super_admin = 6;
+  bool is_active = 7;
+  string current_business_unit_id = 8;
+  repeated string allowed_business_units = 9;
+}
+
+message BusinessUnitProto {
+  string id = 1;
+  string name = 2;
+  string code = 3;
+  string tagline = 4;
+  string color = 5;
+  bool is_active = 6;
+}
+
+message TenantProto {
+  string id = 1;
+  string name = 2;
+  string legal_name = 3;
+  string gstin = 4;
+  string address = 5;
+  string city = 6;
+  string state = 7;
+  string country = 8;
+  string pincode = 9;
+  string email = 10;
+  string phone = 11;
+  string website = 12;
+  string logo_url = 13;
+  string invoice_prefix = 14;
+  string currency = 15;
+  string subscription_plan = 16;
+  string subscription_status = 17;
+  bool is_active = 18;
+}
+
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  UserProto user = 1;
+  TenantProto tenant = 2;
+  string token = 3;
+  bool requires_2fa = 4;
+  string challenge_token = 5;
+}
+
+message LogoutRequest {
+  string token = 1;
+}
+
+message LogoutResponse {
+  string message = 1;
+}
+
+message GetMeRequest {
+  string user_id = 1;
+  string tenant_id = 2;
+}
+
+message GetMeResponse {
+  UserProto user = 1;
+  TenantProto tenant = 2;
+}
+
+message ValidateSessionRequest {
+  string token = 1;
+}
+
+message ValidateSessionResponse {
+  bool is_valid = 1;
+  UserProto user = 2;
+  TenantProto tenant = 3;
+}
+
+message SwitchBusinessUnitRequest {
+  string target_business_unit_id = 1;
+}
+
+message SwitchBusinessUnitResponse {
+  bool success = 1;
+  string active_business_unit_id = 2;
+  string updated_token = 3;
+}
+
+message ListAccessibleUnitsRequest {}
+
+message ListAccessibleUnitsResponse {
+  repeated BusinessUnitProto units = 1;
+  string active_unit_id = 2;
+}
+
+message GetCompanyRequest {
+  string tenant_id = 1;
+}
+
+message GetCompanyResponse {
+  TenantProto tenant = 1;
+}
+
+message UpdateCompanyRequest {
+  string tenant_id = 1;
+  string name = 2;
+  string legal_name = 3;
+  string address = 4;
+  string city = 5;
+  string state = 6;
+  string pincode = 7;
+  string website = 8;
+  string phone = 9;
+  string email = 10;
+  string gstin = 11;
+  string country = 12;
+}
+
+message UpdateCompanyResponse {
+  TenantProto tenant = 1;
+}
+
+message ListTenantsRequest {}
+
+message ListTenantsResponse {
+  repeated TenantProto tenants = 1;
+}
+
+message CreateTenantRequest {
+  string name = 1;
+  string legal_name = 2;
+  string gstin = 3;
+  string email = 4;
+  string phone = 5;
+  string state = 6;
+  string subscription_plan = 7;
+}
+
+message CreateTenantResponse {
+  TenantProto tenant = 1;
+}

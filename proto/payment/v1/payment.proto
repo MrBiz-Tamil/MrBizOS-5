@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package payment.v1;
+
+option go_package = "drayya-core/gen/payment/v1;paymentv1";
+
+service PaymentService {
+  rpc ListPayments(ListPaymentsRequest) returns (ListPaymentsResponse);
+  rpc CreatePayment(CreatePaymentRequest) returns (CreatePaymentResponse);
+}
+
+message PaymentProto {
+  string id = 1;
+  string tenant_id = 2;
+  string invoice_id = 3;
+  string invoice_number = 4;
+  string customer_id = 5;
+  string customer_name = 6;
+  string payment_date = 7;
+  string amount = 8;
+  string payment_method = 9;
+  string reference_number = 10;
+  string receipt_number = 11;
+  string notes = 12;
+  string created_at = 13;
+}
+
+message ListPaymentsRequest {
+  string tenant_id = 1;
+}
+
+message ListPaymentsResponse {
+  repeated PaymentProto payments = 1;
+}
+
+message CreatePaymentRequest {
+  string tenant_id = 1;
+  string user_id = 2;
+  string invoice_id = 3;
+  string amount = 4;
+  string payment_method = 5;
+  string reference_number = 6;
+  string notes = 7;
+}
+
+message CreatePaymentResponse {
+  PaymentProto payment = 1;
+}
+

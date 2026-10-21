@@ -1,0 +1,658 @@
+[
+  {
+    "name": "activity_logs",
+    "sql": "CREATE TABLE `activity_logs` (`id` integer PRIMARY KEY AUTOINCREMENT,`user_id` integer,`action` text,`entity` text,`entity_id` text,`details` text,`ip_address` text,`user_agent` text,`created_at` datetime)"
+  },
+  {
+    "name": "analytics_events",
+    "sql": "CREATE TABLE `analytics_events` (`id` integer PRIMARY KEY AUTOINCREMENT,`created_at` datetime,`user_id` integer,`session_id` text,`event_name` text NOT NULL,`domain` text,`entity_id` integer,`properties` text,`ip_address` text,`user_agent` text,`platform` text)"
+  },
+  {
+    "name": "answers",
+    "sql": "CREATE TABLE `answers` (`id` integer PRIMARY KEY AUTOINCREMENT,`response_id` integer NOT NULL,`question_id` integer NOT NULL,`value` text,CONSTRAINT `fk_responses_answers` FOREIGN KEY (`response_id`) REFERENCES `responses`(`id`))"
+  },
+  {
+    "name": "appointments",
+    "sql": "CREATE TABLE `appointments` (`id` integer PRIMARY KEY AUTOINCREMENT,`booking_id` varchar(20),`patient_id` integer NOT NULL,`doctor_id` integer,`start_time` datetime,`end_time` datetime,`status` text DEFAULT \"pending\",`appointment_type` text,`consultation_mode` text,`notes` text,`consultation_fee` integer,`is_priority` numeric,`family_member_id` integer,`latitude` real DEFAULT 0,`longitude` real DEFAULT 0,`payout_status` text DEFAULT \"pending\",`reminder_sent` numeric DEFAULT false,`escalated_at` datetime,`created_at` datetime,`updated_at` datetime,`version` integer NOT NULL DEFAULT 1,CONSTRAINT `fk_appointments_doctor` FOREIGN KEY (`doctor_id`) REFERENCES `doctorprofile`(`user_id`),CONSTRAINT `fk_appointments_patient` FOREIGN KEY (`patient_id`) REFERENCES `patient_profiles`(`user_id`))"
+  },
+  {
+    "name": "b2b_licenses",
+    "sql": "CREATE TABLE `b2b_licenses` (`id` integer PRIMARY KEY AUTOINCREMENT,`org_name` text NOT NULL,`org_type` text,`contact_name` text,`contact_email` text NOT NULL,`api_key` text NOT NULL,`api_secret` text NOT NULL,`plan` text DEFAULT \"starter\",`monthly_limit` integer DEFAULT 1000,`used_this_month` integer DEFAULT 0,`is_active` numeric DEFAULT true,`expires_at` datetime,`webhook_url` text,`allowed_ips` text,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "b2b_usage_logs",
+    "sql": "CREATE TABLE `b2b_usage_logs` (`id` integer PRIMARY KEY AUTOINCREMENT,`license_id` integer NOT NULL,`endpoint` text,`method` text,`status_code` integer,`latency_ms` integer,`ip_address` text,`created_at` datetime)"
+  },
+  {
+    "name": "bank_statements",
+    "sql": "CREATE TABLE `bank_statements` (`id` integer PRIMARY KEY AUTOINCREMENT,`account_id` text,`date` datetime,`description` text,`debit` integer,`credit` integer,`balance` integer,`reference` text,`status` text DEFAULT \"unmatched\",`ledger_id` integer,`imported_at` datetime,`created_at` datetime)"
+  },
+  {
+    "name": "billing",
+    "sql": "CREATE TABLE `billing` (`id` integer PRIMARY KEY AUTOINCREMENT,`appointment_id` integer,`patient_id` integer,`amount` integer,`currency` text DEFAULT \"INR\",`payment_status` text DEFAULT \"pending\",`payment_method` text,`invoice_date` datetime,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "blogs",
+    "sql": "CREATE TABLE `blogs` (`id` integer PRIMARY KEY AUTOINCREMENT,`title` text NOT NULL,`slug` text,`excerpt` text,`content` text NOT NULL,`category` text NOT NULL,`author_id` integer NOT NULL,`status` text DEFAULT \"pending\",`approver_id` integer,`image_url` text,`read_time` text,`is_featured` numeric DEFAULT false,`meta_title` text,`meta_description` text,`tags` JSON,`sources` JSON,`reviewer_id` integer,`reviewed_at` datetime,`published_at` datetime,`scheduled_publish_at` datetime,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,CONSTRAINT `fk_blogs_author` FOREIGN KEY (`author_id`) REFERENCES `user`(`id`),CONSTRAINT `fk_blogs_reviewer` FOREIGN KEY (`reviewer_id`) REFERENCES `user`(`id`))"
+  },
+  {
+    "name": "budget_expenses",
+    "sql": "CREATE TABLE `budget_expenses` (`id` integer PRIMARY KEY AUTOINCREMENT,`created_at` datetime,`line_id` integer NOT NULL,`amount_paise` integer,`description` text,`vendor_name` text,`invoice_no` text,`expense_date` datetime,`submitted_by` integer,`approved_by` integer,`status` text DEFAULT \"pending\")"
+  },
+  {
+    "name": "budget_lines",
+    "sql": "CREATE TABLE `budget_lines` (`id` integer PRIMARY KEY AUTOINCREMENT,`created_at` datetime,`updated_at` datetime,`period_id` integer NOT NULL,`category` text NOT NULL,`sub_category` text,`allocated_paise` integer,`spent_paise` integer,`committed_paise` integer,`owner_user_id` integer,`notes` text)"
+  },
+  {
+    "name": "budget_periods",
+    "sql": "CREATE TABLE `budget_periods` (`id` integer PRIMARY KEY AUTOINCREMENT,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`name` text NOT NULL,`start_date` datetime,`end_date` datetime,`is_active` numeric DEFAULT true)"
+  },
+  {
+    "name": "call_quality_reports",
+    "sql": "CREATE TABLE `call_quality_reports` (`id` integer PRIMARY KEY AUTOINCREMENT,`appointment_id` integer NOT NULL,`room_name` text,`participant_id` text,`participant_role` text,`avg_bitrate_kbps` real,`avg_packet_loss` real,`avg_jitter_ms` real,`avg_rtt_ms` real,`avg_framerate` real,`avg_resolution` text,`video_codec` text,`audio_codec` text,`audio_level` real,`reconnects` integer,`disconnects` integer,`call_duration_sec` integer,`quality_score` real,`quality_grade` text,`raw_metrics` text,`created_at` datetime)"
+  },
+  {
+    "name": "cart_sessions",
+    "sql": "CREATE TABLE `cart_sessions` (`id` integer PRIMARY KEY AUTOINCREMENT,`user_id` integer,`session_id` text,`cart_data` text,`cart_value` integer,`status` text,`last_active_at` datetime,`recovery_email_sent_at` datetime,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "chat_messages",
+    "sql": "CREATE TABLE `chat_messages` (`id` integer PRIMARY KEY AUTOINCREMENT,`room_id` integer,`sender_id` integer,`receiver_id` integer,`message` text,`message_type` text DEFAULT \"text\",`file_url` text,`is_read` numeric DEFAULT false,`read_at` datetime,`edited_at` datetime,`parent_message_id` integer,`deleted_at` datetime,`created_at` datetime,`updated_at` datetime,CONSTRAINT `fk_chat_messages_sender` FOREIGN KEY (`sender_id`) REFERENCES `user`(`id`))"
+  },
+  {
+    "name": "chat_rooms",
+    "sql": "CREATE TABLE `chat_rooms` (`id` integer PRIMARY KEY AUTOINCREMENT,`appointment_id` integer,`doctor_id` integer,`patient_id` integer,`family_member_id` integer,`on_behalf_note` text,`chat_type` text DEFAULT \"consultation\",`urgency` text DEFAULT \"normal\",`is_active` numeric DEFAULT true,`closed_at` datetime,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,CONSTRAINT `fk_chat_rooms_doctor` FOREIGN KEY (`doctor_id`) REFERENCES `user`(`id`),CONSTRAINT `fk_chat_rooms_patient` FOREIGN KEY (`patient_id`) REFERENCES `user`(`id`))"
+  },
+  {
+    "name": "cities",
+    "sql": "CREATE TABLE `cities` (`id` integer PRIMARY KEY AUTOINCREMENT,`name` text NOT NULL,`state` text,`is_active` numeric DEFAULT true,`created_at` datetime)"
+  },
+  {
+    "name": "clinical_referrals",
+    "sql": "CREATE TABLE `clinical_referrals` (`id` integer PRIMARY KEY AUTOINCREMENT,`patient_id` integer NOT NULL,`referring_doctor_id` integer NOT NULL,`referred_doctor_id` integer,`specialty` text,`urgency` text DEFAULT \"routine\",`reason` text,`clinical_summary` text,`notes` text,`diagnosis_codes` text,`status` text DEFAULT \"pending\",`appointment_id` integer,`attachment_url` text,`expires_at` datetime,`created_at` datetime,`updated_at` datetime,CONSTRAINT `fk_clinical_referrals_patient` FOREIGN KEY (`patient_id`) REFERENCES `user`(`id`),CONSTRAINT `fk_clinical_referrals_referred_doctor` FOREIGN KEY (`referred_doctor_id`) REFERENCES `user`(`id`),CONSTRAINT `fk_clinical_referrals_referring_doctor` FOREIGN KEY (`referring_doctor_id`) REFERENCES `user`(`id`))"
+  },
+  {
+    "name": "cold_chain_metrics",
+    "sql": "CREATE TABLE `cold_chain_metrics` (`id` integer PRIMARY KEY AUTOINCREMENT,`warehouse_id` integer,`temperature` real,`humidity` real,`recorded_at` datetime)"
+  },
+  {
+    "name": "companies",
+    "sql": "CREATE TABLE `companies` (`id` integer PRIMARY KEY AUTOINCREMENT,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`name` text NOT NULL,`domain` text,`wallet_balance` real)"
+  },
+  {
+    "name": "company_credit_ledger",
+    "sql": "CREATE TABLE `company_credit_ledger` (`id` integer PRIMARY KEY AUTOINCREMENT,`company_id` integer NOT NULL,`amount_paise` integer,`description` text,`ref_type` text,`ref_id` integer,`created_at` datetime)"
+  },
+  {
+    "name": "consultation_reviews",
+    "sql": "CREATE TABLE `consultation_reviews` (`id` integer PRIMARY KEY AUTOINCREMENT,`appointment_id` integer NOT NULL,`doctor_id` integer NOT NULL,`reviewer_id` integer NOT NULL,`quality_score` integer NOT NULL,`notes` text,`flagged` numeric DEFAULT false,`outcome` text DEFAULT \"ok\",`created_at` datetime)"
+  },
+  {
+    "name": "corporate_invoices",
+    "sql": "CREATE TABLE `corporate_invoices` (`id` integer PRIMARY KEY AUTOINCREMENT,`company_id` integer NOT NULL,`month` text,`total_consultations` integer,`total_medicine_orders` integer,`total_lab_orders` integer,`total_amount_paise` integer,`status` text DEFAULT \"pending\",`due_date` datetime,`paid_at` datetime,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "coupons",
+    "sql": "CREATE TABLE `coupons` (`id` integer PRIMARY KEY AUTOINCREMENT,`code` text NOT NULL,`description` text,`type` text NOT NULL,`value` integer NOT NULL,`min_order_paise` integer,`max_discount_paise` integer,`max_uses` integer,`used_count` integer DEFAULT 0,`is_active` numeric DEFAULT true,`expires_at` datetime,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime)"
+  },
+  {
+    "name": "courier_deliveries",
+    "sql": "CREATE TABLE `courier_deliveries` (`id` integer PRIMARY KEY AUTOINCREMENT,`order_id` integer,`courier_id` integer,`status` text,`current_latitude` real,`current_longitude` real,`pickup_latitude` real,`pickup_longitude` real,`dest_latitude` real,`dest_longitude` real,`estimated_delivery_time` datetime,`actual_delivery_time` datetime,`sla_deadline` datetime,`sla_breached_at` datetime,`batch_id` text,`delivery_notes` text,`provider_name` text,`tracking_id` text,`proof_photo_url` text,`current_address` text,`estimated_arrival` datetime,`distance_traveled` real,`battery_level` integer,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "courier_profiles",
+    "sql": "CREATE TABLE `courier_profiles` (`id` integer PRIMARY KEY AUTOINCREMENT,`user_id` integer,`vehicle_type` text,`license_number` text,`rating` real DEFAULT 5,`total_trips` integer DEFAULT 0,`is_available` numeric DEFAULT true,`active_deliveries` integer DEFAULT 0,`max_daily_trips` integer DEFAULT 50,`today_trips` integer DEFAULT 0,`last_latitude` real,`last_longitude` real,`city` text,`created_at` datetime,`updated_at` datetime,CONSTRAINT `fk_courier_profiles_user` FOREIGN KEY (`user_id`) REFERENCES `user`(`id`))"
+  },
+  {
+    "name": "delivery_zones",
+    "sql": "CREATE TABLE `delivery_zones` (`id` integer PRIMARY KEY AUTOINCREMENT,`city` text NOT NULL,`is_quick_enabled` numeric DEFAULT true,`max_radius_km` real DEFAULT 10,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "devi_configs",
+    "sql": "CREATE TABLE `devi_configs` (`key` text,`value` text,`updated_at` datetime,PRIMARY KEY (`key`))"
+  },
+  {
+    "name": "devi_guest_sessions",
+    "sql": "CREATE TABLE `devi_guest_sessions` (`id` integer PRIMARY KEY AUTOINCREMENT,`browser_id` text NOT NULL,`nickname` text,`phone` text,`converted_to_user_id` integer,`created_at` datetime,`last_seen_at` datetime,`expires_at` datetime,`deleted_at` datetime)"
+  },
+  {
+    "name": "devi_learned_intents",
+    "sql": "CREATE TABLE `devi_learned_intents` (`id` integer PRIMARY KEY AUTOINCREMENT,`phrase` text,`intent` text,`status` text DEFAULT \"pending\",`embedding` text,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "devi_symptom_logs",
+    "sql": "CREATE TABLE `devi_symptom_logs` (`id` integer PRIMARY KEY AUTOINCREMENT,`user_id` integer,`family_member_id` integer,`guest_browser_id` text,`participant_type` text DEFAULT \"primary_user\",`session_id` text,`intent` text DEFAULT \"symptom_check\",`symptoms_text` text,`dept_matched` text,`urgency` integer,`embedding` vector(768),`booked_appt` numeric DEFAULT false,`response_ms` integer DEFAULT 0,`created_at` datetime)"
+  },
+  {
+    "name": "diagnosis",
+    "sql": "CREATE TABLE `diagnosis` (`id` integer PRIMARY KEY AUTOINCREMENT,`patient_id` integer NOT NULL,`doctor_id` integer NOT NULL,`appointment_id` integer,`condition` text NOT NULL,`severity` text,`notes` text,`created_at` datetime,`updated_at` datetime,CONSTRAINT `fk_diagnosis_doctor` FOREIGN KEY (`doctor_id`) REFERENCES `user`(`id`),CONSTRAINT `fk_diagnosis_patient` FOREIGN KEY (`patient_id`) REFERENCES `user`(`id`))"
+  },
+  {
+    "name": "dispense_records",
+    "sql": "CREATE TABLE `dispense_records` (`id` integer PRIMARY KEY AUTOINCREMENT,`order_id` integer NOT NULL,`order_item_id` integer NOT NULL,`inventory_batch_id` integer NOT NULL,`medicine_id` integer NOT NULL,`quantity` integer NOT NULL,`dispensed_by_id` integer NOT NULL,`dispensed_at` datetime,`label_printed` numeric DEFAULT false,`created_at` datetime)"
+  },
+  {
+    "name": "doctor_analytics_summaries",
+    "sql": "CREATE TABLE `doctor_analytics_summaries` (`id` integer PRIMARY KEY AUTOINCREMENT,`updated_at` datetime,`doctor_user_id` integer NOT NULL,`period` text,`total_consultations` integer,`completed_consults` integer,`cancelled_consults` integer,`avg_rating` real,`repeat_patient_pct` real,`total_earnings_paise` integer,`avg_consult_fee_paise` integer)"
+  },
+  {
+    "name": "doctor_availability",
+    "sql": "CREATE TABLE `doctor_availability` (`id` integer PRIMARY KEY AUTOINCREMENT,`doctor_id` integer NOT NULL,`day_of_week` integer NOT NULL,`start_time` text NOT NULL,`end_time` text NOT NULL,`is_available` numeric DEFAULT true,`version` integer NOT NULL DEFAULT 1,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "doctor_onboardings",
+    "sql": "CREATE TABLE `doctor_onboardings` (`id` integer PRIMARY KEY AUTOINCREMENT,`doctor_id` integer NOT NULL,`stage` text DEFAULT \"clinical_review\",`clinical_recommendation` text DEFAULT \"pending\",`clinical_reviewer_id` integer,`clinical_notes` text,`license_verified` numeric DEFAULT false,`identity_verified` numeric DEFAULT false,`agreement_signed` numeric DEFAULT false,`orientation_done` numeric DEFAULT false,`test_consult_done` numeric DEFAULT false,`activated_at` datetime,`activated_by` integer,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "doctor_sub_specialties",
+    "sql": "CREATE TABLE `doctor_sub_specialties` (`id` integer PRIMARY KEY AUTOINCREMENT,`doctor_type_id` integer NOT NULL,`name` text NOT NULL,`slug` text NOT NULL,`description` text,`requires_certificate` numeric DEFAULT false,`is_active` numeric DEFAULT true,`created_by` integer,`created_at` datetime,`updated_at` datetime,CONSTRAINT `fk_doctor_sub_specialties_doctor_type` FOREIGN KEY (`doctor_type_id`) REFERENCES `doctor_types`(`id`))"
+  },
+  {
+    "name": "doctor_sub_specialty_assignments",
+    "sql": "CREATE TABLE `doctor_sub_specialty_assignments` (`id` integer PRIMARY KEY AUTOINCREMENT,`doctor_user_id` integer NOT NULL,`sub_specialty_id` integer NOT NULL,`assigned_by` integer,`assigned_by_role` text,`certificate_url` text,`is_active` numeric DEFAULT true,`created_at` datetime,`updated_at` datetime,CONSTRAINT `fk_doctor_sub_specialty_assignments_sub_specialty` FOREIGN KEY (`sub_specialty_id`) REFERENCES `doctor_sub_specialties`(`id`))"
+  },
+  {
+    "name": "doctor_types",
+    "sql": "CREATE TABLE `doctor_types` (`id` integer PRIMARY KEY AUTOINCREMENT,`name` text NOT NULL,`slug` text NOT NULL,`description` text,`icon` text,`color` text,`is_active` numeric DEFAULT true,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "doctorprofile",
+    "sql": "CREATE TABLE `doctorprofile` (`id` integer PRIMARY KEY AUTOINCREMENT,`user_id` integer NOT NULL,`pod_id` integer,`service_zone_id` integer,`specialization` text,`doctor_type_id` integer,`license_number` text,`license_expiry` datetime,`years_of_experience` integer,`qualification` text,`college_name` text,`consultation_fees` jsonb,`is_verified` numeric DEFAULT false,`is_online` numeric DEFAULT false,`current_status` text DEFAULT \"offline\",`gender` text,`latitude` real,`longitude` real,`bio` text,`average_rating` real,`total_consultations` integer,`total_consultations_today` integer DEFAULT 0,`profile_completion_percent` integer,`languages_spoken` text,`admin_boost_score` real DEFAULT 0,`offers_free_consultation` numeric DEFAULT false,`daily_free_consult_limit` integer DEFAULT 0,`free_consults_given_today` integer DEFAULT 0,`free_type` text DEFAULT \"first_time_only\",`free_day_of_week` integer DEFAULT 0,`last_ping` datetime,`emergency_capable` numeric DEFAULT false,`total_reviews` integer DEFAULT 0,`is_featured` numeric DEFAULT false,`performance_score` real DEFAULT 0,`weekly_consultations` integer DEFAULT 0,`completion_rate` real DEFAULT 0,`scorecard_score` real DEFAULT 0,`tier` text DEFAULT \"bronze\",`tier_computed_at` datetime,`payout_upi` text,`bank_account_number` text,`bank_ifsc` text,`pan` text,`pan_verified` numeric DEFAULT false,`razorpay_fund_account_id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime)"
+  },
+  {
+    "name": "documents",
+    "sql": "CREATE TABLE `documents` (`id` integer PRIMARY KEY AUTOINCREMENT,`owner_type` text,`owner_id` integer,`category` text,`storage_key` text,`original_name` text,`content_type` text,`size_bytes` integer,`visibility` text DEFAULT \"private\",`public_url` text,`status` text DEFAULT \"pending\",`uploaded_by` integer,`verified_by` integer,`verified_at` datetime,`expiry_date` datetime,`version` integer DEFAULT 1,`supersedes_id` integer,`access_token` text,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "drug_interactions",
+    "sql": "CREATE TABLE `drug_interactions` (`id` integer PRIMARY KEY AUTOINCREMENT,`drug_a_name` text NOT NULL,`drug_b_name` text NOT NULL,`severity` text NOT NULL,`description` text,`created_at` datetime)"
+  },
+  {
+    "name": "email_verification_tokens",
+    "sql": "CREATE TABLE `email_verification_tokens` (`id` integer PRIMARY KEY AUTOINCREMENT,`user_id` integer NOT NULL,`token` text NOT NULL,`expires_at` datetime NOT NULL,`created_at` datetime)"
+  },
+  {
+    "name": "employees",
+    "sql": "CREATE TABLE `employees` (`id` integer PRIMARY KEY AUTOINCREMENT,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`company_id` integer,`user_id` integer,`employee_id` text,`wallet_allowance` real,`is_active` numeric DEFAULT true,CONSTRAINT `fk_employees_company` FOREIGN KEY (`company_id`) REFERENCES `companies`(`id`),CONSTRAINT `uni_employees_user_id` UNIQUE (`user_id`))"
+  },
+  {
+    "name": "emr_access_grants",
+    "sql": "CREATE TABLE `emr_access_grants` (`id` integer PRIMARY KEY AUTOINCREMENT,`doctor_id` integer NOT NULL,`patient_id` integer NOT NULL,`source_type` varchar(50) NOT NULL,`source_id` integer NOT NULL,`granted_at` datetime,`expires_at` datetime NOT NULL)"
+  },
+  {
+    "name": "expenses",
+    "sql": "CREATE TABLE `expenses` (`id` integer PRIMARY KEY AUTOINCREMENT,`description` text NOT NULL,`amount` integer NOT NULL,`currency` text DEFAULT \"INR\",`category` text NOT NULL,`department` text NOT NULL,`source_id` text,`status` text DEFAULT \"pending\",`ledger_transaction_id` uuid,`created_by` integer,`approved_by` integer,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "external_providers",
+    "sql": "CREATE TABLE `external_providers` (`id` integer PRIMARY KEY AUTOINCREMENT,`name` text NOT NULL,`type` text,`api_key` text,`is_active` numeric DEFAULT true,`created_at` datetime)"
+  },
+  {
+    "name": "family_members",
+    "sql": "CREATE TABLE `family_members` (`id` integer PRIMARY KEY AUTOINCREMENT,`user_id` integer NOT NULL,`full_name` text NOT NULL,`relationship` text NOT NULL,`date_of_birth` datetime,`gender` text,`blood_group` text,`allergies` text,`medical_conditions` text,`profile_photo_url` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime)"
+  },
+  {
+    "name": "final_settlements",
+    "sql": "CREATE TABLE `final_settlements` (`id` integer PRIMARY KEY AUTOINCREMENT,`created_at` datetime,`user_id` integer NOT NULL,`employment_type` text,`last_working_day` datetime,`prorated_salary_paise` integer,`leave_encashed_days` real,`leave_encashment_paise` integer,`years_of_service` real,`gratuity_eligible` numeric,`gratuity_paise` integer,`pending_payout_paise` integer,`pending_tds_paise` integer,`deductions_paise` integer,`net_payable_paise` integer,`status` text DEFAULT \"pending\",`it_cleared` numeric,`assets_returned` numeric,`finance_cleared` numeric,`handover_done` numeric,`notes` text)"
+  },
+  {
+    "name": "franchise_royalty_logs",
+    "sql": "CREATE TABLE `franchise_royalty_logs` (`id` integer PRIMARY KEY AUTOINCREMENT,`franchise_id` integer,`appointment_id` integer,`total_amount` integer,`royalty_amount` integer,`transaction_id` text,`created_at` datetime)"
+  },
+  {
+    "name": "franchises",
+    "sql": "CREATE TABLE \"franchises\"  (`id` integer PRIMARY KEY AUTOINCREMENT,`owner_id` integer NOT NULL,`name` text NOT NULL,`royalty_rate` real DEFAULT 10,`region` text,`zone_id` integer,`is_active` numeric DEFAULT true,`created_at` datetime,`updated_at` datetime,CONSTRAINT `fk_franchises_owner` FOREIGN KEY (`owner_id`) REFERENCES `user`(`id`))"
+  },
+  {
+    "name": "health_timeline_events",
+    "sql": "CREATE TABLE `health_timeline_events` (`id` integer PRIMARY KEY AUTOINCREMENT,`patient_id` integer,`type` text,`title` text,`description` text,`date` datetime,`reference_id` integer)"
+  },
+  {
+    "name": "holiday_calendar",
+    "sql": "CREATE TABLE `holiday_calendar` (`id` integer PRIMARY KEY AUTOINCREMENT,`date` datetime NOT NULL,`name` text NOT NULL,`is_optional` numeric DEFAULT false,`year` integer NOT NULL)"
+  },
+  {
+    "name": "hospital_beds",
+    "sql": "CREATE TABLE `hospital_beds` (`id` integer PRIMARY KEY AUTOINCREMENT,`hospital_id` integer,`ward_id` integer,`department_id` integer,`room_number` text,`bed_number` text,`bed_type` text DEFAULT \"standard\",`status` text DEFAULT \"available\",`price_per_night` real,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "hospital_departments",
+    "sql": "CREATE TABLE `hospital_departments` (`id` integer PRIMARY KEY AUTOINCREMENT,`hospital_id` integer,`name` text NOT NULL,`description` text,`created_at` datetime)"
+  },
+  {
+    "name": "hospital_ipd_admissions",
+    "sql": "CREATE TABLE `hospital_ipd_admissions` (`id` integer PRIMARY KEY AUTOINCREMENT,`hospital_id` integer,`patient_id` integer,`doctor_id` integer,`bed_id` integer,`admission_date` datetime,`discharge_date` datetime,`status` text DEFAULT \"admitted\",`discharge_summary` text,`created_at` datetime,`updated_at` datetime,CONSTRAINT `fk_hospital_ipd_admissions_bed` FOREIGN KEY (`bed_id`) REFERENCES `hospital_beds`(`id`),CONSTRAINT `fk_hospital_ipd_admissions_doctor` FOREIGN KEY (`doctor_id`) REFERENCES `user`(`id`),CONSTRAINT `fk_hospital_ipd_admissions_patient` FOREIGN KEY (`patient_id`) REFERENCES `user`(`id`))"
+  },
+  {
+    "name": "hospital_nursing_tasks",
+    "sql": "CREATE TABLE `hospital_nursing_tasks` (`id` integer PRIMARY KEY AUTOINCREMENT,`hospital_id` integer,`patient_id` integer,`bed_id` integer,`title` text NOT NULL,`description` text,`priority` text DEFAULT \"medium\",`status` text DEFAULT \"pending\",`due_at` datetime,`completed_at` datetime,`notes` text,`assigned_to_id` integer,`created_by_id` integer,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "hospital_shift_schedules",
+    "sql": "CREATE TABLE `hospital_shift_schedules` (`id` integer PRIMARY KEY AUTOINCREMENT,`hospital_id` integer,`staff_id` integer,`staff_name` text,`staff_role` text,`shift_date` datetime,`shift_type` text,`start_time` text,`end_time` text,`ward_id` integer,`status` text DEFAULT \"scheduled\",`notes` text,`created_at` datetime)"
+  },
+  {
+    "name": "hospital_ward_service_requests",
+    "sql": "CREATE TABLE `hospital_ward_service_requests` (`id` integer PRIMARY KEY AUTOINCREMENT,`hospital_id` integer,`patient_id` integer,`requested_by_id` integer,`bed_id` integer,`items` JSON,`status` text DEFAULT \"pending\",`priority` text DEFAULT \"normal\",`notes` text,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "hospital_wards",
+    "sql": "CREATE TABLE `hospital_wards` (`id` integer PRIMARY KEY AUTOINCREMENT,`hospital_id` integer,`name` text NOT NULL,`ward_type` text DEFAULT \"general\",`floor` integer,`capacity` integer,`description` text,`is_active` numeric DEFAULT true,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "hospitals",
+    "sql": "CREATE TABLE `hospitals` (`id` integer PRIMARY KEY AUTOINCREMENT,`name` text NOT NULL,`address` text,`zone_id` integer,`contact_info` text,`type` text DEFAULT \"General\",`hospital_type` text DEFAULT \"owned\",`franchise_id` integer,`subscription_id` integer,`is_active` numeric DEFAULT true,`created_at` datetime,`updated_at` datetime,CONSTRAINT `fk_hospitals_franchise` FOREIGN KEY (`franchise_id`) REFERENCES `franchises`(`id`),CONSTRAINT `fk_hospitals_subscription` FOREIGN KEY (`subscription_id`) REFERENCES `user_subscriptions`(`id`))"
+  },
+  {
+    "name": "hr_onboarding_records",
+    "sql": "CREATE TABLE `hr_onboarding_records` (`id` integer PRIMARY KEY AUTOINCREMENT,`staff_id` integer NOT NULL,`certificate` text DEFAULT \"pending\",`aadhar_id` text DEFAULT \"pending\",`pan_card` text DEFAULT \"pending\",`bank_account` text DEFAULT \"pending\",`passport_photo` text DEFAULT \"pending\",`system_access` numeric DEFAULT false,`handbook_read` numeric DEFAULT false,`welcome_email_sent` numeric DEFAULT false,`probation_end_date` datetime,`status` text DEFAULT \"pending_docs\",`created_at` datetime,`updated_at` datetime,CONSTRAINT `fk_hr_onboarding_records_staff_profile` FOREIGN KEY (`staff_id`) REFERENCES `staff_profiles`(`id`))"
+  },
+  {
+    "name": "insurance_claims",
+    "sql": "CREATE TABLE `insurance_claims` (`id` integer PRIMARY KEY AUTOINCREMENT,`claim_number` text,`uhe_id` text,`provider_id` integer,`insurer_id` integer,`amount` integer,`status` text DEFAULT \"pending\",`diagnosis_code` text,`treatment_code` text,`escrow_transaction_id` text,`remarks` text,`document_id` integer,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "insurance_providers",
+    "sql": "CREATE TABLE `insurance_providers` (`id` integer PRIMARY KEY AUTOINCREMENT,`name` text NOT NULL,`code` text,`is_active` numeric DEFAULT true,`created_at` datetime)"
+  },
+  {
+    "name": "investors",
+    "sql": "CREATE TABLE `investors` (`id` integer PRIMARY KEY AUTOINCREMENT,`name` text NOT NULL,`equity_percent` real,`capital_injected` integer,`dividends_paid` integer,`currency` text DEFAULT \"INR\",`next_dividend_date` datetime,`status` text DEFAULT \"active\",`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "job_applications",
+    "sql": "CREATE TABLE `job_applications` (`id` integer PRIMARY KEY AUTOINCREMENT,`job_id` integer,`user_id` integer,`full_name` text,`email` text,`phone_number` text,`whatsapp_number` text,`date_of_birth` text,`gender` text,`father_name` text,`mother_name` text,`passport_photo_url` text,`permanent_address` text,`living_address` text,`position` text,`experience_years` integer,`license_number` text,`ayush_system` text,`treatment_approach` text,`education_details` text,`resume_url` text,`cover_letter` text,`status` text DEFAULT \"applied\",`interview_date` text,`interview_notes` text,`applied_at` datetime,`updated_at` datetime,`onboarded_user_id` integer,CONSTRAINT `fk_job_applications_job` FOREIGN KEY (`job_id`) REFERENCES `job_openings`(`id`))"
+  },
+  {
+    "name": "job_openings",
+    "sql": "CREATE TABLE `job_openings` (`id` integer PRIMARY KEY AUTOINCREMENT,`title` text NOT NULL,`department` text,`location` text,`job_type` text,`specialization` text,`description` text,`requirements` text,`is_active` numeric DEFAULT true,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "knowledge_items",
+    "sql": "CREATE TABLE `knowledge_items` (`id` integer PRIMARY KEY AUTOINCREMENT,`category` text,`title` text,`content` text,`source` text,`embedding` text,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "lab_bookings",
+    "sql": "CREATE TABLE `lab_bookings` (`id` integer PRIMARY KEY AUTOINCREMENT,`patient_id` integer,`lab_center_id` integer,`lab_test_id` integer,`booking_type` text DEFAULT \"home_pickup\",`status` text DEFAULT \"pending\",`preferred_date` text,`preferred_time_slot` text,`pickup_address` text,`pickup_pincode` text,`amount_paise` integer,`home_pickup_charge_paise` integer,`total_paise` integer,`payment_status` text DEFAULT \"pending\",`payment_ref` text,`phlebotomist_id` integer,`report_file_url` text,`ai_summary` text,`ai_recommendation` text,`cancelled_at` datetime,`cancel_reason` text,`created_at` datetime,`updated_at` datetime,CONSTRAINT `fk_lab_bookings_lab_center` FOREIGN KEY (`lab_center_id`) REFERENCES `lab_centers`(`id`),CONSTRAINT `fk_lab_bookings_lab_test` FOREIGN KEY (`lab_test_id`) REFERENCES `lab_tests`(`id`))"
+  },
+  {
+    "name": "lab_center_pricing",
+    "sql": "CREATE TABLE `lab_center_pricing` (`id` integer PRIMARY KEY AUTOINCREMENT,`lab_center_id` integer NOT NULL,`lab_test_id` integer NOT NULL,`price_paise` integer,`home_pickup_charge_paise` integer,`turnaround_hours` integer DEFAULT 24,`is_available` numeric DEFAULT true)"
+  },
+  {
+    "name": "lab_centers",
+    "sql": "CREATE TABLE `lab_centers` (`id` integer PRIMARY KEY AUTOINCREMENT,`partner_id` integer,`name` text,`address` text,`pincode` text,`zone_id` integer,`district` text,`taluk` text,`lat` real,`lng` real,`phone` text,`offers_home_pickup` numeric DEFAULT true,`offers_lab_visit` numeric DEFAULT true,`opening_time` text DEFAULT \"07:00\",`closing_time` text DEFAULT \"20:00\",`is_active` numeric DEFAULT true,`created_at` datetime,CONSTRAINT `fk_lab_centers_partner` FOREIGN KEY (`partner_id`) REFERENCES `lab_partners`(`id`))"
+  },
+  {
+    "name": "lab_package_items",
+    "sql": "CREATE TABLE `lab_package_items` (`package_test_id` integer,`component_test_id` integer,PRIMARY KEY (`package_test_id`,`component_test_id`),CONSTRAINT `fk_lab_package_items_component_test` FOREIGN KEY (`component_test_id`) REFERENCES `lab_tests`(`id`))"
+  },
+  {
+    "name": "lab_partners",
+    "sql": "CREATE TABLE `lab_partners` (`id` integer PRIMARY KEY AUTOINCREMENT,`name` text NOT NULL,`slug` text,`logo_url` text,`is_nabl` numeric DEFAULT true,`is_cap` numeric,`rating` real DEFAULT 4.5,`description` text,`is_active` numeric DEFAULT true,`created_at` datetime)"
+  },
+  {
+    "name": "lab_request_items",
+    "sql": "CREATE TABLE `lab_request_items` (`lab_request_id` integer,`lab_test_id` integer,PRIMARY KEY (`lab_request_id`,`lab_test_id`),CONSTRAINT `fk_lab_request_items_lab_request` FOREIGN KEY (`lab_request_id`) REFERENCES `lab_requests`(`id`),CONSTRAINT `fk_lab_request_items_lab_test` FOREIGN KEY (`lab_test_id`) REFERENCES `lab_tests`(`id`))"
+  },
+  {
+    "name": "lab_requests",
+    "sql": "CREATE TABLE `lab_requests` (`id` integer PRIMARY KEY AUTOINCREMENT,`hospital_id` integer,`patient_id` integer,`doctor_id` integer,`appointment_id` integer,`admission_id` integer,`status` text DEFAULT \"pending\",`priority` text DEFAULT \"normal\",`ordered_at` datetime,`collected_at` datetime,`created_at` datetime,`updated_at` datetime,CONSTRAINT `fk_lab_requests_doctor` FOREIGN KEY (`doctor_id`) REFERENCES `user`(`id`),CONSTRAINT `fk_lab_requests_patient` FOREIGN KEY (`patient_id`) REFERENCES `user`(`id`))"
+  },
+  {
+    "name": "lab_results",
+    "sql": "CREATE TABLE `lab_results` (`id` integer PRIMARY KEY AUTOINCREMENT,`request_id` integer,`test_id` integer,`value` text,`unit` text,`reference_min` real,`reference_max` real,`flag` text,`comments` text,`technician_id` integer,`verified_by_id` integer,`created_at` datetime,`updated_at` datetime,CONSTRAINT `fk_lab_results_test` FOREIGN KEY (`test_id`) REFERENCES `lab_tests`(`id`))"
+  },
+  {
+    "name": "lab_specimens",
+    "sql": "CREATE TABLE `lab_specimens` (`id` integer PRIMARY KEY AUTOINCREMENT,`request_id` integer,`type` text,`barcode` text,`status` text DEFAULT \"pending\",`collected_at` datetime,`collected_by_id` integer,`notes` text)"
+  },
+  {
+    "name": "lab_tests",
+    "sql": "CREATE TABLE `lab_tests` (`id` integer PRIMARY KEY AUTOINCREMENT,`name` text NOT NULL,`category` text,`health_concern` text,`description` text,`sample_type` text,`fasting_required` numeric DEFAULT false,`report_hours` integer DEFAULT 24,`reference_range` text,`unit` text,`base_price` integer,`original_price_paise` integer,`discount_pct` integer DEFAULT 0,`is_package` numeric DEFAULT false,`is_popular` numeric DEFAULT false,`icon` text,`is_active` numeric DEFAULT true,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "leave_balances",
+    "sql": "CREATE TABLE `leave_balances` (`id` integer PRIMARY KEY AUTOINCREMENT,`user_id` integer NOT NULL,`leave_type_id` integer NOT NULL,`year` integer NOT NULL,`allocated` real,`used` real,`pending` real,`carried_over` real,CONSTRAINT `fk_leave_balances_leave_type` FOREIGN KEY (`leave_type_id`) REFERENCES `leave_types`(`id`))"
+  },
+  {
+    "name": "leave_requests",
+    "sql": "CREATE TABLE `leave_requests` (`id` integer PRIMARY KEY AUTOINCREMENT,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`user_id` integer NOT NULL,`leave_type_id` integer NOT NULL,`start_date` datetime,`end_date` datetime,`total_days` real,`half_day` numeric,`reason` text,`status` text DEFAULT \"pending\",`approved_by` integer,`approved_at` datetime,`rejected_by` integer,`reject_reason` text,CONSTRAINT `fk_leave_requests_leave_type` FOREIGN KEY (`leave_type_id`) REFERENCES `leave_types`(`id`))"
+  },
+  {
+    "name": "leave_types",
+    "sql": "CREATE TABLE `leave_types` (`id` integer PRIMARY KEY AUTOINCREMENT,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`name` text NOT NULL,`code` text NOT NULL,`max_days_per_year` integer,`is_paid` numeric DEFAULT true,`carry_forward` numeric DEFAULT false,`max_carry_days` integer)"
+  },
+  {
+    "name": "ledger_account_v2",
+    "sql": "CREATE TABLE `ledger_account_v2` (`id` uuid,`name` text,`type` varchar(20),`currency` text DEFAULT \"INR\",`balance` integer DEFAULT 0,`is_frozen` numeric DEFAULT false,`last_checksum` text,`created_at` datetime,`updated_at` datetime,PRIMARY KEY (`id`))"
+  },
+  {
+    "name": "ledger_entry_v2",
+    "sql": "CREATE TABLE `ledger_entry_v2` (`id` uuid,`transaction_id` uuid,`account_id` uuid,`direction` varchar(10),`amount` integer,`balance_after` integer,`hash` varchar(64),`created_at` datetime,PRIMARY KEY (`id`),CONSTRAINT `chk_ledger_entry_v2_amount` CHECK (amount \u003e 0))"
+  },
+  {
+    "name": "ledger_transaction_v2",
+    "sql": "CREATE TABLE `ledger_transaction_v2` (`id` uuid,`reference_id` text,`type` text,`description` text,`metadata_json` text,`hash` varchar(64),`previous_hash` varchar(64),`created_at` datetime,`posted_at` datetime,PRIMARY KEY (`id`))"
+  },
+  {
+    "name": "medical_records",
+    "sql": "CREATE TABLE `medical_records` (`id` integer PRIMARY KEY AUTOINCREMENT,`patient_id` integer,`doctor_id` integer,`diagnosis` text,`notes` text,`document_id` integer,`file_url` text,`file_type` text,`created_at` datetime,`updated_at` datetime,CONSTRAINT `fk_medical_records_doctor` FOREIGN KEY (`doctor_id`) REFERENCES `user`(`id`),CONSTRAINT `fk_medical_records_patient` FOREIGN KEY (`patient_id`) REFERENCES `user`(`id`))"
+  },
+  {
+    "name": "medicine",
+    "sql": "CREATE TABLE `medicine` (`id` integer PRIMARY KEY AUTOINCREMENT,`name` text,`brand` text,`molecule_code` text,`generic_name` text,`synonyms` text,`category` text,`description` text,`manufacturer` text,`prices` jsonb,`image_url` text,`image_urls` JSON,`is_prescription_required` numeric,`rx_validation_level` text DEFAULT \"OTC\",`requires_cold_chain` numeric DEFAULT false,`is_active` numeric DEFAULT true,`name_ta` text,`name_hi` text,`description_ta` text,`description_hi` text,`form` text,`strength_value` text,`strength_unit` text,`pack_size` text,`ingredients` JSON,`indications` text,`contraindications` text,`dosage_instructions` text,`storage_instructions` text,`gst_percent` real DEFAULT 5,`hsn_code` text,`ayush_license_no` text,`is_inhouse_brand` numeric DEFAULT false,`catalog_status` text,`sales_channel` text,`published_at` datetime,`published_by` integer,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime)"
+  },
+  {
+    "name": "newsletter_subscribers",
+    "sql": "CREATE TABLE `newsletter_subscribers` (`id` integer PRIMARY KEY AUTOINCREMENT,`email` text NOT NULL,`is_active` numeric DEFAULT true,`source` text,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "notification_jobs",
+    "sql": "CREATE TABLE `notification_jobs` (`id` integer PRIMARY KEY AUTOINCREMENT,`channel` text NOT NULL,`job_type` text NOT NULL,`recipient` text NOT NULL,`user_id` integer,`subject` text,`body` text,`template_id` text,`params` text,`status` text NOT NULL DEFAULT \"pending\",`attempts` integer NOT NULL DEFAULT 0,`max_attempts` integer NOT NULL DEFAULT 3,`last_error` text,`next_attempt_at` datetime NOT NULL,`sent_at` datetime,`created_at` datetime)"
+  },
+  {
+    "name": "notification_logs",
+    "sql": "CREATE TABLE `notification_logs` (`id` integer PRIMARY KEY AUTOINCREMENT,`user_id` integer,`appointment_id` integer,`notification_type` text,`template_type` text,`status` text,`error_message` text,`sent_at` datetime,CONSTRAINT `fk_notification_logs_user` FOREIGN KEY (`user_id`) REFERENCES `user`(`id`))"
+  },
+  {
+    "name": "notification_templates",
+    "sql": "CREATE TABLE `notification_templates` (`id` integer PRIMARY KEY AUTOINCREMENT,`template_type` text NOT NULL,`message_content` text NOT NULL,`variables` text,`is_active` numeric DEFAULT true,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime)"
+  },
+  {
+    "name": "notifications",
+    "sql": "CREATE TABLE `notifications` (`id` integer PRIMARY KEY AUTOINCREMENT,`user_id` integer NOT NULL,`title` text NOT NULL,`message` text NOT NULL,`type` text NOT NULL,`is_read` numeric DEFAULT false,`created_at` datetime,`updated_at` datetime,CONSTRAINT `fk_notifications_user` FOREIGN KEY (`user_id`) REFERENCES `user`(`id`))"
+  },
+  {
+    "name": "otp_records",
+    "sql": "CREATE TABLE `otp_records` (`id` integer PRIMARY KEY AUTOINCREMENT,`phone` text NOT NULL,`otp` text NOT NULL,`expires_at` datetime NOT NULL,`used` numeric DEFAULT false,`created_at` datetime)"
+  },
+  {
+    "name": "password_reset_tokens",
+    "sql": "CREATE TABLE `password_reset_tokens` (`id` integer PRIMARY KEY AUTOINCREMENT,`user_id` integer NOT NULL,`token` text NOT NULL,`expires_at` datetime NOT NULL,`used` numeric DEFAULT false,`created_at` datetime)"
+  },
+  {
+    "name": "patient_health_goals",
+    "sql": "CREATE TABLE `patient_health_goals` (`id` integer PRIMARY KEY AUTOINCREMENT,`patient_id` integer NOT NULL,`title` text NOT NULL,`category` text DEFAULT \"fitness\",`target_value` real,`current_value` real,`unit` text,`deadline` text,`notes` text,`status` text DEFAULT \"active\",`created_at` datetime,`updated_at` datetime,`deleted_at` datetime)"
+  },
+  {
+    "name": "patient_health_timeline",
+    "sql": "CREATE TABLE `patient_health_timeline` (`id` integer PRIMARY KEY AUTOINCREMENT,`patient_id` integer NOT NULL,`event_type` text NOT NULL,`title` text NOT NULL,`date` text,`notes` text,`ref_id` integer,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime)"
+  },
+  {
+    "name": "patient_lab_bookings",
+    "sql": "CREATE TABLE `patient_lab_bookings` (`id` integer PRIMARY KEY AUTOINCREMENT,`patient_id` integer NOT NULL,`test_id` integer,`test_name` text,`date` text,`time` text,`home_collection` numeric DEFAULT false,`address_id` integer,`status` text DEFAULT \"booked\",`report_url` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime)"
+  },
+  {
+    "name": "patient_medication_reminders",
+    "sql": "CREATE TABLE `patient_medication_reminders` (`id` integer PRIMARY KEY AUTOINCREMENT,`patient_id` integer NOT NULL,`medicine_name` text NOT NULL,`dosage` text,`time_of_day` text,`days_of_week` text,`notes` text,`active` numeric DEFAULT true,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime)"
+  },
+  {
+    "name": "patient_profiles",
+    "sql": "CREATE TABLE `patient_profiles` (`id` integer PRIMARY KEY AUTOINCREMENT,`user_id` integer,`date_of_birth` datetime,`gender` text,`blood_group` text,`height` real,`weight` real,`allergies` text,`chronic_conditions` text,`emergency_contact` text,`address` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,CONSTRAINT `fk_patient_profiles_user` FOREIGN KEY (`user_id`) REFERENCES `user`(`id`))"
+  },
+  {
+    "name": "patient_second_opinions",
+    "sql": "CREATE TABLE `patient_second_opinions` (`id` integer PRIMARY KEY AUTOINCREMENT,`patient_id` integer NOT NULL,`question` text NOT NULL,`specialty` text,`urgency` text DEFAULT \"low\",`current_diagnosis` text,`current_medications` text,`status` text DEFAULT \"pending\",`response` text,`responding_doctor` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime)"
+  },
+  {
+    "name": "patient_vaccinations",
+    "sql": "CREATE TABLE `patient_vaccinations` (`id` integer PRIMARY KEY AUTOINCREMENT,`patient_id` integer NOT NULL,`vaccine_name` text NOT NULL,`dose_number` integer DEFAULT 1,`date_given` text,`next_due_date` text,`provider` text,`batch_number` text,`notes` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime)"
+  },
+  {
+    "name": "patient_vitals",
+    "sql": "CREATE TABLE `patient_vitals` (`id` integer PRIMARY KEY AUTOINCREMENT,`patient_id` integer,`systolic_bp` real,`diastolic_bp` real,`heart_rate` real,`recorded_at` datetime)"
+  },
+  {
+    "name": "payment",
+    "sql": "CREATE TABLE `payment` (`id` integer PRIMARY KEY AUTOINCREMENT,`appointment_id` integer,`invoice_id` integer,`patient_id` integer,`amount` integer,`consultation_fee` integer,`platform_fee_percentage` real,`platform_commission` integer,`doctor_earnings` integer,`payment_method` text,`razorpay_payment_id` text,`razorpay_order_id` text,`status` text,`paid_at` datetime,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "payout_records",
+    "sql": "CREATE TABLE `payout_records` (`id` integer PRIMARY KEY AUTOINCREMENT,`doctor_user_id` integer NOT NULL,`amount_paise` integer,`currency` text DEFAULT \"INR\",`razorpay_payout_id` text,`ref_id` text,`status` text DEFAULT \"processing\",`mode` text,`appointment_count` integer,`notes` text,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "payout_requests",
+    "sql": "CREATE TABLE `payout_requests` (`id` integer PRIMARY KEY AUTOINCREMENT,`doctor_id` integer NOT NULL,`amount` integer NOT NULL,`currency` text DEFAULT \"INR\",`status` text DEFAULT \"pending\",`ledger_transaction_id` uuid,`admin_comment` text,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "payroll_compliances",
+    "sql": "CREATE TABLE `payroll_compliances` (`id` integer PRIMARY KEY AUTOINCREMENT,`created_at` datetime,`user_id` integer NOT NULL,`month` text,`gross_salary` integer,`basic_salary` integer,`pf_employee` integer,`pf_employer` integer,`esi_employee` integer,`esi_employer` integer,`prof_tax` integer,`income_tax_tds` integer,`net_salary` integer,`esi_eligible` numeric,`pf_eligible` numeric)"
+  },
+  {
+    "name": "payroll_records",
+    "sql": "CREATE TABLE `payroll_records` (`id` integer PRIMARY KEY AUTOINCREMENT,`user_id` integer NOT NULL,`month` integer,`year` integer,`base_amount` integer,`bonus` integer,`deductions` integer,`net_amount` integer,`status` text DEFAULT \"pending\",`payment_date` datetime,`transaction_id` text,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "payslips",
+    "sql": "CREATE TABLE `payslips` (`id` integer PRIMARY KEY AUTOINCREMENT,`created_at` datetime,`user_id` integer NOT NULL,`month` text,`employee_name` text,`designation` text,`pan` text,`uan` text,`esi_number` text,`gross_salary` integer,`basic_salary` integer,`hra` integer,`special_allowance` integer,`pf_employee` integer,`esi_employee` integer,`prof_tax` integer,`income_tax_tds` integer,`total_deductions` integer,`net_salary` integer,`paid_days` integer,`lop_days` real)"
+  },
+  {
+    "name": "performance_reviews",
+    "sql": "CREATE TABLE `performance_reviews` (`id` integer PRIMARY KEY AUTOINCREMENT,`doctor_id` integer NOT NULL,`doctor_name` text,`reviewer_id` integer,`reviewer_name` text,`period` text,`review_cycle` text,`overall_score` real,`category` text,`clinical_score` real,`communication_score` real,`punctuality_score` real,`goals` text,`adjustment_percentage` real,`hr_notes` text,`status` text DEFAULT \"draft\",`created_at` datetime,`updated_at` datetime,`deleted_at` datetime)"
+  },
+  {
+    "name": "pharmacy",
+    "sql": "CREATE TABLE `pharmacy` (`id` integer PRIMARY KEY AUTOINCREMENT,`name` text,`address` text,`city` text,`pincode` text,`zone_id` integer,`region` text,`latitude` real,`longitude` real,`is_central_warehouse` numeric DEFAULT false,`hub_tier` text DEFAULT \"local\",`parent_hub_id` integer,`service_radius` real DEFAULT 10,`is_active` numeric DEFAULT true,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "pharmacy_inventory_transfers",
+    "sql": "CREATE TABLE `pharmacy_inventory_transfers` (`id` integer PRIMARY KEY AUTOINCREMENT,`source_id` integer,`destination_id` integer,`medicine_id` integer,`quantity` integer,`status` text,`requested_by_id` integer,`processed_by_id` integer,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "pharmacy_order_items",
+    "sql": "CREATE TABLE `pharmacy_order_items` (`id` integer PRIMARY KEY AUTOINCREMENT,`order_id` integer,`medicine_name` text,`medicine_id` integer,`quantity` integer,`unit_price` integer,`total_price` integer,`batch_number` text,`expiry_date` datetime,`physical_weight_grams` integer)"
+  },
+  {
+    "name": "pharmacy_orders",
+    "sql": "CREATE TABLE `pharmacy_orders` (`id` integer PRIMARY KEY AUTOINCREMENT,`order_number` text,`user_id` integer,`pharmacy_id` integer,`parent_order_id` integer,`items` JSON,`amount` integer,`currency` text DEFAULT \"INR\",`status` text,`payment_status` text,`payment_method` text,`delivery_mode` text,`tracking_id` text,`shipping_address` text,`delivery_phone` text,`dest_pincode` text,`dest_latitude` real,`dest_longitude` real,`sla_deadline` datetime,`requires_cold_chain` numeric DEFAULT false,`ledger_transaction_id` text,`payout_status` text DEFAULT \"pending\",`delivery_otp` text,`created_at` datetime,`updated_at` datetime,CONSTRAINT `fk_pharmacy_orders_pharmacy` FOREIGN KEY (`pharmacy_id`) REFERENCES `pharmacy`(`id`))"
+  },
+  {
+    "name": "pharmacy_purchase_orders",
+    "sql": "CREATE TABLE `pharmacy_purchase_orders` (`id` integer PRIMARY KEY AUTOINCREMENT,`po_number` text,`supplier_id` integer,`pharmacy_id` integer,`items` JSON,`amount` integer,`currency` text DEFAULT \"INR\",`tax_amount` integer,`total_with_tax` integer,`status` text,`expected_date` datetime,`received_date` datetime,`is_auto_trigger` numeric DEFAULT false,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "pharmacy_suppliers",
+    "sql": "CREATE TABLE `pharmacy_suppliers` (`id` integer PRIMARY KEY AUTOINCREMENT,`name` text,`contact_email` text,`phone` text,`address` text,`is_active` numeric DEFAULT true,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "pharmacyinventory",
+    "sql": "CREATE TABLE `pharmacyinventory` (`id` integer PRIMARY KEY AUTOINCREMENT,`pharmacy_id` integer,`medicine_id` integer,`batch_number` text,`stock_quantity` integer,`reorder_level` integer,`expiry_date` datetime,`is_active` numeric DEFAULT true,CONSTRAINT `fk_pharmacyinventory_medicine` FOREIGN KEY (`medicine_id`) REFERENCES `medicine`(`id`))"
+  },
+  {
+    "name": "pods",
+    "sql": "CREATE TABLE `pods` (`id` integer PRIMARY KEY AUTOINCREMENT,`name` text NOT NULL,`specialty` text,`lead_doctor_id` integer,`doctor_type_id` integer,`is_active` numeric DEFAULT true,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "points_ledger",
+    "sql": "CREATE TABLE `points_ledger` (`id` integer PRIMARY KEY AUTOINCREMENT,`created_at` datetime,`deleted_at` datetime,`user_id` integer NOT NULL,`points` integer,`balance` integer,`ref_type` text,`ref_id` integer,`description` text,`expires_at` datetime)"
+  },
+  {
+    "name": "prescription_items",
+    "sql": "CREATE TABLE `prescription_items` (`id` integer PRIMARY KEY AUTOINCREMENT,`prescription_id` integer NOT NULL,`medicine_id` integer NOT NULL,`dosage_text` text,`quantity_per_dose` real,`frequency_per_day` real,`duration_days` integer,`total_quantity` real,`instructions` text,`refills_allowed` integer DEFAULT 0,`refills_used` integer DEFAULT 0,`last_refilled_at` datetime,`next_refill_due_at` datetime,`last_reminder_sent_at` datetime,`substituted_medicine_id` integer,`substitution_reason` text,`substituted_by_user_id` integer,`substituted_at` datetime,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime)"
+  },
+  {
+    "name": "prescription_templates",
+    "sql": "CREATE TABLE `prescription_templates` (`id` integer PRIMARY KEY AUTOINCREMENT,`doctor_id` integer,`name` text,`diagnosis` text,`medicines` JSON,`created_at` datetime)"
+  },
+  {
+    "name": "prescriptions",
+    "sql": "CREATE TABLE \"prescriptions\"  (`id` integer PRIMARY KEY AUTOINCREMENT,`appointment_id` integer,`doctor_id` integer,`user_id` integer,`diagnosis` text,`symptoms` text,`medicines` JSON,`lab_tests` JSON,`instructions` text,`file_url` text,`status` text DEFAULT \"uploaded\",`created_at` datetime,`updated_at` datetime,`order_id` integer,`document_id` integer,`pharmacist_notes` text,`verified_by_pharmacist_id` integer,`verified_at` datetime,CONSTRAINT `fk_prescriptions_doctor` FOREIGN KEY (`doctor_id`) REFERENCES `user`(`id`),CONSTRAINT `fk_prescriptions_patient` FOREIGN KEY (`user_id`) REFERENCES `user`(`id`))"
+  },
+  {
+    "name": "product_bundles",
+    "sql": "CREATE TABLE `product_bundles` (`id` integer PRIMARY KEY AUTOINCREMENT,`name` text NOT NULL,`slug` text,`condition_tag` text,`description` text,`image_url` text,`items` JSON,`bundle_price_paise` integer NOT NULL,`is_active` numeric DEFAULT true,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime)"
+  },
+  {
+    "name": "product_interactions",
+    "sql": "CREATE TABLE `product_interactions` (`id` integer PRIMARY KEY AUTOINCREMENT,`medicine_id` integer,`user_id` integer,`session_id` text,`event_type` text,`created_at` datetime,CONSTRAINT `fk_product_interactions_medicine` FOREIGN KEY (`medicine_id`) REFERENCES `medicine`(`id`))"
+  },
+  {
+    "name": "product_reviews",
+    "sql": "CREATE TABLE `product_reviews` (`id` integer PRIMARY KEY AUTOINCREMENT,`product_id` integer NOT NULL,`product_type` text NOT NULL,`patient_id` integer NOT NULL,`rating` integer NOT NULL,`body` text,`verified_purchase` numeric DEFAULT false,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,CONSTRAINT `chk_product_reviews_rating` CHECK (rating BETWEEN 1 AND 5))"
+  },
+  {
+    "name": "product_sales_summaries",
+    "sql": "CREATE TABLE `product_sales_summaries` (`medicine_id` integer PRIMARY KEY AUTOINCREMENT,`total_views` integer DEFAULT 0,`total_adds_to_cart` integer DEFAULT 0,`total_purchases` integer DEFAULT 0,`total_revenue` integer DEFAULT 0,`week_over_week_growth` real DEFAULT 0,`last_updated_at` datetime)"
+  },
+  {
+    "name": "product_variants",
+    "sql": "CREATE TABLE `product_variants` (`id` integer PRIMARY KEY AUTOINCREMENT,`medicine_id` integer,`sku` text NOT NULL,`strength` text,`pack_size` text,`prices` jsonb,`compare_at_prices` jsonb,`physical_weight_grams` integer,`created_at` datetime,`updated_at` datetime,CONSTRAINT `fk_medicine_variants` FOREIGN KEY (`medicine_id`) REFERENCES `medicine`(`id`))"
+  },
+  {
+    "name": "questions",
+    "sql": "CREATE TABLE `questions` (`id` integer PRIMARY KEY AUTOINCREMENT,`template_id` integer NOT NULL,`sort_order` integer,`text` text NOT NULL,`type` text NOT NULL,`options` text,`is_required` numeric DEFAULT false,`is_conditional` numeric DEFAULT false,`show_if_q_id` integer,`show_if_value` text,CONSTRAINT `fk_templates_questions` FOREIGN KEY (`template_id`) REFERENCES `templates`(`id`))"
+  },
+  {
+    "name": "ratings",
+    "sql": "CREATE TABLE `ratings` (`id` integer PRIMARY KEY AUTOINCREMENT,`doctor_id` integer NOT NULL,`user_id` integer NOT NULL,`appointment_id` integer,`score` integer NOT NULL,`comment` text,`is_hidden` numeric DEFAULT false,`hidden_by` integer,`hidden_reason` text,`created_at` datetime)"
+  },
+  {
+    "name": "recruitment_templates",
+    "sql": "CREATE TABLE `recruitment_templates` (`id` integer PRIMARY KEY AUTOINCREMENT,`role` text NOT NULL,`type` text NOT NULL,`title` text NOT NULL,`content` text NOT NULL,`variables` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime)"
+  },
+  {
+    "name": "recurring_expenses",
+    "sql": "CREATE TABLE `recurring_expenses` (`id` integer PRIMARY KEY AUTOINCREMENT,`description` text NOT NULL,`amount` integer NOT NULL,`currency` text DEFAULT \"INR\",`category` text NOT NULL,`department` text NOT NULL,`frequency` text NOT NULL,`day_of_month` integer,`day_of_week` integer,`next_due_at` datetime,`last_posted_at` datetime,`is_active` numeric DEFAULT true,`created_by` integer,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "referral_codes",
+    "sql": "CREATE TABLE `referral_codes` (`id` integer PRIMARY KEY AUTOINCREMENT,`code` text NOT NULL,`user_id` integer NOT NULL,`usage_count` integer DEFAULT 0,`created_at` datetime,`total_uses` integer,`total_earned` integer)"
+  },
+  {
+    "name": "referral_notes",
+    "sql": "CREATE TABLE `referral_notes` (`id` integer PRIMARY KEY AUTOINCREMENT,`referral_id` integer NOT NULL,`doctor_id` integer NOT NULL,`note` text,`outcome` text,`created_at` datetime,CONSTRAINT `fk_referral_notes_doctor` FOREIGN KEY (`doctor_id`) REFERENCES `user`(`id`))"
+  },
+  {
+    "name": "referral_records",
+    "sql": "CREATE TABLE `referral_records` (`id` integer PRIMARY KEY AUTOINCREMENT,`code_id` integer,`referee_user_id` integer,`reward_amount` integer,`status` text DEFAULT \"pending\",`created_at` datetime,CONSTRAINT `fk_referral_records_referral_code` FOREIGN KEY (`code_id`) REFERENCES `referral_codes`(`id`))"
+  },
+  {
+    "name": "referral_uses",
+    "sql": "CREATE TABLE `referral_uses` (`id` integer PRIMARY KEY AUTOINCREMENT,`created_at` datetime,`referrer_id` integer NOT NULL,`referee_id` integer NOT NULL,`code` text,`points_given` integer)"
+  },
+  {
+    "name": "refill_orders",
+    "sql": "CREATE TABLE `refill_orders` (`id` integer PRIMARY KEY AUTOINCREMENT,`schedule_id` integer NOT NULL,`user_id` integer NOT NULL,`order_id` integer,`status` text DEFAULT \"pending\",`quantity` integer,`note` text,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "refill_schedules",
+    "sql": "CREATE TABLE `refill_schedules` (`id` integer PRIMARY KEY AUTOINCREMENT,`user_id` integer NOT NULL,`medicine_name` text NOT NULL,`dosage` text,`frequency` text,`quantity_per_refill` integer DEFAULT 30,`next_refill_date` datetime,`auto_order` numeric DEFAULT true,`status` text DEFAULT \"active\",`last_filled_at` datetime,`prescription_id` text,`pharmacy_id` integer,`created_at` datetime,`updated_at` datetime,CONSTRAINT `fk_refill_schedules_user` FOREIGN KEY (`user_id`) REFERENCES `user`(`id`))"
+  },
+  {
+    "name": "responses",
+    "sql": "CREATE TABLE `responses` (`id` integer PRIMARY KEY AUTOINCREMENT,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`template_id` integer NOT NULL,`patient_user_id` integer NOT NULL,`consultation_id` integer,`status` text DEFAULT \"submitted\",`reviewed_by` integer,`reviewed_at` datetime,`summary` text)"
+  },
+  {
+    "name": "reward_rules",
+    "sql": "CREATE TABLE `reward_rules` (`id` integer PRIMARY KEY AUTOINCREMENT,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`ref_type` text,`points_per_rupee` real,`max_points_per_txn` integer,`is_active` numeric DEFAULT true)"
+  },
+  {
+    "name": "service_zones",
+    "sql": "CREATE TABLE `service_zones` (`id` integer PRIMARY KEY AUTOINCREMENT,`name` text NOT NULL,`city` text,`state` text,`parent_id` integer,`kind` text DEFAULT \"subzone\",`pincodes` JSON,`center_lat` real,`center_lng` real,`is_active` numeric DEFAULT true,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "serviceable_areas",
+    "sql": "CREATE TABLE `serviceable_areas` (`id` integer PRIMARY KEY AUTOINCREMENT,`pincode` text,`city_id` integer,`pharmacy_id` integer)"
+  },
+  {
+    "name": "shipment_updates",
+    "sql": "CREATE TABLE `shipment_updates` (`id` integer PRIMARY KEY AUTOINCREMENT,`shipment_id` integer,`status` text,`location` text,`notes` text,`timestamp` datetime)"
+  },
+  {
+    "name": "shipments",
+    "sql": "CREATE TABLE `shipments` (`id` integer PRIMARY KEY AUTOINCREMENT,`tracking_number` text NOT NULL,`order_id` integer,`order_type` text,`courier_id` integer,`provider_name` text,`status` text DEFAULT \"pending\",`origin` text,`destination` text,`current_address` text,`current_lat` real,`current_lon` real,`estimated_arrival` datetime,`actual_delivery` datetime,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "sos_blocks",
+    "sql": "CREATE TABLE `sos_blocks` (`id` integer PRIMARY KEY AUTOINCREMENT,`patient_id` integer NOT NULL,`reason` text,`blocked_by` integer,`expires_at` datetime NOT NULL,`created_at` datetime)"
+  },
+  {
+    "name": "staff_attendance",
+    "sql": "CREATE TABLE `staff_attendance` (`id` integer PRIMARY KEY AUTOINCREMENT,`user_id` integer NOT NULL,`shift_id` integer,`date` date,`check_in` datetime,`check_out` datetime,`status` text DEFAULT \"present\",`is_verified` numeric DEFAULT false,`created_at` datetime)"
+  },
+  {
+    "name": "staff_profiles",
+    "sql": "CREATE TABLE `staff_profiles` (`id` integer PRIMARY KEY AUTOINCREMENT,`user_id` integer NOT NULL,`employee_id` text NOT NULL,`employment_type` text DEFAULT \"salaried\",`department` text,`designation` text,`joining_date` datetime,`base_salary` integer,`manager_id` integer,`employment_status` text DEFAULT \"active\",`last_working_day` datetime,`termination_reason` text,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "staff_shifts",
+    "sql": "CREATE TABLE `staff_shifts` (`id` integer PRIMARY KEY AUTOINCREMENT,`hospital_id` integer,`name` text,`start_time` text,`end_time` text,`is_active` numeric DEFAULT true,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "stock_reservations",
+    "sql": "CREATE TABLE `stock_reservations` (`id` integer PRIMARY KEY AUTOINCREMENT,`cart_id` text NOT NULL,`pharmacy_id` integer NOT NULL,`medicine_id` integer NOT NULL,`quantity` integer NOT NULL,`user_id` integer,`expires_at` datetime NOT NULL,`status` text DEFAULT \"active\",`created_at` datetime)"
+  },
+  {
+    "name": "subscription_events",
+    "sql": "CREATE TABLE `subscription_events` (`id` integer PRIMARY KEY AUTOINCREMENT,`subscription_id` integer NOT NULL,`user_id` integer,`event_type` text,`metadata` text,`created_at` datetime)"
+  },
+  {
+    "name": "subscription_invoices",
+    "sql": "CREATE TABLE `subscription_invoices` (`id` integer PRIMARY KEY AUTOINCREMENT,`created_at` datetime,`updated_at` datetime,`user_id` integer NOT NULL,`subscription_id` integer NOT NULL,`plan_id` integer,`amount_paise` integer,`status` text DEFAULT \"pending\",`razorpay_payment_id` text,`period_start` datetime,`period_end` datetime,`paid_at` datetime)"
+  },
+  {
+    "name": "subscription_plans",
+    "sql": "CREATE TABLE `subscription_plans` (`id` integer PRIMARY KEY AUTOINCREMENT,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`tier` text,`name` text,`price_monthly` real,`features` text,`razorpay_plan_id` text)"
+  },
+  {
+    "name": "tax_rules",
+    "sql": "CREATE TABLE `tax_rules` (`id` integer PRIMARY KEY AUTOINCREMENT,`region` text NOT NULL,`category` text NOT NULL,`tax_type` text,`rate` real,`description` text,`is_active` numeric DEFAULT true,`created_at` datetime)"
+  },
+  {
+    "name": "tds_remittances",
+    "sql": "CREATE TABLE `tds_remittances` (`id` integer PRIMARY KEY AUTOINCREMENT,`created_at` datetime,`financial_year` text,`quarter` text,`challan_number` text,`amount_paise` integer,`section` text DEFAULT \"194J\",`remitted_on` datetime,`notes` text)"
+  },
+  {
+    "name": "templates",
+    "sql": "CREATE TABLE `templates` (`id` integer PRIMARY KEY AUTOINCREMENT,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`name` text NOT NULL,`specialty` text,`description` text,`is_active` numeric DEFAULT true)"
+  },
+  {
+    "name": "ticket_audit_logs",
+    "sql": "CREATE TABLE `ticket_audit_logs` (`id` integer PRIMARY KEY AUTOINCREMENT,`ticket_id` integer,`action` text,`old_value` text,`new_value` text,`actor_id` integer,`created_at` datetime)"
+  },
+  {
+    "name": "ticket_messages",
+    "sql": "CREATE TABLE `ticket_messages` (`id` integer PRIMARY KEY AUTOINCREMENT,`ticket_id` integer,`sender_id` integer,`sender_name` text,`message` text,`is_staff` numeric DEFAULT false,`is_ai_reply` numeric DEFAULT false,`created_at` datetime,CONSTRAINT `fk_tickets_messages` FOREIGN KEY (`ticket_id`) REFERENCES `tickets`(`id`))"
+  },
+  {
+    "name": "tickets",
+    "sql": "CREATE TABLE `tickets` (`id` integer PRIMARY KEY AUTOINCREMENT,`user_id` integer,`subject` text,`description` text,`category` text DEFAULT \"general\",`department` text DEFAULT \"general\",`priority` text DEFAULT \"normal\",`status` text DEFAULT \"open\",`assigned_to` integer,`ai_handled` numeric DEFAULT false,`closed_at` datetime,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "user",
+    "sql": "CREATE TABLE `user` (`id` integer PRIMARY KEY AUTOINCREMENT,`uheid` text,`email` text NOT NULL,`password_hash` text NOT NULL,`role` text DEFAULT \"patient\",`full_name` text,`gender` text,`phone_number` text,`is_active` numeric DEFAULT true,`is_verified` numeric DEFAULT false,`profile_picture` text,`address` text,`whats_app_number` text,`hospital_id` integer,`tier` text DEFAULT \"free\",`is_verified_premium` numeric DEFAULT false,`preferred_language` text DEFAULT \"english\",`secondary_languages` text,`psychology_eligible` numeric DEFAULT false,`wallet_balance` integer DEFAULT 0,`prakriti_score` text,`free_consults_used` integer DEFAULT 0,`must_change_password` numeric DEFAULT false,`mfa_code` text,`mfa_last_sent` datetime,`subscription_start_date` datetime,`subscription_end_date` datetime,`subscription_auto_renew` numeric DEFAULT false,`subscription_payment_method` text,`last_login` datetime,`fcm_token` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime)"
+  },
+  {
+    "name": "user_consents",
+    "sql": "CREATE TABLE `user_consents` (`id` integer PRIMARY KEY AUTOINCREMENT,`user_id` integer NOT NULL,`external_provider_id` integer NOT NULL,`scope` varchar(50),`expires_at` datetime,`is_revoked` numeric DEFAULT false,`created_at` datetime)"
+  },
+  {
+    "name": "user_subscriptions",
+    "sql": "CREATE TABLE `user_subscriptions` (`id` integer PRIMARY KEY AUTOINCREMENT,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`user_id` integer,`plan_id` integer,`status` text,`razorpay_subscription_id` text,`current_period_start` datetime,`current_period_end` datetime,`cancel_at_cycle_end` numeric,CONSTRAINT `fk_user_subscriptions_plan` FOREIGN KEY (`plan_id`) REFERENCES `subscription_plans`(`id`))"
+  },
+  {
+    "name": "video_consultations",
+    "sql": "CREATE TABLE `video_consultations` (`id` integer PRIMARY KEY AUTOINCREMENT,`session_id` text,`appointment_id` integer,`doctor_id` integer,`patient_id` integer,`status` text,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "wellness_inventories",
+    "sql": "CREATE TABLE `wellness_inventories` (`id` integer PRIMARY KEY AUTOINCREMENT,`product_id` integer NOT NULL,`pharmacy_id` integer NOT NULL,`stock_quantity` integer DEFAULT 0,`reorder_level` integer DEFAULT 10,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "wellness_order_items",
+    "sql": "CREATE TABLE `wellness_order_items` (`id` integer PRIMARY KEY AUTOINCREMENT,`order_id` integer NOT NULL,`product_id` integer NOT NULL,`quantity` integer NOT NULL,`unit_price` integer NOT NULL,CONSTRAINT `fk_wellness_order_items_product` FOREIGN KEY (`product_id`) REFERENCES `wellness_products`(`id`),CONSTRAINT `fk_wellness_orders_items` FOREIGN KEY (`order_id`) REFERENCES `wellness_orders`(`id`))"
+  },
+  {
+    "name": "wellness_orders",
+    "sql": "CREATE TABLE `wellness_orders` (`id` integer PRIMARY KEY AUTOINCREMENT,`order_number` text,`user_id` integer NOT NULL,`pharmacy_id` integer,`total_amount` integer NOT NULL,`status` text DEFAULT \"pending\",`payment_status` text DEFAULT \"pending\",`payment_ref` text,`delivery_address` text,`contact_phone` text,`contact_email` text,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "wellness_products",
+    "sql": "CREATE TABLE `wellness_products` (`id` integer PRIMARY KEY AUTOINCREMENT,`name` text NOT NULL,`description` text,`category` text,`brand` text,`selling_price` integer NOT NULL,`discount_price` integer,`image_url` text,`is_active` numeric DEFAULT true,`created_at` datetime,`updated_at` datetime)"
+  },
+  {
+    "name": "whatsapp_user_links",
+    "sql": "CREATE TABLE `whatsapp_user_links` (`id` integer PRIMARY KEY AUTOINCREMENT,`phone` text NOT NULL,`user_id` integer,`family_member_id` integer,`verified` numeric DEFAULT false,`otp_code` text,`otp_expires_at` datetime,`linked_at` datetime,`created_at` datetime)"
+  }
+]
