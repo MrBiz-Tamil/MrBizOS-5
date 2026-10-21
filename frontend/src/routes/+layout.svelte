@@ -42,7 +42,21 @@
 	let activeWorkspacePreset = $state<WorkspacePreset>('FULL');
 	let activeCustomConfig = $state<CustomWorkspaceConfig | null>(null);
 	let showWorkspaceManagerModal = $state(false);
+	let showWorkspaceMenu = $state(false);
+	let showProfileMenu = $state(false);
 	let billingOnlyMode = $derived(activeWorkspacePreset === 'COUNTER');
+
+	const workspacePresetsList: { id: WorkspacePreset; icon: string; name: string; badge: string; desc: string }[] = [
+		{ id: 'FULL', icon: '🌐', name: 'Enterprise ERP Suite', badge: 'All Modules', desc: 'Complete 16-module multi-industry ERP' },
+		{ id: 'HEALTHCARE', icon: '🏥', name: 'Smart Healthcare OS', badge: 'Clinical Suite', desc: 'Doctors, Telehealth, EMR Rx Pad, Pharmacy POS' },
+		{ id: 'TRAVEL', icon: '✈️', name: 'Travel & Tours OS', badge: 'GDS & DMC Hub', desc: 'Tour packages, PNR hold clocks & DMC vouchers' },
+		{ id: 'REALESTATE', icon: '🏢', name: 'Real Estate Matrix', badge: 'Plots & RERA', desc: '24-plot layout matrix, Indian land units & visits' },
+		{ id: 'PROJECTS', icon: '📁', name: 'UTMS Delivery OS', badge: 'SLA Engine', desc: 'SLA engine, Kanban pipeline & milestone billing' },
+		{ id: 'COUNTER', icon: '⚡', name: 'Express Retail Counter', badge: 'POS Terminal', desc: 'Ultra-fast retail counter with instant UPI QR' },
+		{ id: 'COMMERCE', icon: '🛍️', name: 'E-Commerce & POD', badge: 'Apparel & Labs', desc: 'Etsy sync, blank matrix & print lab queue' },
+		{ id: 'GROWTH', icon: '💬', name: 'Social Sales & AI Voice', badge: 'Growth Desk', desc: 'Omnichannel WhatsApp/IG, AI voice & deals' },
+		{ id: 'OPERATIONS', icon: '📦', name: 'Supply Chain & Ops', badge: '3-Way Match', desc: '3-way procurement, batches & vendor khata' }
+	];
 
 	let currentWorkspaceLabel = $derived.by(() => {
 		switch (activeWorkspacePreset) {
@@ -1200,139 +1214,187 @@
 
 		<!-- Main Workspace Area -->
 		<div class="main-content">
-			<!-- Topbar -->
+			<!-- Clean Organized Topbar -->
 			<header class="topbar">
-				<div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+				<!-- Left: Company Scope & Identity -->
+				<div class="topbar-left">
 					{#if currentUser?.is_super_admin && tenantList.length > 0}
-						<div style="display: flex; align-items: center; gap: 0.5rem;">
-							<span style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Company Scope:</span>
+						<div class="company-scope-chip" title="Active Enterprise Tenant Scope">
+							<span class="company-icon">🏢</span>
 							<select
-								class="form-select"
-								style="width: auto; padding: 0.35rem 0.75rem; font-size: 0.8125rem; border-color: rgba(99, 102, 241, 0.4); background: rgba(17, 24, 39, 0.9); font-weight: 500;"
+								class="company-scope-select"
 								value={currentTenant?.id}
 								onchange={handleSwitchTenant}
+								title="Switch Operating Company"
 							>
 								{#each tenantList as t}
-									<option value={t.id}>{t.name} ({t.gstin})</option>
+									<option value={t.id}>{t.name}</option>
 								{/each}
 							</select>
 						</div>
 					{:else}
-						<div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-							<div style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700; color: #fff; font-size: 0.9375rem;">
-								<span>🏢</span> {currentTenant?.name || 'Private Enterprise'}
-							</div>
-							{#if currentTenant?.gstin}
-								<span style="font-size: 0.75rem; font-family: var(--font-mono); color: #818cf8; background: rgba(99, 102, 241, 0.15); padding: 0.15rem 0.55rem; border-radius: 4px; border: 1px solid rgba(99, 102, 241, 0.25);">
-									GSTIN: {currentTenant.gstin}
-								</span>
-							{/if}
-							<span style="font-size: 0.75rem; font-weight: 700; background: {isNextPlan ? 'rgba(99, 102, 241, 0.15)' : 'rgba(16, 185, 129, 0.15)'}; color: {isNextPlan ? '#a5b4fc' : '#34d399'}; padding: 0.15rem 0.6rem; border-radius: 9999px; border: 1px solid {isNextPlan ? 'rgba(99, 102, 241, 0.3)' : 'rgba(16, 185, 129, 0.3)'};">
-								{isNextPlan ? '💎 Next Plan' : '🌱 Basic Plan'}
-							</span>
+						<div class="company-brand-chip" title="GSTIN: {currentTenant?.gstin || 'Unregistered'}">
+							<span class="company-icon">🏢</span>
+							<span class="company-name">{currentTenant?.name || 'Private Enterprise'}</span>
 						</div>
 					{/if}
+
+					<span class="plan-pill {isNextPlan ? 'plan-next' : 'plan-basic'}">
+						{isNextPlan ? '💎 Next Plan' : '🌱 Basic'}
+					</span>
 				</div>
 
-				<!-- Center: Universal Command Palette (Ctrl+K) Trigger & Quick Workspace Switcher -->
-				<div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; justify-content: center; max-width: 620px;">
+				<!-- Center: Compact Universal Search + Single Unified Workspace Switcher -->
+				<div class="topbar-center">
 					<button
 						type="button"
 						onclick={() => { showCommandPalette = true; commandSearch = ''; selectedCommandIndex = 0; }}
 						class="cmd-search-trigger"
 						title="Quick Search & Navigation (Ctrl+K)"
 					>
-						<span style="opacity: 0.7; font-size: 0.85rem;">🔍</span>
-						<span class="cmd-search-text">Search anything or run action...</span>
+						<span class="search-lens">🔍</span>
+						<span class="cmd-search-text">Search anything or jump to...</span>
 						<kbd class="cmd-kbd">Ctrl K</kbd>
 					</button>
 
-					<div class="topbar-workspace-pills">
+					<!-- Unified Workspace Dropdown Button -->
+					<div class="workspace-dropdown-container">
 						<button
 							type="button"
-							class="topbar-works-selector-pill"
-							onclick={() => (showWorkspaceManagerModal = true)}
-							title="Manage & Switch Works Workspace"
+							class="workspace-trigger-btn"
+							class:active={showWorkspaceMenu}
+							onclick={() => (showWorkspaceMenu = !showWorkspaceMenu)}
+							title="Switch Workspace Preset or Launch Studio"
 						>
-							<span style="font-size: 0.9rem;">{currentWorkspaceLabel.icon}</span>
-							<span style="font-weight: 700; color: #f8fafc; font-size: 0.725rem;">{currentWorkspaceLabel.name}</span>
-							<span class="topbar-works-tag">{currentWorkspaceLabel.badge}</span>
-							<span style="font-size: 0.7rem; color: #a5b4fc; margin-left: 2px;">▾ 🛠️</span>
+							<span class="ws-icon">{currentWorkspaceLabel.icon}</span>
+							<span class="ws-title">{currentWorkspaceLabel.name}</span>
+							<span class="ws-tag">{currentWorkspaceLabel.badge}</span>
+							<svg class="ws-chevron" class:rotate={showWorkspaceMenu} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<polyline points="6 9 12 15 18 9"/>
+							</svg>
 						</button>
-						<button
-							type="button"
-							class="topbar-pill"
-							class:active={activeWorkspacePreset === 'COUNTER'}
-							onclick={() => setWorkspacePreset('COUNTER')}
-							title="Express Retail Counter & POS"
-						>
-							⚡ Counter
-						</button>
-						<button
-							type="button"
-							class="topbar-pill"
-							class:active={activeWorkspacePreset === 'HEALTHCARE'}
-							onclick={() => setWorkspacePreset('HEALTHCARE')}
-							title="Smart Healthcare Hub"
-						>
-							🏥 Clinic
-						</button>
-						<button
-							type="button"
-							class="topbar-pill"
-							class:active={activeWorkspacePreset === 'TRAVEL'}
-							onclick={() => setWorkspacePreset('TRAVEL')}
-							title="Travel & Tours Agency"
-						>
-							✈️ Travel
-						</button>
-						<button
-							type="button"
-							class="topbar-pill"
-							class:active={activeWorkspacePreset === 'REALESTATE'}
-							onclick={() => setWorkspacePreset('REALESTATE')}
-							title="Real Estate Matrix"
-						>
-							🏢 Real Estate
-						</button>
-						<button
-							type="button"
-							class="topbar-pill"
-							class:active={activeWorkspacePreset === 'PROJECTS'}
-							onclick={() => setWorkspacePreset('PROJECTS')}
-							title="UTMS Projects & Delivery"
-						>
-							📁 UTMS
-						</button>
-						<button
-							type="button"
-							class="topbar-pill"
-							class:active={activeWorkspacePreset === 'FULL'}
-							onclick={() => setWorkspacePreset('FULL')}
-							title="Full Enterprise ERP Suite"
-						>
-							🌐 Full
-						</button>
+
+						{#if showWorkspaceMenu}
+							<button
+								class="menu-backdrop"
+								type="button"
+								aria-label="Close workspace menu"
+								onclick={() => (showWorkspaceMenu = false)}
+							></button>
+							<div class="workspace-popover animate-fade-in">
+								<div class="popover-header">
+									<span class="popover-title">SWITCH BUSINESS WORKSPACE</span>
+									<span class="popover-count">{workspacePresetsList.length} presets</span>
+								</div>
+								<div class="popover-list">
+									{#each workspacePresetsList as p}
+										<button
+											type="button"
+											class="workspace-item"
+											class:selected={activeWorkspacePreset === p.id}
+											onclick={() => {
+												setWorkspacePreset(p.id);
+												showWorkspaceMenu = false;
+											}}
+										>
+											<span class="item-icon">{p.icon}</span>
+											<div class="item-info">
+												<div class="item-head">
+													<span class="item-name">{p.name}</span>
+													<span class="item-badge">{p.badge}</span>
+												</div>
+												<div class="item-desc">{p.desc}</div>
+											</div>
+											{#if activeWorkspacePreset === p.id}
+												<span class="active-check">✓</span>
+											{/if}
+										</button>
+									{/each}
+								</div>
+								<div class="popover-footer">
+									<button
+										type="button"
+										class="studio-launch-btn"
+										onclick={() => {
+											showWorkspaceMenu = false;
+											showWorkspaceManagerModal = true;
+										}}
+									>
+										🛠️ Custom Workspace Studio & Presets...
+									</button>
+								</div>
+							</div>
+						{/if}
 					</div>
 				</div>
 
-				<div style="display: flex; align-items: center; gap: 1rem;">
-					{#if !isNextPlan && !currentUser?.is_super_admin}
-						<button
-							onclick={() => {
-								upgradeFeatureTitle = 'Next Plan (Business Tier)';
-								upgradeFeatureDesc = 'Unlock Audited Double-Entry Accounting, automated Expense Management, higher invoice quotas, and multi-user collaboration.';
-								showUpgradeModal = true;
-							}}
-							class="btn btn-secondary btn-sm"
-							style="border-color: rgba(129, 140, 248, 0.4); color: #a5b4fc;"
-						>
-							✨ Upgrade to Next Plan
-						</button>
-					{/if}
-					<a href="/invoices/new" class="btn btn-primary btn-sm">
-						+ Create Invoice
+				<!-- Right: Live Telemetry, Quick Create, Profile Dropdown -->
+				<div class="topbar-right">
+					<div class="telemetry-chip" title="Live Server-Sent Events Connected">
+						<span class="pulse-dot"></span>
+						<span class="telemetry-label">Live</span>
+					</div>
+
+					<a href="/invoices/new" class="btn btn-primary btn-sm glow-btn action-create-btn">
+						<svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<line x1="12" y1="5" x2="12" y2="19"/>
+							<line x1="5" y1="12" x2="19" y2="12"/>
+						</svg>
+						Create Invoice
 					</a>
+
+					<!-- Profile Menu Trigger -->
+					<div class="profile-dropdown-container">
+						<button
+							type="button"
+							class="profile-chip-btn"
+							class:active={showProfileMenu}
+							onclick={() => (showProfileMenu = !showProfileMenu)}
+							title="{currentUser?.full_name || 'Admin'} ({currentUser?.role || 'User'})"
+						>
+							<div class="avatar-badge">
+								{getInitials(currentUser?.full_name)}
+							</div>
+							<span class="user-role-text">{currentUser?.role || 'Admin'}</span>
+							<svg class="chevron-mini" class:rotate={showProfileMenu} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<polyline points="6 9 12 15 18 9"/>
+							</svg>
+						</button>
+
+						{#if showProfileMenu}
+							<button
+								class="menu-backdrop"
+								type="button"
+								aria-label="Close profile menu"
+								onclick={() => (showProfileMenu = false)}
+							></button>
+							<div class="profile-popover animate-fade-in">
+								<div class="profile-meta-card">
+									<div class="meta-fullname">{currentUser?.full_name || 'Executive Administrator'}</div>
+									<div class="meta-email font-mono">{currentUser?.email || 'admin@mrbiz.local'}</div>
+									<div class="meta-tenant">{currentTenant?.name || 'Global Business Group'}</div>
+								</div>
+								<div class="profile-links">
+									<a href="/settings" class="profile-link" onclick={() => (showProfileMenu = false)}>
+										⚙️ Organization Settings
+									</a>
+									<a href="/admin/billing" class="profile-link" onclick={() => (showProfileMenu = false)}>
+										💳 Plan Invoices & ARR Cockpit
+									</a>
+									<a href="/hrms" class="profile-link" onclick={() => (showProfileMenu = false)}>
+										👥 Human Resources & Payroll
+									</a>
+									<a href="/services" class="profile-link" onclick={() => (showProfileMenu = false)}>
+										🌐 16 Industry Modules Hub
+									</a>
+									<div class="menu-divider"></div>
+									<button type="button" class="profile-link text-danger" onclick={() => { showProfileMenu = false; handleLogout(); }}>
+										🚪 Sign Out of Workspace
+									</button>
+								</div>
+							</div>
+						{/if}
+					</div>
 				</div>
 			</header>
 
@@ -1622,27 +1684,125 @@
 		box-shadow: 0 0 10px rgba(99, 102, 241, 0.25);
 	}
 
-	/* Topbar Command Search Trigger */
+	/* ========================================================
+	   CLEAN ORGANIZED TOPBAR DESIGN SYSTEM
+	   ======================================================== */
+	.topbar {
+		height: 60px;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 1.5rem;
+		background: rgba(15, 23, 42, 0.85);
+		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+		backdrop-filter: blur(12px);
+		position: sticky;
+		top: 0;
+		z-index: 50;
+		gap: 1rem;
+	}
+
+	.topbar-left {
+		display: flex;
+		align-items: center;
+		gap: 0.65rem;
+		flex-shrink: 0;
+	}
+
+	.company-scope-chip,
+	.company-brand-chip {
+		display: flex;
+		align-items: center;
+		gap: 0.45rem;
+		background: rgba(255, 255, 255, 0.04);
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		border-radius: 8px;
+		padding: 0.35rem 0.65rem;
+		font-size: 0.85rem;
+		font-weight: 600;
+		color: #f1f5f9;
+	}
+
+	.company-icon {
+		font-size: 0.95rem;
+	}
+
+	.company-name {
+		white-space: nowrap;
+	}
+
+	.company-scope-select {
+		background: transparent;
+		border: none;
+		color: #f1f5f9;
+		font-size: 0.85rem;
+		font-weight: 600;
+		cursor: pointer;
+		outline: none;
+		padding-right: 0.25rem;
+	}
+
+	.company-scope-select option {
+		background: #0f172a;
+		color: #f1f5f9;
+	}
+
+	.plan-pill {
+		font-size: 0.7rem;
+		font-weight: 700;
+		padding: 0.2rem 0.55rem;
+		border-radius: 9999px;
+		letter-spacing: 0.03em;
+		white-space: nowrap;
+	}
+
+	.plan-next {
+		background: rgba(99, 102, 241, 0.15);
+		color: #a5b4fc;
+		border: 1px solid rgba(99, 102, 241, 0.3);
+	}
+
+	.plan-basic {
+		background: rgba(16, 185, 129, 0.15);
+		color: #34d399;
+		border: 1px solid rgba(16, 185, 129, 0.3);
+	}
+
+	/* Center: Search & Unified Workspace Switcher */
+	.topbar-center {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		flex: 1;
+		justify-content: center;
+		max-width: 680px;
+	}
+
 	.cmd-search-trigger {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		background: rgba(15, 23, 42, 0.7);
+		background: rgba(15, 23, 42, 0.6);
 		border: 1px solid rgba(255, 255, 255, 0.1);
 		border-radius: 8px;
-		padding: 0.35rem 0.75rem;
+		padding: 0.4rem 0.75rem;
 		color: #94a3b8;
-		font-size: 0.8125rem;
+		font-size: 0.82rem;
 		cursor: pointer;
 		transition: all 0.15s ease;
 		flex: 1;
-		max-width: 300px;
+		max-width: 280px;
 	}
 
 	.cmd-search-trigger:hover {
-		background: rgba(30, 41, 59, 0.9);
+		background: rgba(30, 41, 59, 0.8);
 		border-color: rgba(99, 102, 241, 0.4);
 		color: #f1f5f9;
+	}
+
+	.search-lens {
+		font-size: 0.85rem;
+		opacity: 0.7;
 	}
 
 	.cmd-search-text {
@@ -1663,40 +1823,413 @@
 		color: #cbd5e1;
 	}
 
-	/* Topbar Workspace Pills */
-	.topbar-workspace-pills {
-		display: flex;
-		align-items: center;
-		gap: 0.25rem;
-		background: rgba(15, 23, 42, 0.8);
-		padding: 0.2rem;
-		border-radius: 8px;
-		border: 1px solid rgba(255, 255, 255, 0.08);
+	/* Unified Workspace Dropdown Button */
+	.workspace-dropdown-container {
+		position: relative;
 	}
 
-	.topbar-pill {
-		background: transparent;
-		border: none;
-		color: #94a3b8;
-		font-size: 0.7rem;
-		font-weight: 600;
-		padding: 0.25rem 0.55rem;
-		border-radius: 6px;
+	.workspace-trigger-btn {
+		display: flex;
+		align-items: center;
+		gap: 0.45rem;
+		background: rgba(255, 255, 255, 0.04);
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: 8px;
+		padding: 0.4rem 0.75rem;
+		color: #f1f5f9;
 		cursor: pointer;
 		transition: all 0.15s ease;
+		font-size: 0.82rem;
+		font-weight: 600;
+	}
+
+	.workspace-trigger-btn:hover,
+	.workspace-trigger-btn.active {
+		background: rgba(99, 102, 241, 0.15);
+		border-color: rgba(99, 102, 241, 0.4);
+		color: #ffffff;
+	}
+
+	.ws-icon {
+		font-size: 0.95rem;
+	}
+
+	.ws-title {
 		white-space: nowrap;
 	}
 
-	.topbar-pill:hover {
-		color: #f8fafc;
-		background: rgba(255, 255, 255, 0.05);
+	.ws-tag {
+		font-size: 0.68rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		padding: 0.1rem 0.4rem;
+		border-radius: 4px;
+		background: rgba(99, 102, 241, 0.2);
+		color: #a5b4fc;
+		border: 1px solid rgba(99, 102, 241, 0.3);
+		white-space: nowrap;
 	}
 
-	.topbar-pill.active {
-		background: #6366f1;
-		color: #ffffff;
+	.ws-chevron {
+		width: 14px;
+		height: 14px;
+		color: #94a3b8;
+		transition: transform 0.2s ease;
+	}
+
+	.ws-chevron.rotate {
+		transform: rotate(180deg);
+	}
+
+	/* Menu Backdrop */
+	.menu-backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 99;
+		background: transparent;
+		border: none;
+		cursor: default;
+		padding: 0;
+		margin: 0;
+	}
+
+	/* Workspace Popover */
+	.workspace-popover {
+		position: absolute;
+		top: calc(100% + 8px);
+		left: 50%;
+		transform: translateX(-50%);
+		width: 380px;
+		background: #0f172a;
+		border: 1px solid rgba(255, 255, 255, 0.12);
+		border-radius: 12px;
+		box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(99, 102, 241, 0.15);
+		z-index: 100;
+		overflow: hidden;
+		animation: popoverFadeIn 0.15s ease-out;
+	}
+
+	@keyframes popoverFadeIn {
+		from { opacity: 0; transform: translate(-50%, -6px); }
+		to { opacity: 1; transform: translate(-50%, 0); }
+	}
+
+	.popover-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 0.75rem 1rem 0.5rem;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+	}
+
+	.popover-title {
+		font-size: 0.68rem;
 		font-weight: 700;
-		box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+		color: #94a3b8;
+		letter-spacing: 0.05em;
+	}
+
+	.popover-count {
+		font-size: 0.68rem;
+		color: #64748b;
+	}
+
+	.popover-list {
+		max-height: 340px;
+		overflow-y: auto;
+		padding: 0.4rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.2rem;
+	}
+
+	.workspace-item {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.55rem 0.75rem;
+		background: transparent;
+		border: 1px solid transparent;
+		border-radius: 8px;
+		color: #cbd5e1;
+		cursor: pointer;
+		text-align: left;
+		transition: all 0.12s ease;
+		width: 100%;
+	}
+
+	.workspace-item:hover {
+		background: rgba(255, 255, 255, 0.05);
+		color: #ffffff;
+	}
+
+	.workspace-item.selected {
+		background: rgba(99, 102, 241, 0.15);
+		border-color: rgba(99, 102, 241, 0.35);
+		color: #ffffff;
+	}
+
+	.item-icon {
+		font-size: 1.25rem;
+		width: 2rem;
+		height: 2rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(255, 255, 255, 0.05);
+		border-radius: 6px;
+		flex-shrink: 0;
+	}
+
+	.item-info {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.item-head {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-bottom: 0.15rem;
+	}
+
+	.item-name {
+		font-size: 0.82rem;
+		font-weight: 600;
+		color: #f1f5f9;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.item-badge {
+		font-size: 0.65rem;
+		padding: 0.1rem 0.35rem;
+		border-radius: 4px;
+		background: rgba(255, 255, 255, 0.08);
+		color: #94a3b8;
+	}
+
+	.item-desc {
+		font-size: 0.7rem;
+		color: #64748b;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.active-check {
+		font-weight: 700;
+		color: #818cf8;
+		font-size: 0.95rem;
+	}
+
+	.popover-footer {
+		padding: 0.5rem;
+		border-top: 1px solid rgba(255, 255, 255, 0.06);
+		background: rgba(0, 0, 0, 0.2);
+	}
+
+	.studio-launch-btn {
+		width: 100%;
+		padding: 0.45rem 0.75rem;
+		background: transparent;
+		border: 1px dashed rgba(99, 102, 241, 0.4);
+		border-radius: 6px;
+		color: #a5b4fc;
+		font-size: 0.75rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.15s ease;
+		text-align: center;
+	}
+
+	.studio-launch-btn:hover {
+		background: rgba(99, 102, 241, 0.15);
+		color: #ffffff;
+	}
+
+	/* Right Utility Strip */
+	.topbar-right {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		flex-shrink: 0;
+	}
+
+	.telemetry-chip {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		font-size: 0.72rem;
+		font-weight: 600;
+		color: #34d399;
+		background: rgba(16, 185, 129, 0.1);
+		border: 1px solid rgba(16, 185, 129, 0.2);
+		padding: 0.25rem 0.55rem;
+		border-radius: 9999px;
+	}
+
+	.pulse-dot {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: #34d399;
+		animation: pulse-dot 1.8s infinite;
+	}
+
+	@keyframes pulse-dot {
+		0%, 100% { opacity: 1; transform: scale(1); }
+		50% { opacity: 0.4; transform: scale(0.85); }
+	}
+
+	.action-create-btn {
+		font-size: 0.8rem;
+		padding: 0.4rem 0.85rem;
+		white-space: nowrap;
+	}
+
+	/* Profile Chip */
+	.profile-dropdown-container {
+		position: relative;
+	}
+
+	.profile-chip-btn {
+		display: flex;
+		align-items: center;
+		gap: 0.45rem;
+		background: rgba(255, 255, 255, 0.04);
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: 9999px;
+		padding: 0.2rem 0.55rem 0.2rem 0.2rem;
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+
+	.profile-chip-btn:hover,
+	.profile-chip-btn.active {
+		background: rgba(255, 255, 255, 0.08);
+		border-color: rgba(99, 102, 241, 0.4);
+	}
+
+	.avatar-badge {
+		width: 26px;
+		height: 26px;
+		border-radius: 50%;
+		background: linear-gradient(135deg, #6366f1, #8b5cf6);
+		color: #ffffff;
+		font-size: 0.72rem;
+		font-weight: 700;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.user-role-text {
+		font-size: 0.75rem;
+		font-weight: 600;
+		color: #cbd5e1;
+		text-transform: capitalize;
+	}
+
+	.chevron-mini {
+		width: 12px;
+		height: 12px;
+		color: #94a3b8;
+		transition: transform 0.2s ease;
+	}
+
+	.chevron-mini.rotate {
+		transform: rotate(180deg);
+	}
+
+	/* Profile Popover Menu */
+	.profile-popover {
+		position: absolute;
+		top: calc(100% + 8px);
+		right: 0;
+		width: 260px;
+		background: #0f172a;
+		border: 1px solid rgba(255, 255, 255, 0.12);
+		border-radius: 12px;
+		box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+		z-index: 100;
+		overflow: hidden;
+		animation: popoverFadeInRight 0.15s ease-out;
+	}
+
+	@keyframes popoverFadeInRight {
+		from { opacity: 0; transform: translateY(-6px); }
+		to { opacity: 1; transform: translateY(0); }
+	}
+
+	.profile-meta-card {
+		padding: 0.85rem 1rem;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+		background: rgba(255, 255, 255, 0.02);
+	}
+
+	.meta-fullname {
+		font-size: 0.85rem;
+		font-weight: 700;
+		color: #f1f5f9;
+	}
+
+	.meta-email {
+		font-size: 0.72rem;
+		color: #94a3b8;
+		margin: 0.1rem 0 0.35rem;
+	}
+
+	.meta-tenant {
+		font-size: 0.7rem;
+		color: #818cf8;
+	}
+
+	.profile-links {
+		padding: 0.4rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+	}
+
+	.profile-link {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.5rem 0.75rem;
+		background: transparent;
+		border: none;
+		border-radius: 6px;
+		color: #cbd5e1;
+		font-size: 0.8rem;
+		font-weight: 500;
+		text-align: left;
+		text-decoration: none;
+		cursor: pointer;
+		width: 100%;
+		transition: all 0.12s ease;
+	}
+
+	.profile-link:hover {
+		background: rgba(255, 255, 255, 0.06);
+		color: #ffffff;
+	}
+
+	.menu-divider {
+		height: 1px;
+		background: rgba(255, 255, 255, 0.06);
+		margin: 0.25rem 0;
+	}
+
+	.text-danger {
+		color: #fb7185;
+	}
+
+	.text-danger:hover {
+		background: rgba(239, 68, 68, 0.15);
+		color: #fca5a5;
 	}
 
 	/* Command Palette Modal */
