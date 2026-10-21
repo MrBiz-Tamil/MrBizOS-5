@@ -19,14 +19,16 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	BillingService_ListInvoices_FullMethodName       = "/billing.v1.BillingService/ListInvoices"
-	BillingService_GetInvoice_FullMethodName         = "/billing.v1.BillingService/GetInvoice"
-	BillingService_CreateInvoice_FullMethodName      = "/billing.v1.BillingService/CreateInvoice"
-	BillingService_CancelInvoice_FullMethodName      = "/billing.v1.BillingService/CancelInvoice"
-	BillingService_UpdateLogistics_FullMethodName    = "/billing.v1.BillingService/UpdateLogistics"
-	BillingService_GenerateInvoicePDF_FullMethodName = "/billing.v1.BillingService/GenerateInvoicePDF"
-	BillingService_RecordPayment_FullMethodName      = "/billing.v1.BillingService/RecordPayment"
-	BillingService_GetBillingSummary_FullMethodName  = "/billing.v1.BillingService/GetBillingSummary"
+	BillingService_ListInvoices_FullMethodName                = "/billing.v1.BillingService/ListInvoices"
+	BillingService_GetInvoice_FullMethodName                  = "/billing.v1.BillingService/GetInvoice"
+	BillingService_CreateInvoice_FullMethodName               = "/billing.v1.BillingService/CreateInvoice"
+	BillingService_CancelInvoice_FullMethodName               = "/billing.v1.BillingService/CancelInvoice"
+	BillingService_UpdateLogistics_FullMethodName             = "/billing.v1.BillingService/UpdateLogistics"
+	BillingService_GenerateInvoicePDF_FullMethodName          = "/billing.v1.BillingService/GenerateInvoicePDF"
+	BillingService_RecordPayment_FullMethodName               = "/billing.v1.BillingService/RecordPayment"
+	BillingService_GetBillingSummary_FullMethodName           = "/billing.v1.BillingService/GetBillingSummary"
+	BillingService_GetTenantBillingTemplate_FullMethodName    = "/billing.v1.BillingService/GetTenantBillingTemplate"
+	BillingService_UpdateTenantBillingTemplate_FullMethodName = "/billing.v1.BillingService/UpdateTenantBillingTemplate"
 )
 
 // BillingServiceClient is the client API for BillingService service.
@@ -41,6 +43,8 @@ type BillingServiceClient interface {
 	GenerateInvoicePDF(ctx context.Context, in *GenerateInvoicePDFRequest, opts ...grpc.CallOption) (*GenerateInvoicePDFResponse, error)
 	RecordPayment(ctx context.Context, in *RecordPaymentRequest, opts ...grpc.CallOption) (*RecordPaymentResponse, error)
 	GetBillingSummary(ctx context.Context, in *GetBillingSummaryRequest, opts ...grpc.CallOption) (*GetBillingSummaryResponse, error)
+	GetTenantBillingTemplate(ctx context.Context, in *GetTenantBillingTemplateRequest, opts ...grpc.CallOption) (*GetTenantBillingTemplateResponse, error)
+	UpdateTenantBillingTemplate(ctx context.Context, in *UpdateTenantBillingTemplateRequest, opts ...grpc.CallOption) (*UpdateTenantBillingTemplateResponse, error)
 }
 
 type billingServiceClient struct {
@@ -131,6 +135,26 @@ func (c *billingServiceClient) GetBillingSummary(ctx context.Context, in *GetBil
 	return out, nil
 }
 
+func (c *billingServiceClient) GetTenantBillingTemplate(ctx context.Context, in *GetTenantBillingTemplateRequest, opts ...grpc.CallOption) (*GetTenantBillingTemplateResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetTenantBillingTemplateResponse)
+	err := c.cc.Invoke(ctx, BillingService_GetTenantBillingTemplate_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) UpdateTenantBillingTemplate(ctx context.Context, in *UpdateTenantBillingTemplateRequest, opts ...grpc.CallOption) (*UpdateTenantBillingTemplateResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateTenantBillingTemplateResponse)
+	err := c.cc.Invoke(ctx, BillingService_UpdateTenantBillingTemplate_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BillingServiceServer is the server API for BillingService service.
 // All implementations must embed UnimplementedBillingServiceServer
 // for forward compatibility.
@@ -143,6 +167,8 @@ type BillingServiceServer interface {
 	GenerateInvoicePDF(context.Context, *GenerateInvoicePDFRequest) (*GenerateInvoicePDFResponse, error)
 	RecordPayment(context.Context, *RecordPaymentRequest) (*RecordPaymentResponse, error)
 	GetBillingSummary(context.Context, *GetBillingSummaryRequest) (*GetBillingSummaryResponse, error)
+	GetTenantBillingTemplate(context.Context, *GetTenantBillingTemplateRequest) (*GetTenantBillingTemplateResponse, error)
+	UpdateTenantBillingTemplate(context.Context, *UpdateTenantBillingTemplateRequest) (*UpdateTenantBillingTemplateResponse, error)
 	mustEmbedUnimplementedBillingServiceServer()
 }
 
@@ -176,6 +202,12 @@ func (UnimplementedBillingServiceServer) RecordPayment(context.Context, *RecordP
 }
 func (UnimplementedBillingServiceServer) GetBillingSummary(context.Context, *GetBillingSummaryRequest) (*GetBillingSummaryResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetBillingSummary not implemented")
+}
+func (UnimplementedBillingServiceServer) GetTenantBillingTemplate(context.Context, *GetTenantBillingTemplateRequest) (*GetTenantBillingTemplateResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetTenantBillingTemplate not implemented")
+}
+func (UnimplementedBillingServiceServer) UpdateTenantBillingTemplate(context.Context, *UpdateTenantBillingTemplateRequest) (*UpdateTenantBillingTemplateResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateTenantBillingTemplate not implemented")
 }
 func (UnimplementedBillingServiceServer) mustEmbedUnimplementedBillingServiceServer() {}
 func (UnimplementedBillingServiceServer) testEmbeddedByValue()                        {}
@@ -342,6 +374,42 @@ func _BillingService_GetBillingSummary_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BillingService_GetTenantBillingTemplate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTenantBillingTemplateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).GetTenantBillingTemplate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BillingService_GetTenantBillingTemplate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).GetTenantBillingTemplate(ctx, req.(*GetTenantBillingTemplateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_UpdateTenantBillingTemplate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateTenantBillingTemplateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).UpdateTenantBillingTemplate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BillingService_UpdateTenantBillingTemplate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).UpdateTenantBillingTemplate(ctx, req.(*UpdateTenantBillingTemplateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // BillingService_ServiceDesc is the grpc.ServiceDesc for BillingService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -380,6 +448,14 @@ var BillingService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetBillingSummary",
 			Handler:    _BillingService_GetBillingSummary_Handler,
+		},
+		{
+			MethodName: "GetTenantBillingTemplate",
+			Handler:    _BillingService_GetTenantBillingTemplate_Handler,
+		},
+		{
+			MethodName: "UpdateTenantBillingTemplate",
+			Handler:    _BillingService_UpdateTenantBillingTemplate_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

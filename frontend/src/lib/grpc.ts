@@ -196,6 +196,8 @@ export const billingGrpc = {
 	generateInvoicePDF: (req: any) => callRpc('billing.v1.BillingService', 'GenerateInvoicePDF', req),
 	recordPayment: (req: any) => callRpc('billing.v1.BillingService', 'RecordPayment', req),
 	getBillingSummary: (params = {}) => callRpc('billing.v1.BillingService', 'GetBillingSummary', params),
+	getTenantBillingTemplate: (params = {}) => callRpc('billing.v1.BillingService', 'GetTenantBillingTemplate', params),
+	updateTenantBillingTemplate: (req: any) => callRpc('billing.v1.BillingService', 'UpdateTenantBillingTemplate', req),
 };
 
 

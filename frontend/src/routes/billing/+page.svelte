@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { billingGrpc } from '$lib/grpc';
+	import InvoiceTemplates from '$lib/components/InvoiceTemplates.svelte';
+	import type { Tenant, Invoice as ApiInvoice } from '$lib/api';
 
 	interface InvoiceItem {
 		id?: string;
@@ -41,6 +43,8 @@
 		cgstTotal?: string;
 		sgstTotal?: string;
 		igstTotal?: string;
+		templateId?: string;
+		paperSize?: string;
 		items?: InvoiceItem[];
 	}
 
@@ -64,9 +68,89 @@
 		topReceivables: Receivable[];
 	}
 
-	let activeTab = $state<'quickbill' | 'invoices' | 'khata'>('quickbill');
+	interface TemplateInfo {
+		id: string;
+		name: string;
+		category: string;
+		desc: string;
+		badge: string;
+	}
+
+	const templates: TemplateInfo[] = [
+		{ id: '1', name: '1. Modern Corporate', category: 'Corporate B2B & Enterprise', desc: 'Contemporary indigo dual-tone layout with metadata pill cards, QR code, and structured GST breakdown.', badge: 'Popular' },
+		{ id: '2', name: '2. Classic Traditional Boxed', category: 'Wholesale & Distribution', desc: 'Bordered cell outlines adhering strictly to standard Indian GST Rule 46 format with authorized signatory seal.', badge: 'GST Standard' },
+		{ id: '3', name: '3. Minimalist Executive', category: 'Consulting & Legal', desc: 'High-end editorial typography, generous whitespace, and fine dividers for professional firms.', badge: 'Clean' },
+		{ id: '4', name: '4. Retail Counter POS', category: 'Retail Stores & Supermarkets', desc: 'Space-saving counter receipt format with MRP, savings callouts, and cashier receipt headers.', badge: 'Retail' },
+		{ id: '5', name: '5. Thermal 80mm Receipt', category: 'POS Thermal Roll Printers', desc: 'Continuous 3-inch/80mm roll paper layout with dashed dividers and monospace print formatting.', badge: '80mm POS' },
+		{ id: '6', name: '6. Creative Studio & Agency', category: 'Agencies & Freelancers', desc: 'Vibrant accent colors with scope-of-work deliverable breakdowns for digital agencies.', badge: 'Creative' },
+		{ id: '7', name: '7. Industrial & Dispatch B2B', category: 'Manufacturing & Logistics', desc: 'Dedicated transport fields: PO Number, Vehicle #, E-Way Bill #, Transporter Name, and Delivery Challan.', badge: 'Logistics' },
+		{ id: '8', name: '8. Bold Tech SaaS', category: 'Cloud Subscriptions & IT', desc: 'Modern dark gradient banner with plan tiers, billing cycles, and software subscription terms.', badge: 'SaaS' },
+		{ id: '9', name: '9. Wholesale Multi-Tax Slab', category: 'Trading & Multi-Tax Traders', desc: 'Includes an exhaustive HSN/SAC summary table dividing CGST, SGST, and IGST by rate slab.', badge: 'Tax Slab' },
+		{ id: '10', name: '10. Simple Bill of Supply', category: 'Composition & Non-GST Traders', desc: 'No tax columns (Qty x Rate = Total), equipped with statutory Section 31(3)(c) composition notice.', badge: 'Composition' },
+		{ id: '11', name: '11. Industrial BlueMetals & Transport', category: 'Mining, Heavy Materials & Transport', desc: 'Heavy boxed grid format with PO No, Vehicle No, Delivery Place, E.& O.E, and authentic Indian quarry/metals GST structure.', badge: 'Industry Favorite' },
+		{ id: '12', name: '12. Hostel / Lodging Guest Folio', category: 'Hostels, PGs, Guest Houses & Lodges', desc: 'Guest folio with room/bed, booking ref, check-in/check-out, nights stayed, GST slab summary, advance & balance, and guest signature.', badge: 'Hospitality' },
+		{ id: '13', name: '13. Restaurant / Cafe Bill', category: 'Restaurants, Cafes, Bakeries & Cloud Kitchens', desc: 'Compact dine-in bill with table, waiter, KOT/order no, FSSAI licence, CGST/SGST split, UPI QR and a customisable thank-you line.', badge: 'Food Service' },
+		{ id: '14', name: '14. Pharmacy / Medical Store', category: 'Pharmacies, Chemists & Medical Stores', desc: 'Drug licence header, patient & prescribing doctor, per-line batch / expiry / MRP with short-expiry flag, MRP savings, GST slab summary, Schedule H notice and pharmacist signature.', badge: 'Pharma' },
+		{ id: '15', name: '15. Bakery / Sweet Shop', category: 'Bakeries, Cake Shops, Sweet Marts & Cafes', desc: 'FSSAI licence header, veg / non-veg marks, best-before per item, cake-order block (pickup date, message on cake), per-rate GST split, advance paid & balance, UPI QR.', badge: 'Bakery' },
+		{ id: '16', name: '16. Grocery / Supermarket', category: 'Kirana Stores, Supermarkets & Fresh Produce', desc: 'MRP vs selling price per line, total savings badge, weighed quantities (kg / L), item & quantity count, GST summary that keeps exempt staples visible, cash tendered & change, UPI QR.', badge: 'Grocery' },
+		{ id: '17', name: '17. Hardware / Building Materials', category: 'Hardware, Paints, Plumbing, Electricals & Building Materials', desc: 'Trade-discount column, delivery / site block with transport details (vehicle, e-way, LR), HSN-wise tax summary, credit terms with due date, bank details, receiver and authorised signatures.', badge: 'Hardware' }
+	];
+
+	let activeTab = $state<'quickbill' | 'invoices' | 'khata' | 'templates'>('quickbill');
 	let loading = $state(true);
 	let billingOnlyMode = $state(false);
+
+	// Template Preferences & Options State
+	let selectedTemplateId = $state('1');
+	let selectedPaperSize = $state<'A4' | 'A5' | 'A5_LANDSCAPE'>('A4');
+	let selectedCopyType = $state<'ORIGINAL' | 'DUPLICATE' | 'TRIPLICATE' | 'OFFICE'>('ORIGINAL');
+	let selectedTaxMode = $state<'WITH_GST' | 'WITHOUT_GST'>('WITH_GST');
+	let brandColor = $state('#0284c7');
+	let showBankDetails = $state(true);
+	let showUPIQR = $state(true);
+	let showTaxSummary = $state(true);
+	let businessSubtitle = $state('Wholesale & Retail Commercial Trading');
+	let signatoryTitle = $state('Authorized Signatory');
+	let defaultTerms = $state('Payment within 15 days from invoice date.');
+	let defaultJurisdiction = $state('Mumbai');
+	let defaultInterestRate = $state('18% p.a.');
+	let defaultReturnPolicy = $state('Goods once sold can only be replaced within 7 days in original condition.');
+
+	// Company info for InvoiceTemplates component
+	let company = $state<Tenant>({
+		id: 'tenant-1',
+		name: 'MrBiz Commercial Enterprises',
+		legal_name: 'MrBiz Solutions LLP',
+		gstin: '27AABCA1234F1Z6',
+		address: 'Shop 14, Commercial Complex, MG Road',
+		city: 'Mumbai',
+		state: 'Maharashtra',
+		country: 'India',
+		pincode: '400001',
+		email: 'billing@mrbiz.app',
+		phone: '+91 98200 12345',
+		invoice_prefix: 'INV-2026',
+		financial_year_start: '2026-04-01',
+		currency: 'INR',
+		subscription_plan: 'BUSINESS',
+		subscription_status: 'ACTIVE',
+		bank_name: 'HDFC Bank Ltd',
+		bank_account_no: '50200012345678',
+		bank_ifsc: 'HDFC0000240',
+		bank_branch: 'Fort, Mumbai',
+		bank_account_holder: 'MrBiz Solutions LLP',
+		upi_id: 'mrbiz@upi',
+		business_subtitle: 'Wholesale & Retail Commercial Trading',
+		signatory_title: 'Authorized Signatory',
+		default_terms: 'Payment within 15 days from invoice date.',
+		default_jurisdiction: 'Mumbai',
+		default_interest_rate: '18% p.a.',
+		default_return_policy: 'Goods once sold can only be replaced within 7 days in original condition.',
+		drug_license_no: 'DL-MH-2026-9921',
+		fssai_no: '11521001000452',
+		is_active: true,
+		created_at: new Date().toISOString()
+	});
 
 	// Summary KPI metrics
 	let summary = $state<BillingSummary>({
@@ -121,6 +205,10 @@
 	let payMode = $state('UPI');
 	let payRef = $state('');
 	let payMessage = $state<string | null>(null);
+
+	// Template Preview Modal State
+	let showTemplatePreviewModal = $state(false);
+	let previewInvoiceData = $state<ApiInvoice | null>(null);
 
 	// Action notification banner
 	let bannerMessage = $state<string | null>(null);
@@ -187,6 +275,7 @@
 			billingOnlyMode = localStorage.getItem('mrbiz_billing_only_mode') === 'true';
 		}
 		await loadBillingData();
+		await loadTenantTemplate();
 	});
 
 	function toggleBillingOnlyMode() {
@@ -200,6 +289,67 @@
 		setTimeout(() => (bannerMessage = null), 4000);
 	}
 
+	async function loadTenantTemplate() {
+		try {
+			const res = await billingGrpc.getTenantBillingTemplate({ tenant_id: 'tenant-1' });
+			if (res) {
+				selectedTemplateId = res.template_id || '1';
+				selectedPaperSize = (res.paper_size as any) || 'A4';
+				selectedCopyType = (res.copy_type as any) || 'ORIGINAL';
+				selectedTaxMode = (res.tax_mode as any) || 'WITH_GST';
+				brandColor = res.brand_color || '#0284c7';
+				showBankDetails = res.show_bank_details ?? true;
+				showUPIQR = res.show_upi_qr ?? true;
+				showTaxSummary = res.show_tax_summary ?? true;
+				businessSubtitle = res.business_subtitle || businessSubtitle;
+				signatoryTitle = res.signatory_title || signatoryTitle;
+				defaultTerms = res.default_terms || defaultTerms;
+				defaultJurisdiction = res.default_jurisdiction || defaultJurisdiction;
+				defaultInterestRate = res.default_interest_rate || defaultInterestRate;
+				defaultReturnPolicy = res.default_return_policy || defaultReturnPolicy;
+			}
+		} catch (e) {
+			console.warn('Template config load fallback:', e);
+		}
+	}
+
+	async function saveTemplateConfig() {
+		try {
+			loading = true;
+			const res = await billingGrpc.updateTenantBillingTemplate({
+				tenant_id: 'tenant-1',
+				template_id: selectedTemplateId,
+				paper_size: selectedPaperSize,
+				copy_type: selectedCopyType,
+				tax_mode: selectedTaxMode,
+				brand_color: brandColor,
+				show_bank_details: showBankDetails,
+				show_upi_qr: showUPIQR,
+				show_tax_summary: showTaxSummary,
+				business_subtitle: businessSubtitle,
+				signatory_title: signatoryTitle,
+				default_terms: defaultTerms,
+				default_jurisdiction: defaultJurisdiction,
+				default_interest_rate: defaultInterestRate,
+				default_return_policy: defaultReturnPolicy,
+				template_options_json: JSON.stringify({
+					primary_color: brandColor,
+					show_bank: showBankDetails,
+					show_upi: showUPIQR,
+					show_tax: showTaxSummary
+				})
+			});
+			if (res) {
+				bannerMessage = `✅ ${res.message || 'Billing template preferences saved successfully!'}`;
+			}
+		} catch (e: any) {
+			bannerMessage = `Error saving template: ${e.message}`;
+		} finally {
+			loading = false;
+			setTimeout(() => (bannerMessage = null), 5000);
+		}
+	}
+
 	async function loadBillingData() {
 		loading = true;
 		try {
@@ -209,7 +359,47 @@
 			]);
 
 			if (invRes && invRes.invoices) {
-				invoices = invRes.invoices;
+				invoices = invRes.invoices.map((i: any) => ({
+					id: i.id,
+					tenantId: i.tenant_id,
+					invoiceNumber: i.invoice_number,
+					customerId: i.customer_id,
+					customerName: i.customer_name,
+					customerGstin: i.customer_gstin,
+					invoiceDate: i.invoice_date,
+					dueDate: i.due_date,
+					status: i.status,
+					subtotal: i.subtotal,
+					discountTotal: i.discount_total,
+					taxTotal: i.tax_total,
+					grandTotal: i.grand_total,
+					amountPaid: i.amount_paid,
+					balanceDue: i.balance_due,
+					paymentMode: i.payment_mode,
+					supplyState: i.supply_state,
+					isInterState: i.is_inter_state,
+					cgstTotal: i.cgst_total,
+					sgstTotal: i.sgst_total,
+					igstTotal: i.igst_total,
+					templateId: i.template_id || '1',
+					paperSize: i.paper_size || 'A4',
+					items: i.items?.map((it: any) => ({
+						id: it.id,
+						productId: it.product_id,
+						itemDescription: it.item_description,
+						hsnSac: it.hsn_sac,
+						quantity: it.quantity,
+						unitCode: it.unit_code,
+						unitPrice: it.unit_price,
+						discountRate: it.discount_rate,
+						taxRate: it.tax_rate,
+						taxableAmount: it.taxable_amount,
+						cgstAmount: it.cgst_amount,
+						sgstAmount: it.sgst_amount,
+						igstAmount: it.igst_amount,
+						totalAmount: it.total_amount
+					}))
+				}));
 			}
 			if (sumRes) {
 				summary = {
@@ -269,6 +459,14 @@
 				payment_mode: paymentMode,
 				tendered_cash: paymentMode === 'CREDIT' ? '0' : tenderedAmount || String(payableAmount),
 				notes: billNotes,
+				template_id: selectedTemplateId,
+				paper_size: selectedPaperSize,
+				template_options_json: JSON.stringify({
+					primary_color: brandColor,
+					show_bank: showBankDetails,
+					show_upi: showUPIQR,
+					show_tax: showTaxSummary
+				}),
 				items: items.map((i) => ({
 					product_id: i.productId,
 					item_description: i.itemDescription || 'General Goods/Service',
@@ -282,7 +480,7 @@
 			});
 
 			if (res && res.invoice) {
-				bannerMessage = `✅ Bill ${res.invoice.invoice_number} created successfully! Total: ₹${res.invoice.grand_total}`;
+				bannerMessage = `✅ Bill ${res.invoice.invoice_number} created successfully with Template ${selectedTemplateId}! Total: ₹${res.invoice.grand_total}`;
 				await loadBillingData();
 				activeTab = 'invoices';
 			}
@@ -308,7 +506,7 @@
 		window.open(url, '_blank');
 	}
 
-	function printThermalReceipt() {
+	function printFormattedInvoice() {
 		window.print();
 	}
 
@@ -343,6 +541,118 @@
 		}
 	}
 
+	// Open Template Preview Modal for an Invoice or Live Draft
+	function openInvoiceTemplatePreview(inv?: Invoice) {
+		if (inv) {
+			previewInvoiceData = {
+				id: inv.id,
+				tenant_id: inv.tenantId,
+				invoice_number: inv.invoiceNumber,
+				customer_id: inv.customerId,
+				customer_name: inv.customerName,
+				customer_gstin: inv.customerGstin || '',
+				invoice_date: inv.invoiceDate,
+				due_date: inv.dueDate,
+				status: inv.status,
+				subtotal: inv.subtotal,
+				discount_total: inv.discountTotal,
+				taxable_amount: (parseFloat(inv.subtotal) - parseFloat(inv.discountTotal)).toFixed(2),
+				cgst_total: inv.cgstTotal || '0.00',
+				sgst_total: inv.sgstTotal || '0.00',
+				igst_total: inv.igstTotal || '0.00',
+				round_off: '0.00',
+				grand_total: inv.grandTotal,
+				amount_paid: inv.amountPaid,
+				balance_due: inv.balanceDue,
+				supply_state: inv.supplyState,
+				is_inter_state: inv.isInterState,
+				billing_address: 'Main Market, Station Road, Mumbai 400001',
+				shipping_address: 'Main Market, Station Road, Mumbai 400001',
+				utgst_total: '0.00',
+				notes: 'Thank you for choosing MrBiz-OS.',
+				items: inv.items?.map((it, idx) => ({
+					id: it.id || String(idx),
+					invoice_id: inv.id,
+					product_id: it.productId,
+					item_description: it.itemDescription,
+					hsn_sac: it.hsnSac,
+					quantity: it.quantity,
+					unit_code: it.unitCode,
+					unit_price: it.unitPrice,
+					discount_rate: it.discountRate,
+					discount_amount: '0.00',
+					taxable_amount: it.taxableAmount || (parseFloat(it.quantity) * parseFloat(it.unitPrice)).toFixed(2),
+					tax_rate: it.taxRate,
+					cgst_rate: (parseFloat(it.taxRate) / 2).toFixed(1),
+					sgst_rate: (parseFloat(it.taxRate) / 2).toFixed(1),
+					igst_rate: it.taxRate,
+					cgst_amount: it.cgstAmount || '0.00',
+					sgst_amount: it.sgstAmount || '0.00',
+					igst_amount: it.igstAmount || '0.00',
+					total_amount: it.totalAmount || (parseFloat(it.quantity) * parseFloat(it.unitPrice) * (1 + parseFloat(it.taxRate)/100)).toFixed(2),
+					created_at: new Date().toISOString()
+				})) || [],
+				created_at: new Date().toISOString()
+			};
+			if (inv.templateId) {
+				selectedTemplateId = inv.templateId;
+			}
+		} else {
+			// Live Draft Invoice Preview
+			previewInvoiceData = {
+				id: 'draft-bill',
+				tenant_id: 'tenant-1',
+				invoice_number: 'INV-DRAFT-PREVIEW',
+				customer_id: 'cust-draft',
+				customer_name: customerName,
+				customer_gstin: customerGstin,
+				invoice_date: new Date().toISOString().split('T')[0],
+				due_date: new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0],
+				status: 'DRAFT',
+				subtotal: grossSubtotal.toFixed(2),
+				discount_total: totalDiscount.toFixed(2),
+				taxable_amount: taxableAmount.toFixed(2),
+				cgst_total: (totalTax / 2).toFixed(2),
+				sgst_total: (totalTax / 2).toFixed(2),
+				igst_total: isInterState ? totalTax.toFixed(2) : '0.00',
+				round_off: roundOff,
+				grand_total: payableAmount.toFixed(2),
+				amount_paid: tenderedAmount || '0.00',
+				balance_due: calculatedDue,
+				supply_state: supplyState,
+				is_inter_state: isInterState,
+				billing_address: 'Walk-in Counter, MrBiz Store',
+				shipping_address: 'Walk-in Counter, MrBiz Store',
+				utgst_total: '0.00',
+				notes: billNotes,
+				items: items.map((it, idx) => ({
+					id: String(idx + 1),
+					invoice_id: 'draft',
+					product_id: it.productId,
+					item_description: it.itemDescription || 'General Goods/Service',
+					hsn_sac: it.hsnSac,
+					quantity: it.quantity,
+					unit_code: it.unitCode,
+					unit_price: it.unitPrice,
+					discount_rate: it.discountRate,
+					discount_amount: ((parseFloat(it.quantity) * parseFloat(it.unitPrice) * parseFloat(it.discountRate)) / 100).toFixed(2),
+					taxable_amount: (parseFloat(it.quantity) * parseFloat(it.unitPrice) * (1 - parseFloat(it.discountRate)/100)).toFixed(2),
+					tax_rate: it.taxRate,
+					cgst_rate: (parseFloat(it.taxRate) / 2).toFixed(1),
+					sgst_rate: (parseFloat(it.taxRate) / 2).toFixed(1),
+					igst_rate: it.taxRate,
+					cgst_amount: ((parseFloat(it.quantity) * parseFloat(it.unitPrice) * parseFloat(it.taxRate)) / 200).toFixed(2),
+					sgst_amount: ((parseFloat(it.quantity) * parseFloat(it.unitPrice) * parseFloat(it.taxRate)) / 200).toFixed(2),
+					igst_amount: isInterState ? ((parseFloat(it.quantity) * parseFloat(it.unitPrice) * parseFloat(it.taxRate)) / 100).toFixed(2) : '0.00',
+					total_amount: (parseFloat(it.quantity) * parseFloat(it.unitPrice) * (1 + parseFloat(it.taxRate)/100)).toFixed(2),
+					created_at: new Date().toISOString()
+				})),
+				created_at: new Date().toISOString()
+			};
+		}
+		showTemplatePreviewModal = true;
+	}
+
 	let filteredInvoices = $derived.by(() => {
 		if (statusFilter === 'ALL') return invoices;
 		return invoices.filter((i) => i.status === statusFilter);
@@ -368,12 +678,13 @@
 			<div class="title-row">
 				<h1>⚡ Express Billing & Quick Invoicing Counter</h1>
 				<span class="badge-tag">GST Ready</span>
+				<span class="badge-template">Template {selectedTemplateId} Active</span>
 				{#if billingOnlyMode}
 					<span class="badge-mode">Focused Billing Only</span>
 				{/if}
 			</div>
 			<p class="subtitle">
-				Ultra-fast 3-second billing. Auto GST calculation, dynamic UPI QR code, 80mm thermal print, and WhatsApp bills.
+				Ultra-fast 3-second billing with 17 industry invoice templates. Auto GST, dynamic UPI QR code, 80mm thermal print, and WhatsApp sharing.
 			</p>
 		</div>
 
@@ -451,7 +762,14 @@
 			class:active={activeTab === 'khata'}
 			onclick={() => (activeTab = 'khata')}
 		>
-			👥 Receivables & Customer Khata ({summary.topReceivables.length})
+			👥 Receivables & Khata ({summary.topReceivables.length})
+		</button>
+		<button
+			class="tab-btn"
+			class:active={activeTab === 'templates'}
+			onclick={() => (activeTab = 'templates')}
+		>
+			🎨 17 Billing Templates & Options
 		</button>
 	</nav>
 
@@ -518,7 +836,17 @@
 				<!-- Items Table Card -->
 				<div class="card items-card">
 					<div class="card-header">
-						<h3>2. Items & Services</h3>
+						<div class="items-header-left">
+							<h3>2. Items & Services</h3>
+							<div class="template-quick-picker">
+								<label for="quickTmplSelect" class="small-label">Bill Template:</label>
+								<select id="quickTmplSelect" class="small-select" bind:value={selectedTemplateId}>
+									{#each templates as t}
+										<option value={t.id}>{t.name}</option>
+									{/each}
+								</select>
+							</div>
+						</div>
 						<button class="add-row-btn" onclick={addItem}>+ Add Item Line</button>
 					</div>
 
@@ -690,7 +1018,6 @@
 					{#if paymentMode === 'UPI'}
 						<div class="upi-box">
 							<div class="upi-qr-wrapper">
-								<!-- Interactive QR visual -->
 								<div class="qr-placeholder">
 									<svg viewBox="0 0 100 100" class="qr-svg">
 										<rect x="5" y="5" width="30" height="30" fill="#0f172a" />
@@ -794,8 +1121,12 @@
 							⚡ Generate & Save Bill
 						</button>
 
+						<button class="preview-btn" onclick={() => openInvoiceTemplatePreview()}>
+							👁️ Live Template Preview ({selectedTemplateId})
+						</button>
+
 						<div class="action-btn-row">
-							<button class="secondary-btn" onclick={printThermalReceipt}>
+							<button class="secondary-btn" onclick={printFormattedInvoice}>
 								🖨️ 80mm Print
 							</button>
 							<button class="whatsapp-btn" onclick={() => shareBillOnWhatsApp()}>
@@ -866,8 +1197,8 @@
 								<th>Total Amount</th>
 								<th>Paid</th>
 								<th>Balance Due</th>
+								<th>Template</th>
 								<th>Status</th>
-								<th>Mode</th>
 								<th>Actions</th>
 							</tr>
 						</thead>
@@ -890,20 +1221,29 @@
 										₹{inv.balanceDue}
 									</td>
 									<td>
+										<span class="tmpl-chip">T-{inv.templateId || '1'}</span>
+									</td>
+									<td>
 										<span class="status-badge {inv.status.toLowerCase()}">
 											{inv.status}
 										</span>
 									</td>
-									<td>{inv.paymentMode}</td>
 									<td>
 										<div class="actions-cell">
+											<button
+												class="icon-action-btn view"
+												onclick={() => openInvoiceTemplatePreview(inv)}
+												title="View Full Formatted Template"
+											>
+												👁️
+											</button>
 											{#if parseFloat(inv.balanceDue) > 0}
 												<button
 													class="record-pay-btn"
 													onclick={() => openPaymentModal(inv)}
 													title="Record Payment"
 												>
-													💳 Record Pay
+													💳 Pay
 												</button>
 											{/if}
 											<button
@@ -915,8 +1255,8 @@
 											</button>
 											<button
 												class="icon-action-btn"
-												onclick={printThermalReceipt}
-												title="Print PDF Receipt"
+												onclick={() => openInvoiceTemplatePreview(inv)}
+												title="Print Formatted Invoice"
 											>
 												🖨️
 											</button>
@@ -979,6 +1319,212 @@
 							{/each}
 						</tbody>
 					</table>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<!-- TAB 4: 17 BILLING TEMPLATES & OPTIONS -->
+	{#if activeTab === 'templates'}
+		<div class="templates-hub">
+			<!-- Top Options & Preferences Workbench -->
+			<div class="card template-options-card">
+				<div class="card-header">
+					<div>
+						<h3>🎨 Global Billing Template & Print Preferences</h3>
+						<span class="sub-text">Configure print parameters, bank visibility, and branding across your 17 templates</span>
+					</div>
+					<button class="save-tmpl-btn" onclick={saveTemplateConfig}>
+						💾 Save Preferences
+					</button>
+				</div>
+
+				<div class="options-grid">
+					<div class="opt-col">
+						<label for="defaultTmplSelect">Active Template</label>
+						<select id="defaultTmplSelect" bind:value={selectedTemplateId}>
+							{#each templates as t}
+								<option value={t.id}>{t.name} ({t.badge})</option>
+							{/each}
+						</select>
+					</div>
+
+					<div class="opt-col">
+						<label for="defaultPaperSelect">Paper Size</label>
+						<select id="defaultPaperSelect" bind:value={selectedPaperSize}>
+							<option value="A4">A4 Standard Sheet</option>
+							<option value="A5">A5 Portrait Sheet</option>
+							<option value="A5_LANDSCAPE">A5 Landscape Sheet</option>
+						</select>
+					</div>
+
+					<div class="opt-col">
+						<label for="defaultCopySelect">Default Copy Type</label>
+						<select id="defaultCopySelect" bind:value={selectedCopyType}>
+							<option value="ORIGINAL">Original for Recipient</option>
+							<option value="DUPLICATE">Duplicate for Transporter</option>
+							<option value="TRIPLICATE">Triplicate for Supplier</option>
+							<option value="OFFICE">Office Copy</option>
+						</select>
+					</div>
+
+					<div class="opt-col">
+						<label for="defaultTaxMode">Tax Mode</label>
+						<select id="defaultTaxMode" bind:value={selectedTaxMode}>
+							<option value="WITH_GST">Tax Invoice (With GST)</option>
+							<option value="WITHOUT_GST">Bill of Supply (Composition/Non-GST)</option>
+						</select>
+					</div>
+
+					<div class="opt-col">
+						<label for="brandColorInput">Accent / Brand Color</label>
+						<div class="color-picker-row">
+							<input id="brandColorInput" type="color" bind:value={brandColor} />
+							<span class="color-code">{brandColor}</span>
+						</div>
+					</div>
+				</div>
+
+				<!-- Toggles Row -->
+				<div class="toggles-row">
+					<label class="checkbox-label">
+						<input type="checkbox" bind:checked={showBankDetails} />
+						<span>Show Bank Account & IFSC</span>
+					</label>
+
+					<label class="checkbox-label">
+						<input type="checkbox" bind:checked={showUPIQR} />
+						<span>Show Dynamic UPI QR Code</span>
+					</label>
+
+					<label class="checkbox-label">
+						<input type="checkbox" bind:checked={showTaxSummary} />
+						<span>Show GST Slab Tax Summary</span>
+					</label>
+				</div>
+			</div>
+
+			<!-- All 17 Templates Gallery Grid -->
+			<div class="templates-gallery-grid">
+				{#each templates as t}
+					<div
+						class="template-card"
+						class:active={selectedTemplateId === t.id}
+						role="button"
+						tabindex="0"
+						onclick={() => (selectedTemplateId = t.id)}
+						onkeydown={(e) => {
+							if (e.key === 'Enter' || e.key === ' ') {
+								selectedTemplateId = t.id;
+							}
+						}}
+					>
+						<div class="tmpl-card-header">
+							<span class="tmpl-badge">{t.badge}</span>
+							<span class="tmpl-category">{t.category}</span>
+						</div>
+						<h4 class="tmpl-title">{t.name}</h4>
+						<p class="tmpl-desc">{t.desc}</p>
+						<div class="tmpl-footer">
+							<button
+								class="select-tmpl-btn"
+								class:selected={selectedTemplateId === t.id}
+								onclick={(e) => {
+									e.stopPropagation();
+									selectedTemplateId = t.id;
+								}}
+							>
+								{selectedTemplateId === t.id ? '✓ Selected Active' : 'Use Template'}
+							</button>
+
+							<button
+								class="preview-tmpl-btn"
+								onclick={(e) => {
+									e.stopPropagation();
+									selectedTemplateId = t.id;
+									openInvoiceTemplatePreview();
+								}}
+							>
+								👁️ Preview
+							</button>
+						</div>
+					</div>
+				{/each}
+			</div>
+		</div>
+	{/if}
+
+	<!-- LIVE INVOICE TEMPLATE PREVIEW & PRINT MODAL -->
+	{#if showTemplatePreviewModal && previewInvoiceData}
+		<div class="modal-backdrop">
+			<div class="modal-card-full">
+				<div class="modal-header-preview">
+					<div class="preview-header-left">
+						<h3>👁️ Formatted Template Preview: {templates.find(t => t.id === selectedTemplateId)?.name}</h3>
+						<div class="modal-controls">
+							<select class="control-select" bind:value={selectedTemplateId}>
+								{#each templates as t}
+									<option value={t.id}>{t.name}</option>
+								{/each}
+							</select>
+
+							<select class="control-select" bind:value={selectedPaperSize}>
+								<option value="A4">A4 Sheet</option>
+								<option value="A5">A5 Portrait</option>
+								<option value="A5_LANDSCAPE">A5 Landscape</option>
+							</select>
+
+							<select class="control-select" bind:value={selectedCopyType}>
+								<option value="ORIGINAL">Original</option>
+								<option value="DUPLICATE">Duplicate</option>
+								<option value="TRIPLICATE">Triplicate</option>
+								<option value="OFFICE">Office Copy</option>
+							</select>
+
+							<select class="control-select" bind:value={selectedTaxMode}>
+								<option value="WITH_GST">With GST</option>
+								<option value="WITHOUT_GST">Bill of Supply</option>
+							</select>
+						</div>
+					</div>
+
+					<div class="preview-header-actions">
+						<button class="print-dialog-btn" onclick={printFormattedInvoice}>
+							🖨️ Print Document
+						</button>
+						<button
+							class="whatsapp-modal-btn"
+							onclick={() => {
+								const text = `Bill from MrBiz-OS: ${previewInvoiceData?.invoice_number} | Total: ₹${previewInvoiceData?.grand_total}`;
+								window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+							}}
+						>
+							💬 WhatsApp
+						</button>
+						<button class="modal-close" onclick={() => (showTemplatePreviewModal = false)}>✕</button>
+					</div>
+				</div>
+
+				<!-- Render the full InvoiceTemplates component -->
+				<div class="template-render-wrapper">
+					<InvoiceTemplates
+						invoice={previewInvoiceData}
+						{company}
+						templateId={selectedTemplateId}
+						copyType={selectedCopyType}
+						taxMode={selectedTaxMode}
+						paperSize={selectedPaperSize}
+						extraDetails={{
+							showBankDetails,
+							showUPIQR,
+							showTaxSummary,
+							signatoryTitle,
+							terms: defaultTerms,
+							jurisdictionCity: defaultJurisdiction,
+							interestRate: defaultInterestRate,
+							returnPolicy: defaultReturnPolicy
+						}}
+					/>
 				</div>
 			</div>
 		</div>
@@ -1085,6 +1631,7 @@
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
+		flex-wrap: wrap;
 	}
 
 	h1 {
@@ -1097,6 +1644,15 @@
 	.badge-tag {
 		background: rgba(56, 189, 248, 0.15);
 		color: #38bdf8;
+		padding: 0.2rem 0.6rem;
+		border-radius: 6px;
+		font-size: 0.75rem;
+		font-weight: 700;
+	}
+
+	.badge-template {
+		background: rgba(168, 85, 247, 0.15);
+		color: #c084fc;
 		padding: 0.2rem 0.6rem;
 		border-radius: 6px;
 		font-size: 0.75rem;
@@ -1205,6 +1761,7 @@
 		gap: 0.5rem;
 		border-bottom: 1px solid #334155;
 		margin-bottom: 1.5rem;
+		overflow-x: auto;
 	}
 
 	.tab-btn {
@@ -1217,6 +1774,7 @@
 		cursor: pointer;
 		border-bottom: 2px solid transparent;
 		transition: all 0.2s;
+		white-space: nowrap;
 	}
 
 	.tab-btn.active {
@@ -1250,6 +1808,36 @@
 		justify-content: space-between;
 		align-items: center;
 		margin-bottom: 1rem;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+
+	.items-header-left {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		flex-wrap: wrap;
+	}
+
+	.template-quick-picker {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+
+	.small-label {
+		font-size: 0.75rem;
+		color: #94a3b8;
+	}
+
+	.small-select {
+		background: #1e293b;
+		border: 1px solid #334155;
+		color: #38bdf8;
+		font-size: 0.75rem;
+		font-weight: 600;
+		padding: 0.2rem 0.5rem;
+		border-radius: 4px;
 	}
 
 	.card-header h3 {
@@ -1570,6 +2158,21 @@
 		background: #0369a1;
 	}
 
+	.preview-btn {
+		background: rgba(168, 85, 247, 0.15);
+		border: 1px solid rgba(168, 85, 247, 0.4);
+		color: #c084fc;
+		padding: 0.65rem;
+		border-radius: 8px;
+		font-weight: 700;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.preview-btn:hover {
+		background: rgba(168, 85, 247, 0.25);
+	}
+
 	.action-btn-row {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
@@ -1668,6 +2271,16 @@
 		color: #94a3b8;
 	}
 
+	.tmpl-chip {
+		background: #1e293b;
+		border: 1px solid #334155;
+		color: #a5b4fc;
+		font-size: 0.75rem;
+		padding: 0.15rem 0.4rem;
+		border-radius: 4px;
+		font-weight: 600;
+	}
+
 	.status-badge {
 		padding: 0.2rem 0.5rem;
 		border-radius: 4px;
@@ -1719,6 +2332,12 @@
 		cursor: pointer;
 	}
 
+	.icon-action-btn.view {
+		background: rgba(168, 85, 247, 0.15);
+		border-color: rgba(168, 85, 247, 0.3);
+		color: #c084fc;
+	}
+
 	.unpaid-badge {
 		background: rgba(239, 68, 68, 0.15);
 		color: #f87171;
@@ -1738,15 +2357,178 @@
 		cursor: pointer;
 	}
 
-	/* Modal */
+	/* TAB 4: TEMPLATES HUB */
+	.template-options-card {
+		margin-bottom: 2rem;
+	}
+
+	.options-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+		gap: 1rem;
+		margin-bottom: 1.25rem;
+	}
+
+	.opt-col {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+	}
+
+	.color-picker-row {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
+	.color-picker-row input[type="color"] {
+		width: 44px;
+		height: 38px;
+		padding: 2px;
+		cursor: pointer;
+	}
+
+	.color-code {
+		font-family: monospace;
+		font-weight: 700;
+		color: #38bdf8;
+	}
+
+	.toggles-row {
+		display: flex;
+		gap: 1.5rem;
+		flex-wrap: wrap;
+		border-top: 1px solid #1e293b;
+		padding-top: 1rem;
+	}
+
+	.checkbox-label {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.8125rem;
+		color: #cbd5e1;
+		cursor: pointer;
+	}
+
+	.save-tmpl-btn {
+		background: #0284c7;
+		color: #ffffff;
+		border: none;
+		padding: 0.5rem 1rem;
+		border-radius: 6px;
+		font-weight: 700;
+		cursor: pointer;
+	}
+
+	.templates-gallery-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+		gap: 1.25rem;
+	}
+
+	.template-card {
+		background: #0f172a;
+		border: 1px solid #1e293b;
+		border-radius: 12px;
+		padding: 1.25rem;
+		display: flex;
+		flex-direction: column;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.template-card:hover {
+		border-color: #38bdf8;
+		transform: translateY(-2px);
+	}
+
+	.template-card.active {
+		border-color: #38bdf8;
+		background: rgba(2, 132, 199, 0.05);
+		box-shadow: 0 0 0 1px #38bdf8;
+	}
+
+	.tmpl-card-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 0.5rem;
+	}
+
+	.tmpl-badge {
+		background: rgba(168, 85, 247, 0.15);
+		color: #c084fc;
+		font-size: 0.75rem;
+		font-weight: 700;
+		padding: 0.15rem 0.5rem;
+		border-radius: 4px;
+	}
+
+	.tmpl-category {
+		font-size: 0.75rem;
+		color: #94a3b8;
+	}
+
+	.tmpl-title {
+		font-size: 1rem;
+		font-weight: 700;
+		color: #ffffff;
+		margin: 0.25rem 0 0.5rem 0;
+	}
+
+	.tmpl-desc {
+		font-size: 0.8125rem;
+		color: #94a3b8;
+		line-height: 1.4;
+		flex: 1;
+		margin: 0 0 1rem 0;
+	}
+
+	.tmpl-footer {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.select-tmpl-btn {
+		flex: 1;
+		background: #1e293b;
+		border: 1px solid #334155;
+		color: #cbd5e1;
+		padding: 0.4rem;
+		border-radius: 6px;
+		font-size: 0.8125rem;
+		font-weight: 600;
+		cursor: pointer;
+	}
+
+	.select-tmpl-btn.selected {
+		background: #0284c7;
+		color: #ffffff;
+		border-color: #38bdf8;
+	}
+
+	.preview-tmpl-btn {
+		background: rgba(56, 189, 248, 0.1);
+		border: 1px solid rgba(56, 189, 248, 0.3);
+		color: #38bdf8;
+		padding: 0.4rem 0.75rem;
+		border-radius: 6px;
+		font-size: 0.8125rem;
+		font-weight: 600;
+		cursor: pointer;
+	}
+
+	/* Modal Common */
 	.modal-backdrop {
 		position: fixed;
 		inset: 0;
-		background: rgba(0, 0, 0, 0.7);
+		background: rgba(0, 0, 0, 0.8);
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		z-index: 1000;
+		padding: 1rem;
 	}
 
 	.modal-card {
@@ -1756,6 +2538,93 @@
 		width: 100%;
 		max-width: 440px;
 		padding: 1.5rem;
+	}
+
+	.modal-card-full {
+		background: #0b1120;
+		border: 1px solid #334155;
+		border-radius: 12px;
+		width: 100%;
+		max-width: 1100px;
+		height: 90vh;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
+
+	.modal-header-preview {
+		padding: 0.875rem 1.25rem;
+		background: #0f172a;
+		border-bottom: 1px solid #334155;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+	}
+
+	.preview-header-left {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		flex-wrap: wrap;
+	}
+
+	.preview-header-left h3 {
+		font-size: 0.9375rem;
+		margin: 0;
+		color: #ffffff;
+	}
+
+	.modal-controls {
+		display: flex;
+		gap: 0.4rem;
+	}
+
+	.control-select {
+		background: #1e293b;
+		border: 1px solid #334155;
+		color: #38bdf8;
+		font-size: 0.75rem;
+		padding: 0.25rem 0.5rem;
+		border-radius: 4px;
+	}
+
+	.preview-header-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+	}
+
+	.print-dialog-btn {
+		background: #0284c7;
+		color: #ffffff;
+		border: none;
+		padding: 0.4rem 0.8rem;
+		border-radius: 6px;
+		font-weight: 700;
+		font-size: 0.8125rem;
+		cursor: pointer;
+	}
+
+	.whatsapp-modal-btn {
+		background: #166534;
+		color: #ffffff;
+		border: none;
+		padding: 0.4rem 0.8rem;
+		border-radius: 6px;
+		font-weight: 600;
+		font-size: 0.8125rem;
+		cursor: pointer;
+	}
+
+	.template-render-wrapper {
+		flex: 1;
+		overflow-y: auto;
+		padding: 2rem;
+		background: #1e293b;
+		display: flex;
+		justify-content: center;
 	}
 
 	.modal-header {

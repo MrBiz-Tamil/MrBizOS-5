@@ -18,23 +18,47 @@ type BillingServiceServer struct {
 	db *gorm.DB
 	mu sync.RWMutex
 
-	invoices map[string]*billingv1.InvoiceProto
+	invoices  map[string]*billingv1.InvoiceProto
+	templates map[string]*billingv1.GetTenantBillingTemplateResponse
 }
 
 func NewService(db *gorm.DB) *BillingServiceServer {
 	s := &BillingServiceServer{
-		db:       db,
-		invoices: make(map[string]*billingv1.InvoiceProto),
+		db:        db,
+		invoices:  make(map[string]*billingv1.InvoiceProto),
+		templates: make(map[string]*billingv1.GetTenantBillingTemplateResponse),
 	}
 	s.seedDefaults()
 	return s
 }
 
 func (s *BillingServiceServer) seedDefaults() {
+	s.templates["tenant-1"] = &billingv1.GetTenantBillingTemplateResponse{
+		TenantId:            "tenant-1",
+		TemplateId:          "1",
+		PaperSize:           "A4",
+		CopyType:            "ORIGINAL",
+		TaxMode:             "WITH_GST",
+		BrandColor:          "#0284c7",
+		ShowBankDetails:     true,
+		ShowUpiQr:           true,
+		ShowTaxSummary:      true,
+		BusinessSubtitle:    "Wholesale & Retail Commercial Trading",
+		SignatoryTitle:      "Authorized Signatory",
+		DefaultTerms:        "Payment within 15 days from invoice date. Subject to local jurisdiction.",
+		DefaultJurisdiction: "Mumbai",
+		DefaultInterestRate: "18% p.a.",
+		DefaultReturnPolicy: "Goods once sold can only be replaced within 7 days in original condition.",
+		TemplateOptionsJson: "{}",
+	}
+
 	s.invoices["INV-2026-101"] = &billingv1.InvoiceProto{
-		Id:             "INV-2026-101",
-		TenantId:       "tenant-1",
-		InvoiceNumber:  "INV-2026-101",
+		Id:                  "INV-2026-101",
+		TenantId:            "tenant-1",
+		InvoiceNumber:       "INV-2026-101",
+		TemplateId:          "1",
+		PaperSize:           "A4",
+		CopyType:            "ORIGINAL",
 		CustomerId:     "CUST-001",
 		CustomerName:   "Aarav Sharma Trading Co.",
 		CustomerGstin:  "27AABCA1234F1Z6",
@@ -308,38 +332,55 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		custName = "Cash Walk-in Customer"
 	}
 
+	templateId := req.Msg.TemplateId
+	if templateId == "" {
+		if t, ok := s.templates[req.Msg.TenantId]; ok && t.TemplateId != "" {
+			templateId = t.TemplateId
+		} else {
+			templateId = "1"
+		}
+	}
+	paperSize := req.Msg.PaperSize
+	if paperSize == "" {
+		paperSize = "A4"
+	}
+
 	inv := &billingv1.InvoiceProto{
-		Id:             invId,
-		TenantId:       req.Msg.TenantId,
-		InvoiceNumber:  invNum,
-		CustomerId:     req.Msg.CustomerId,
-		CustomerName:   custName,
-		InvoiceDate:    invDate,
-		DueDate:        dueDate,
-		Status:         status,
-		Subtotal:       fmt.Sprintf("%.2f", subtotal),
-		DiscountTotal:  fmt.Sprintf("%.2f", discountTotal),
-		TaxTotal:       fmt.Sprintf("%.2f", taxTotal),
-		RoundOff:       "0.00",
-		GrandTotal:     fmt.Sprintf("%.2f", grandTotal),
-		AmountPaid:     fmt.Sprintf("%.2f", amtPaid),
-		BalanceDue:     fmt.Sprintf("%.2f", balDue),
-		SupplyState:    req.Msg.SupplyState,
-		BillingAddress: req.Msg.BillingAddress,
-		ShippingAddress: req.Msg.ShippingAddress,
-		Notes:          req.Msg.Notes,
-		PaymentMode:    req.Msg.PaymentMode,
-		VehicleNumber:  req.Msg.VehicleNumber,
-		DeliveryPlace:  req.Msg.DeliveryPlace,
-		PoNumber:       req.Msg.PoNumber,
-		EwayBill:       req.Msg.EwayBill,
-		TransporterName: req.Msg.TransporterName,
-		CgstTotal:      fmt.Sprintf("%.2f", cgstTotal),
-		SgstTotal:      fmt.Sprintf("%.2f", sgstTotal),
-		IgstTotal:      fmt.Sprintf("%.2f", igstTotal),
-		IsInterState:   isInter,
-		CreatedAt:      time.Now().Format(time.RFC3339),
-		Items:          itemsProto,
+		Id:                  invId,
+		TenantId:            req.Msg.TenantId,
+		InvoiceNumber:       invNum,
+		CustomerId:          req.Msg.CustomerId,
+		CustomerName:        custName,
+		InvoiceDate:         invDate,
+		DueDate:             dueDate,
+		Status:              status,
+		Subtotal:            fmt.Sprintf("%.2f", subtotal),
+		DiscountTotal:       fmt.Sprintf("%.2f", discountTotal),
+		TaxTotal:            fmt.Sprintf("%.2f", taxTotal),
+		RoundOff:            "0.00",
+		GrandTotal:          fmt.Sprintf("%.2f", grandTotal),
+		AmountPaid:          fmt.Sprintf("%.2f", amtPaid),
+		BalanceDue:          fmt.Sprintf("%.2f", balDue),
+		SupplyState:         req.Msg.SupplyState,
+		BillingAddress:      req.Msg.BillingAddress,
+		ShippingAddress:     req.Msg.ShippingAddress,
+		Notes:               req.Msg.Notes,
+		PaymentMode:         req.Msg.PaymentMode,
+		VehicleNumber:       req.Msg.VehicleNumber,
+		DeliveryPlace:       req.Msg.DeliveryPlace,
+		PoNumber:            req.Msg.PoNumber,
+		EwayBill:            req.Msg.EwayBill,
+		TransporterName:     req.Msg.TransporterName,
+		CgstTotal:           fmt.Sprintf("%.2f", cgstTotal),
+		SgstTotal:           fmt.Sprintf("%.2f", sgstTotal),
+		IgstTotal:           fmt.Sprintf("%.2f", igstTotal),
+		IsInterState:        isInter,
+		TemplateId:          templateId,
+		PaperSize:           paperSize,
+		CopyType:            "ORIGINAL",
+		TemplateOptionsJson: req.Msg.TemplateOptionsJson,
+		CreatedAt:           time.Now().Format(time.RFC3339),
+		Items:               itemsProto,
 	}
 
 	s.invoices[invId] = inv
@@ -517,3 +558,74 @@ func (s *BillingServiceServer) GetBillingSummary(ctx context.Context, req *conne
 		TopReceivables:      receivables,
 	}), nil
 }
+
+func (s *BillingServiceServer) GetTenantBillingTemplate(ctx context.Context, req *connect.Request[billingv1.GetTenantBillingTemplateRequest]) (*connect.Response[billingv1.GetTenantBillingTemplateResponse], error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	tenantId := req.Msg.TenantId
+	if tenantId == "" {
+		tenantId = "tenant-1"
+	}
+
+	tmpl, ok := s.templates[tenantId]
+	if !ok {
+		tmpl = &billingv1.GetTenantBillingTemplateResponse{
+			TenantId:            tenantId,
+			TemplateId:          "1",
+			PaperSize:           "A4",
+			CopyType:            "ORIGINAL",
+			TaxMode:             "WITH_GST",
+			BrandColor:          "#0284c7",
+			ShowBankDetails:     true,
+			ShowUpiQr:           true,
+			ShowTaxSummary:      true,
+			BusinessSubtitle:    "Wholesale & Retail Commercial Trading",
+			SignatoryTitle:      "Authorized Signatory",
+			DefaultTerms:        "Payment within 15 days from invoice date. Subject to local jurisdiction.",
+			DefaultJurisdiction: "Mumbai",
+			DefaultInterestRate: "18% p.a.",
+			DefaultReturnPolicy: "Goods once sold can only be replaced within 7 days in original condition.",
+			TemplateOptionsJson: "{}",
+		}
+	}
+
+	return connect.NewResponse(tmpl), nil
+}
+
+func (s *BillingServiceServer) UpdateTenantBillingTemplate(ctx context.Context, req *connect.Request[billingv1.UpdateTenantBillingTemplateRequest]) (*connect.Response[billingv1.UpdateTenantBillingTemplateResponse], error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	tenantId := req.Msg.TenantId
+	if tenantId == "" {
+		tenantId = "tenant-1"
+	}
+
+	res := &billingv1.GetTenantBillingTemplateResponse{
+		TenantId:            tenantId,
+		TemplateId:          req.Msg.TemplateId,
+		PaperSize:           req.Msg.PaperSize,
+		CopyType:            req.Msg.CopyType,
+		TaxMode:             req.Msg.TaxMode,
+		BrandColor:          req.Msg.BrandColor,
+		ShowBankDetails:     req.Msg.ShowBankDetails,
+		ShowUpiQr:           req.Msg.ShowUpiQr,
+		ShowTaxSummary:      req.Msg.ShowTaxSummary,
+		BusinessSubtitle:    req.Msg.BusinessSubtitle,
+		SignatoryTitle:      req.Msg.SignatoryTitle,
+		DefaultTerms:        req.Msg.DefaultTerms,
+		DefaultJurisdiction: req.Msg.DefaultJurisdiction,
+		DefaultInterestRate: req.Msg.DefaultInterestRate,
+		DefaultReturnPolicy: req.Msg.DefaultReturnPolicy,
+		TemplateOptionsJson: req.Msg.TemplateOptionsJson,
+	}
+
+	s.templates[tenantId] = res
+
+	return connect.NewResponse(&billingv1.UpdateTenantBillingTemplateResponse{
+		Message:  fmt.Sprintf("Billing template updated to Template %s (%s)", req.Msg.TemplateId, req.Msg.PaperSize),
+		Template: res,
+	}), nil
+}
+

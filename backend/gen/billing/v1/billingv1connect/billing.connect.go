@@ -57,6 +57,12 @@ const (
 	// BillingServiceGetBillingSummaryProcedure is the fully-qualified name of the BillingService's
 	// GetBillingSummary RPC.
 	BillingServiceGetBillingSummaryProcedure = "/billing.v1.BillingService/GetBillingSummary"
+	// BillingServiceGetTenantBillingTemplateProcedure is the fully-qualified name of the
+	// BillingService's GetTenantBillingTemplate RPC.
+	BillingServiceGetTenantBillingTemplateProcedure = "/billing.v1.BillingService/GetTenantBillingTemplate"
+	// BillingServiceUpdateTenantBillingTemplateProcedure is the fully-qualified name of the
+	// BillingService's UpdateTenantBillingTemplate RPC.
+	BillingServiceUpdateTenantBillingTemplateProcedure = "/billing.v1.BillingService/UpdateTenantBillingTemplate"
 )
 
 // BillingServiceClient is a client for the billing.v1.BillingService service.
@@ -69,6 +75,8 @@ type BillingServiceClient interface {
 	GenerateInvoicePDF(context.Context, *connect.Request[v1.GenerateInvoicePDFRequest]) (*connect.Response[v1.GenerateInvoicePDFResponse], error)
 	RecordPayment(context.Context, *connect.Request[v1.RecordPaymentRequest]) (*connect.Response[v1.RecordPaymentResponse], error)
 	GetBillingSummary(context.Context, *connect.Request[v1.GetBillingSummaryRequest]) (*connect.Response[v1.GetBillingSummaryResponse], error)
+	GetTenantBillingTemplate(context.Context, *connect.Request[v1.GetTenantBillingTemplateRequest]) (*connect.Response[v1.GetTenantBillingTemplateResponse], error)
+	UpdateTenantBillingTemplate(context.Context, *connect.Request[v1.UpdateTenantBillingTemplateRequest]) (*connect.Response[v1.UpdateTenantBillingTemplateResponse], error)
 }
 
 // NewBillingServiceClient constructs a client for the billing.v1.BillingService service. By
@@ -130,19 +138,33 @@ func NewBillingServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(billingServiceMethods.ByName("GetBillingSummary")),
 			connect.WithClientOptions(opts...),
 		),
+		getTenantBillingTemplate: connect.NewClient[v1.GetTenantBillingTemplateRequest, v1.GetTenantBillingTemplateResponse](
+			httpClient,
+			baseURL+BillingServiceGetTenantBillingTemplateProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("GetTenantBillingTemplate")),
+			connect.WithClientOptions(opts...),
+		),
+		updateTenantBillingTemplate: connect.NewClient[v1.UpdateTenantBillingTemplateRequest, v1.UpdateTenantBillingTemplateResponse](
+			httpClient,
+			baseURL+BillingServiceUpdateTenantBillingTemplateProcedure,
+			connect.WithSchema(billingServiceMethods.ByName("UpdateTenantBillingTemplate")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // billingServiceClient implements BillingServiceClient.
 type billingServiceClient struct {
-	listInvoices       *connect.Client[v1.ListInvoicesRequest, v1.ListInvoicesResponse]
-	getInvoice         *connect.Client[v1.GetInvoiceRequest, v1.GetInvoiceResponse]
-	createInvoice      *connect.Client[v1.CreateInvoiceRequest, v1.CreateInvoiceResponse]
-	cancelInvoice      *connect.Client[v1.CancelInvoiceRequest, v1.CancelInvoiceResponse]
-	updateLogistics    *connect.Client[v1.UpdateLogisticsRequest, v1.UpdateLogisticsResponse]
-	generateInvoicePDF *connect.Client[v1.GenerateInvoicePDFRequest, v1.GenerateInvoicePDFResponse]
-	recordPayment      *connect.Client[v1.RecordPaymentRequest, v1.RecordPaymentResponse]
-	getBillingSummary  *connect.Client[v1.GetBillingSummaryRequest, v1.GetBillingSummaryResponse]
+	listInvoices                *connect.Client[v1.ListInvoicesRequest, v1.ListInvoicesResponse]
+	getInvoice                  *connect.Client[v1.GetInvoiceRequest, v1.GetInvoiceResponse]
+	createInvoice               *connect.Client[v1.CreateInvoiceRequest, v1.CreateInvoiceResponse]
+	cancelInvoice               *connect.Client[v1.CancelInvoiceRequest, v1.CancelInvoiceResponse]
+	updateLogistics             *connect.Client[v1.UpdateLogisticsRequest, v1.UpdateLogisticsResponse]
+	generateInvoicePDF          *connect.Client[v1.GenerateInvoicePDFRequest, v1.GenerateInvoicePDFResponse]
+	recordPayment               *connect.Client[v1.RecordPaymentRequest, v1.RecordPaymentResponse]
+	getBillingSummary           *connect.Client[v1.GetBillingSummaryRequest, v1.GetBillingSummaryResponse]
+	getTenantBillingTemplate    *connect.Client[v1.GetTenantBillingTemplateRequest, v1.GetTenantBillingTemplateResponse]
+	updateTenantBillingTemplate *connect.Client[v1.UpdateTenantBillingTemplateRequest, v1.UpdateTenantBillingTemplateResponse]
 }
 
 // ListInvoices calls billing.v1.BillingService.ListInvoices.
@@ -185,6 +207,16 @@ func (c *billingServiceClient) GetBillingSummary(ctx context.Context, req *conne
 	return c.getBillingSummary.CallUnary(ctx, req)
 }
 
+// GetTenantBillingTemplate calls billing.v1.BillingService.GetTenantBillingTemplate.
+func (c *billingServiceClient) GetTenantBillingTemplate(ctx context.Context, req *connect.Request[v1.GetTenantBillingTemplateRequest]) (*connect.Response[v1.GetTenantBillingTemplateResponse], error) {
+	return c.getTenantBillingTemplate.CallUnary(ctx, req)
+}
+
+// UpdateTenantBillingTemplate calls billing.v1.BillingService.UpdateTenantBillingTemplate.
+func (c *billingServiceClient) UpdateTenantBillingTemplate(ctx context.Context, req *connect.Request[v1.UpdateTenantBillingTemplateRequest]) (*connect.Response[v1.UpdateTenantBillingTemplateResponse], error) {
+	return c.updateTenantBillingTemplate.CallUnary(ctx, req)
+}
+
 // BillingServiceHandler is an implementation of the billing.v1.BillingService service.
 type BillingServiceHandler interface {
 	ListInvoices(context.Context, *connect.Request[v1.ListInvoicesRequest]) (*connect.Response[v1.ListInvoicesResponse], error)
@@ -195,6 +227,8 @@ type BillingServiceHandler interface {
 	GenerateInvoicePDF(context.Context, *connect.Request[v1.GenerateInvoicePDFRequest]) (*connect.Response[v1.GenerateInvoicePDFResponse], error)
 	RecordPayment(context.Context, *connect.Request[v1.RecordPaymentRequest]) (*connect.Response[v1.RecordPaymentResponse], error)
 	GetBillingSummary(context.Context, *connect.Request[v1.GetBillingSummaryRequest]) (*connect.Response[v1.GetBillingSummaryResponse], error)
+	GetTenantBillingTemplate(context.Context, *connect.Request[v1.GetTenantBillingTemplateRequest]) (*connect.Response[v1.GetTenantBillingTemplateResponse], error)
+	UpdateTenantBillingTemplate(context.Context, *connect.Request[v1.UpdateTenantBillingTemplateRequest]) (*connect.Response[v1.UpdateTenantBillingTemplateResponse], error)
 }
 
 // NewBillingServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -252,6 +286,18 @@ func NewBillingServiceHandler(svc BillingServiceHandler, opts ...connect.Handler
 		connect.WithSchema(billingServiceMethods.ByName("GetBillingSummary")),
 		connect.WithHandlerOptions(opts...),
 	)
+	billingServiceGetTenantBillingTemplateHandler := connect.NewUnaryHandler(
+		BillingServiceGetTenantBillingTemplateProcedure,
+		svc.GetTenantBillingTemplate,
+		connect.WithSchema(billingServiceMethods.ByName("GetTenantBillingTemplate")),
+		connect.WithHandlerOptions(opts...),
+	)
+	billingServiceUpdateTenantBillingTemplateHandler := connect.NewUnaryHandler(
+		BillingServiceUpdateTenantBillingTemplateProcedure,
+		svc.UpdateTenantBillingTemplate,
+		connect.WithSchema(billingServiceMethods.ByName("UpdateTenantBillingTemplate")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/billing.v1.BillingService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case BillingServiceListInvoicesProcedure:
@@ -270,6 +316,10 @@ func NewBillingServiceHandler(svc BillingServiceHandler, opts ...connect.Handler
 			billingServiceRecordPaymentHandler.ServeHTTP(w, r)
 		case BillingServiceGetBillingSummaryProcedure:
 			billingServiceGetBillingSummaryHandler.ServeHTTP(w, r)
+		case BillingServiceGetTenantBillingTemplateProcedure:
+			billingServiceGetTenantBillingTemplateHandler.ServeHTTP(w, r)
+		case BillingServiceUpdateTenantBillingTemplateProcedure:
+			billingServiceUpdateTenantBillingTemplateHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -309,4 +359,12 @@ func (UnimplementedBillingServiceHandler) RecordPayment(context.Context, *connec
 
 func (UnimplementedBillingServiceHandler) GetBillingSummary(context.Context, *connect.Request[v1.GetBillingSummaryRequest]) (*connect.Response[v1.GetBillingSummaryResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("billing.v1.BillingService.GetBillingSummary is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) GetTenantBillingTemplate(context.Context, *connect.Request[v1.GetTenantBillingTemplateRequest]) (*connect.Response[v1.GetTenantBillingTemplateResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("billing.v1.BillingService.GetTenantBillingTemplate is not implemented"))
+}
+
+func (UnimplementedBillingServiceHandler) UpdateTenantBillingTemplate(context.Context, *connect.Request[v1.UpdateTenantBillingTemplateRequest]) (*connect.Response[v1.UpdateTenantBillingTemplateResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("billing.v1.BillingService.UpdateTenantBillingTemplate is not implemented"))
 }

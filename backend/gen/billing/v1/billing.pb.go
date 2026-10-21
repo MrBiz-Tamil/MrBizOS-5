@@ -304,6 +304,10 @@ type InvoiceProto struct {
 	UtgstTotal              string                 `protobuf:"bytes,50,opt,name=utgst_total,json=utgstTotal,proto3" json:"utgst_total,omitempty"`
 	IsInterState            bool                   `protobuf:"varint,51,opt,name=is_inter_state,json=isInterState,proto3" json:"is_inter_state,omitempty"`
 	CustomerGstin           string                 `protobuf:"bytes,52,opt,name=customer_gstin,json=customerGstin,proto3" json:"customer_gstin,omitempty"`
+	TemplateId              string                 `protobuf:"bytes,53,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`
+	PaperSize               string                 `protobuf:"bytes,54,opt,name=paper_size,json=paperSize,proto3" json:"paper_size,omitempty"`
+	CopyType                string                 `protobuf:"bytes,55,opt,name=copy_type,json=copyType,proto3" json:"copy_type,omitempty"`
+	TemplateOptionsJson     string                 `protobuf:"bytes,56,opt,name=template_options_json,json=templateOptionsJson,proto3" json:"template_options_json,omitempty"`
 	unknownFields           protoimpl.UnknownFields
 	sizeCache               protoimpl.SizeCache
 }
@@ -702,6 +706,34 @@ func (x *InvoiceProto) GetCustomerGstin() string {
 	return ""
 }
 
+func (x *InvoiceProto) GetTemplateId() string {
+	if x != nil {
+		return x.TemplateId
+	}
+	return ""
+}
+
+func (x *InvoiceProto) GetPaperSize() string {
+	if x != nil {
+		return x.PaperSize
+	}
+	return ""
+}
+
+func (x *InvoiceProto) GetCopyType() string {
+	if x != nil {
+		return x.CopyType
+	}
+	return ""
+}
+
+func (x *InvoiceProto) GetTemplateOptionsJson() string {
+	if x != nil {
+		return x.TemplateOptionsJson
+	}
+	return ""
+}
+
 type ListInvoicesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
@@ -1062,6 +1094,9 @@ type CreateInvoiceRequest struct {
 	Items                   []*CreateInvoiceItemInputProto `protobuf:"bytes,32,rep,name=items,proto3" json:"items,omitempty"`
 	SubscriptionPeriodStart string                         `protobuf:"bytes,33,opt,name=subscription_period_start,json=subscriptionPeriodStart,proto3" json:"subscription_period_start,omitempty"` // service period / hostel check-in (RFC3339 or YYYY-MM-DD)
 	SubscriptionPeriodEnd   string                         `protobuf:"bytes,34,opt,name=subscription_period_end,json=subscriptionPeriodEnd,proto3" json:"subscription_period_end,omitempty"`       // service period / hostel check-out
+	TemplateId              string                         `protobuf:"bytes,35,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`
+	PaperSize               string                         `protobuf:"bytes,36,opt,name=paper_size,json=paperSize,proto3" json:"paper_size,omitempty"`
+	TemplateOptionsJson     string                         `protobuf:"bytes,37,opt,name=template_options_json,json=templateOptionsJson,proto3" json:"template_options_json,omitempty"`
 	unknownFields           protoimpl.UnknownFields
 	sizeCache               protoimpl.SizeCache
 }
@@ -1330,6 +1365,27 @@ func (x *CreateInvoiceRequest) GetSubscriptionPeriodStart() string {
 func (x *CreateInvoiceRequest) GetSubscriptionPeriodEnd() string {
 	if x != nil {
 		return x.SubscriptionPeriodEnd
+	}
+	return ""
+}
+
+func (x *CreateInvoiceRequest) GetTemplateId() string {
+	if x != nil {
+		return x.TemplateId
+	}
+	return ""
+}
+
+func (x *CreateInvoiceRequest) GetPaperSize() string {
+	if x != nil {
+		return x.PaperSize
+	}
+	return ""
+}
+
+func (x *CreateInvoiceRequest) GetTemplateOptionsJson() string {
+	if x != nil {
+		return x.TemplateOptionsJson
 	}
 	return ""
 }
@@ -2214,6 +2270,430 @@ func (x *GetBillingSummaryResponse) GetTopReceivables() []*CustomerReceivablePro
 	return nil
 }
 
+type GetTenantBillingTemplateRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTenantBillingTemplateRequest) Reset() {
+	*x = GetTenantBillingTemplateRequest{}
+	mi := &file_billing_v1_billing_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTenantBillingTemplateRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTenantBillingTemplateRequest) ProtoMessage() {}
+
+func (x *GetTenantBillingTemplateRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_billing_v1_billing_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTenantBillingTemplateRequest.ProtoReflect.Descriptor instead.
+func (*GetTenantBillingTemplateRequest) Descriptor() ([]byte, []int) {
+	return file_billing_v1_billing_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *GetTenantBillingTemplateRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+type GetTenantBillingTemplateResponse struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	TenantId            string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	TemplateId          string                 `protobuf:"bytes,2,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`
+	PaperSize           string                 `protobuf:"bytes,3,opt,name=paper_size,json=paperSize,proto3" json:"paper_size,omitempty"`
+	CopyType            string                 `protobuf:"bytes,4,opt,name=copy_type,json=copyType,proto3" json:"copy_type,omitempty"`
+	TaxMode             string                 `protobuf:"bytes,5,opt,name=tax_mode,json=taxMode,proto3" json:"tax_mode,omitempty"`
+	BrandColor          string                 `protobuf:"bytes,6,opt,name=brand_color,json=brandColor,proto3" json:"brand_color,omitempty"`
+	ShowBankDetails     bool                   `protobuf:"varint,7,opt,name=show_bank_details,json=showBankDetails,proto3" json:"show_bank_details,omitempty"`
+	ShowUpiQr           bool                   `protobuf:"varint,8,opt,name=show_upi_qr,json=showUpiQr,proto3" json:"show_upi_qr,omitempty"`
+	ShowTaxSummary      bool                   `protobuf:"varint,9,opt,name=show_tax_summary,json=showTaxSummary,proto3" json:"show_tax_summary,omitempty"`
+	BusinessSubtitle    string                 `protobuf:"bytes,10,opt,name=business_subtitle,json=businessSubtitle,proto3" json:"business_subtitle,omitempty"`
+	SignatoryTitle      string                 `protobuf:"bytes,11,opt,name=signatory_title,json=signatoryTitle,proto3" json:"signatory_title,omitempty"`
+	DefaultTerms        string                 `protobuf:"bytes,12,opt,name=default_terms,json=defaultTerms,proto3" json:"default_terms,omitempty"`
+	DefaultJurisdiction string                 `protobuf:"bytes,13,opt,name=default_jurisdiction,json=defaultJurisdiction,proto3" json:"default_jurisdiction,omitempty"`
+	DefaultInterestRate string                 `protobuf:"bytes,14,opt,name=default_interest_rate,json=defaultInterestRate,proto3" json:"default_interest_rate,omitempty"`
+	DefaultReturnPolicy string                 `protobuf:"bytes,15,opt,name=default_return_policy,json=defaultReturnPolicy,proto3" json:"default_return_policy,omitempty"`
+	TemplateOptionsJson string                 `protobuf:"bytes,16,opt,name=template_options_json,json=templateOptionsJson,proto3" json:"template_options_json,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *GetTenantBillingTemplateResponse) Reset() {
+	*x = GetTenantBillingTemplateResponse{}
+	mi := &file_billing_v1_billing_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTenantBillingTemplateResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTenantBillingTemplateResponse) ProtoMessage() {}
+
+func (x *GetTenantBillingTemplateResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_billing_v1_billing_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTenantBillingTemplateResponse.ProtoReflect.Descriptor instead.
+func (*GetTenantBillingTemplateResponse) Descriptor() ([]byte, []int) {
+	return file_billing_v1_billing_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *GetTenantBillingTemplateResponse) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *GetTenantBillingTemplateResponse) GetTemplateId() string {
+	if x != nil {
+		return x.TemplateId
+	}
+	return ""
+}
+
+func (x *GetTenantBillingTemplateResponse) GetPaperSize() string {
+	if x != nil {
+		return x.PaperSize
+	}
+	return ""
+}
+
+func (x *GetTenantBillingTemplateResponse) GetCopyType() string {
+	if x != nil {
+		return x.CopyType
+	}
+	return ""
+}
+
+func (x *GetTenantBillingTemplateResponse) GetTaxMode() string {
+	if x != nil {
+		return x.TaxMode
+	}
+	return ""
+}
+
+func (x *GetTenantBillingTemplateResponse) GetBrandColor() string {
+	if x != nil {
+		return x.BrandColor
+	}
+	return ""
+}
+
+func (x *GetTenantBillingTemplateResponse) GetShowBankDetails() bool {
+	if x != nil {
+		return x.ShowBankDetails
+	}
+	return false
+}
+
+func (x *GetTenantBillingTemplateResponse) GetShowUpiQr() bool {
+	if x != nil {
+		return x.ShowUpiQr
+	}
+	return false
+}
+
+func (x *GetTenantBillingTemplateResponse) GetShowTaxSummary() bool {
+	if x != nil {
+		return x.ShowTaxSummary
+	}
+	return false
+}
+
+func (x *GetTenantBillingTemplateResponse) GetBusinessSubtitle() string {
+	if x != nil {
+		return x.BusinessSubtitle
+	}
+	return ""
+}
+
+func (x *GetTenantBillingTemplateResponse) GetSignatoryTitle() string {
+	if x != nil {
+		return x.SignatoryTitle
+	}
+	return ""
+}
+
+func (x *GetTenantBillingTemplateResponse) GetDefaultTerms() string {
+	if x != nil {
+		return x.DefaultTerms
+	}
+	return ""
+}
+
+func (x *GetTenantBillingTemplateResponse) GetDefaultJurisdiction() string {
+	if x != nil {
+		return x.DefaultJurisdiction
+	}
+	return ""
+}
+
+func (x *GetTenantBillingTemplateResponse) GetDefaultInterestRate() string {
+	if x != nil {
+		return x.DefaultInterestRate
+	}
+	return ""
+}
+
+func (x *GetTenantBillingTemplateResponse) GetDefaultReturnPolicy() string {
+	if x != nil {
+		return x.DefaultReturnPolicy
+	}
+	return ""
+}
+
+func (x *GetTenantBillingTemplateResponse) GetTemplateOptionsJson() string {
+	if x != nil {
+		return x.TemplateOptionsJson
+	}
+	return ""
+}
+
+type UpdateTenantBillingTemplateRequest struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	TenantId            string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	TemplateId          string                 `protobuf:"bytes,2,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`
+	PaperSize           string                 `protobuf:"bytes,3,opt,name=paper_size,json=paperSize,proto3" json:"paper_size,omitempty"`
+	CopyType            string                 `protobuf:"bytes,4,opt,name=copy_type,json=copyType,proto3" json:"copy_type,omitempty"`
+	TaxMode             string                 `protobuf:"bytes,5,opt,name=tax_mode,json=taxMode,proto3" json:"tax_mode,omitempty"`
+	BrandColor          string                 `protobuf:"bytes,6,opt,name=brand_color,json=brandColor,proto3" json:"brand_color,omitempty"`
+	ShowBankDetails     bool                   `protobuf:"varint,7,opt,name=show_bank_details,json=showBankDetails,proto3" json:"show_bank_details,omitempty"`
+	ShowUpiQr           bool                   `protobuf:"varint,8,opt,name=show_upi_qr,json=showUpiQr,proto3" json:"show_upi_qr,omitempty"`
+	ShowTaxSummary      bool                   `protobuf:"varint,9,opt,name=show_tax_summary,json=showTaxSummary,proto3" json:"show_tax_summary,omitempty"`
+	BusinessSubtitle    string                 `protobuf:"bytes,10,opt,name=business_subtitle,json=businessSubtitle,proto3" json:"business_subtitle,omitempty"`
+	SignatoryTitle      string                 `protobuf:"bytes,11,opt,name=signatory_title,json=signatoryTitle,proto3" json:"signatory_title,omitempty"`
+	DefaultTerms        string                 `protobuf:"bytes,12,opt,name=default_terms,json=defaultTerms,proto3" json:"default_terms,omitempty"`
+	DefaultJurisdiction string                 `protobuf:"bytes,13,opt,name=default_jurisdiction,json=defaultJurisdiction,proto3" json:"default_jurisdiction,omitempty"`
+	DefaultInterestRate string                 `protobuf:"bytes,14,opt,name=default_interest_rate,json=defaultInterestRate,proto3" json:"default_interest_rate,omitempty"`
+	DefaultReturnPolicy string                 `protobuf:"bytes,15,opt,name=default_return_policy,json=defaultReturnPolicy,proto3" json:"default_return_policy,omitempty"`
+	TemplateOptionsJson string                 `protobuf:"bytes,16,opt,name=template_options_json,json=templateOptionsJson,proto3" json:"template_options_json,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *UpdateTenantBillingTemplateRequest) Reset() {
+	*x = UpdateTenantBillingTemplateRequest{}
+	mi := &file_billing_v1_billing_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateTenantBillingTemplateRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateTenantBillingTemplateRequest) ProtoMessage() {}
+
+func (x *UpdateTenantBillingTemplateRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_billing_v1_billing_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateTenantBillingTemplateRequest.ProtoReflect.Descriptor instead.
+func (*UpdateTenantBillingTemplateRequest) Descriptor() ([]byte, []int) {
+	return file_billing_v1_billing_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *UpdateTenantBillingTemplateRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *UpdateTenantBillingTemplateRequest) GetTemplateId() string {
+	if x != nil {
+		return x.TemplateId
+	}
+	return ""
+}
+
+func (x *UpdateTenantBillingTemplateRequest) GetPaperSize() string {
+	if x != nil {
+		return x.PaperSize
+	}
+	return ""
+}
+
+func (x *UpdateTenantBillingTemplateRequest) GetCopyType() string {
+	if x != nil {
+		return x.CopyType
+	}
+	return ""
+}
+
+func (x *UpdateTenantBillingTemplateRequest) GetTaxMode() string {
+	if x != nil {
+		return x.TaxMode
+	}
+	return ""
+}
+
+func (x *UpdateTenantBillingTemplateRequest) GetBrandColor() string {
+	if x != nil {
+		return x.BrandColor
+	}
+	return ""
+}
+
+func (x *UpdateTenantBillingTemplateRequest) GetShowBankDetails() bool {
+	if x != nil {
+		return x.ShowBankDetails
+	}
+	return false
+}
+
+func (x *UpdateTenantBillingTemplateRequest) GetShowUpiQr() bool {
+	if x != nil {
+		return x.ShowUpiQr
+	}
+	return false
+}
+
+func (x *UpdateTenantBillingTemplateRequest) GetShowTaxSummary() bool {
+	if x != nil {
+		return x.ShowTaxSummary
+	}
+	return false
+}
+
+func (x *UpdateTenantBillingTemplateRequest) GetBusinessSubtitle() string {
+	if x != nil {
+		return x.BusinessSubtitle
+	}
+	return ""
+}
+
+func (x *UpdateTenantBillingTemplateRequest) GetSignatoryTitle() string {
+	if x != nil {
+		return x.SignatoryTitle
+	}
+	return ""
+}
+
+func (x *UpdateTenantBillingTemplateRequest) GetDefaultTerms() string {
+	if x != nil {
+		return x.DefaultTerms
+	}
+	return ""
+}
+
+func (x *UpdateTenantBillingTemplateRequest) GetDefaultJurisdiction() string {
+	if x != nil {
+		return x.DefaultJurisdiction
+	}
+	return ""
+}
+
+func (x *UpdateTenantBillingTemplateRequest) GetDefaultInterestRate() string {
+	if x != nil {
+		return x.DefaultInterestRate
+	}
+	return ""
+}
+
+func (x *UpdateTenantBillingTemplateRequest) GetDefaultReturnPolicy() string {
+	if x != nil {
+		return x.DefaultReturnPolicy
+	}
+	return ""
+}
+
+func (x *UpdateTenantBillingTemplateRequest) GetTemplateOptionsJson() string {
+	if x != nil {
+		return x.TemplateOptionsJson
+	}
+	return ""
+}
+
+type UpdateTenantBillingTemplateResponse struct {
+	state         protoimpl.MessageState            `protogen:"open.v1"`
+	Message       string                            `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	Template      *GetTenantBillingTemplateResponse `protobuf:"bytes,2,opt,name=template,proto3" json:"template,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateTenantBillingTemplateResponse) Reset() {
+	*x = UpdateTenantBillingTemplateResponse{}
+	mi := &file_billing_v1_billing_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateTenantBillingTemplateResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateTenantBillingTemplateResponse) ProtoMessage() {}
+
+func (x *UpdateTenantBillingTemplateResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_billing_v1_billing_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateTenantBillingTemplateResponse.ProtoReflect.Descriptor instead.
+func (*UpdateTenantBillingTemplateResponse) Descriptor() ([]byte, []int) {
+	return file_billing_v1_billing_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *UpdateTenantBillingTemplateResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *UpdateTenantBillingTemplateResponse) GetTemplate() *GetTenantBillingTemplateResponse {
+	if x != nil {
+		return x.Template
+	}
+	return nil
+}
+
 var File_billing_v1_billing_proto protoreflect.FileDescriptor
 
 const file_billing_v1_billing_proto_rawDesc = "" +
@@ -2251,7 +2731,7 @@ const file_billing_v1_billing_proto_rawDesc = "" +
 	"\x0fdiscount_amount\x18\x15 \x01(\tR\x0ediscountAmount\x12\x1b\n" +
 	"\tcgst_rate\x18\x16 \x01(\tR\bcgstRate\x12\x1b\n" +
 	"\tsgst_rate\x18\x17 \x01(\tR\bsgstRate\x12\x1b\n" +
-	"\tigst_rate\x18\x18 \x01(\tR\bigstRate\"\xb7\x0e\n" +
+	"\tigst_rate\x18\x18 \x01(\tR\bigstRate\"\xc8\x0f\n" +
 	"\fInvoiceProto\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12%\n" +
@@ -2317,7 +2797,13 @@ const file_billing_v1_billing_proto_rawDesc = "" +
 	"\vutgst_total\x182 \x01(\tR\n" +
 	"utgstTotal\x12$\n" +
 	"\x0eis_inter_state\x183 \x01(\bR\fisInterState\x12%\n" +
-	"\x0ecustomer_gstin\x184 \x01(\tR\rcustomerGstin\"2\n" +
+	"\x0ecustomer_gstin\x184 \x01(\tR\rcustomerGstin\x12\x1f\n" +
+	"\vtemplate_id\x185 \x01(\tR\n" +
+	"templateId\x12\x1d\n" +
+	"\n" +
+	"paper_size\x186 \x01(\tR\tpaperSize\x12\x1b\n" +
+	"\tcopy_type\x187 \x01(\tR\bcopyType\x122\n" +
+	"\x15template_options_json\x188 \x01(\tR\x13templateOptionsJson\"2\n" +
 	"\x13ListInvoicesRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\"L\n" +
 	"\x14ListInvoicesResponse\x124\n" +
@@ -2345,7 +2831,8 @@ const file_billing_v1_billing_proto_rawDesc = "" +
 	"\vexpiry_date\x18\v \x01(\tR\n" +
 	"expiryDate\x12\x10\n" +
 	"\x03mrp\x18\f \x01(\tR\x03mrp\x12#\n" +
-	"\rrack_location\x18\r \x01(\tR\frackLocation\"\xfe\t\n" +
+	"\rrack_location\x18\r \x01(\tR\frackLocation\"\xf2\n" +
+	"\n" +
 	"\x14CreateInvoiceRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1f\n" +
@@ -2385,7 +2872,12 @@ const file_billing_v1_billing_proto_rawDesc = "" +
 	"\rchange_amount\x18\x1f \x01(\tR\fchangeAmount\x12=\n" +
 	"\x05items\x18  \x03(\v2'.billing.v1.CreateInvoiceItemInputProtoR\x05items\x12:\n" +
 	"\x19subscription_period_start\x18! \x01(\tR\x17subscriptionPeriodStart\x126\n" +
-	"\x17subscription_period_end\x18\" \x01(\tR\x15subscriptionPeriodEnd\"K\n" +
+	"\x17subscription_period_end\x18\" \x01(\tR\x15subscriptionPeriodEnd\x12\x1f\n" +
+	"\vtemplate_id\x18# \x01(\tR\n" +
+	"templateId\x12\x1d\n" +
+	"\n" +
+	"paper_size\x18$ \x01(\tR\tpaperSize\x122\n" +
+	"\x15template_options_json\x18% \x01(\tR\x13templateOptionsJson\"K\n" +
 	"\x15CreateInvoiceResponse\x122\n" +
 	"\ainvoice\x18\x01 \x01(\v2\x18.billing.v1.InvoiceProtoR\ainvoice\"\x83\x01\n" +
 	"\x14CancelInvoiceRequest\x12\x1b\n" +
@@ -2466,7 +2958,54 @@ const file_billing_v1_billing_proto_rawDesc = "" +
 	"\x14total_invoices_count\x18\x04 \x01(\x05R\x12totalInvoicesCount\x12.\n" +
 	"\x13paid_invoices_count\x18\x05 \x01(\x05R\x11paidInvoicesCount\x122\n" +
 	"\x15unpaid_invoices_count\x18\x06 \x01(\x05R\x13unpaidInvoicesCount\x12L\n" +
-	"\x0ftop_receivables\x18\a \x03(\v2#.billing.v1.CustomerReceivableProtoR\x0etopReceivables2\xd5\x05\n" +
+	"\x0ftop_receivables\x18\a \x03(\v2#.billing.v1.CustomerReceivableProtoR\x0etopReceivables\">\n" +
+	"\x1fGetTenantBillingTemplateRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\"\x98\x05\n" +
+	" GetTenantBillingTemplateResponse\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1f\n" +
+	"\vtemplate_id\x18\x02 \x01(\tR\n" +
+	"templateId\x12\x1d\n" +
+	"\n" +
+	"paper_size\x18\x03 \x01(\tR\tpaperSize\x12\x1b\n" +
+	"\tcopy_type\x18\x04 \x01(\tR\bcopyType\x12\x19\n" +
+	"\btax_mode\x18\x05 \x01(\tR\ataxMode\x12\x1f\n" +
+	"\vbrand_color\x18\x06 \x01(\tR\n" +
+	"brandColor\x12*\n" +
+	"\x11show_bank_details\x18\a \x01(\bR\x0fshowBankDetails\x12\x1e\n" +
+	"\vshow_upi_qr\x18\b \x01(\bR\tshowUpiQr\x12(\n" +
+	"\x10show_tax_summary\x18\t \x01(\bR\x0eshowTaxSummary\x12+\n" +
+	"\x11business_subtitle\x18\n" +
+	" \x01(\tR\x10businessSubtitle\x12'\n" +
+	"\x0fsignatory_title\x18\v \x01(\tR\x0esignatoryTitle\x12#\n" +
+	"\rdefault_terms\x18\f \x01(\tR\fdefaultTerms\x121\n" +
+	"\x14default_jurisdiction\x18\r \x01(\tR\x13defaultJurisdiction\x122\n" +
+	"\x15default_interest_rate\x18\x0e \x01(\tR\x13defaultInterestRate\x122\n" +
+	"\x15default_return_policy\x18\x0f \x01(\tR\x13defaultReturnPolicy\x122\n" +
+	"\x15template_options_json\x18\x10 \x01(\tR\x13templateOptionsJson\"\x9a\x05\n" +
+	"\"UpdateTenantBillingTemplateRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1f\n" +
+	"\vtemplate_id\x18\x02 \x01(\tR\n" +
+	"templateId\x12\x1d\n" +
+	"\n" +
+	"paper_size\x18\x03 \x01(\tR\tpaperSize\x12\x1b\n" +
+	"\tcopy_type\x18\x04 \x01(\tR\bcopyType\x12\x19\n" +
+	"\btax_mode\x18\x05 \x01(\tR\ataxMode\x12\x1f\n" +
+	"\vbrand_color\x18\x06 \x01(\tR\n" +
+	"brandColor\x12*\n" +
+	"\x11show_bank_details\x18\a \x01(\bR\x0fshowBankDetails\x12\x1e\n" +
+	"\vshow_upi_qr\x18\b \x01(\bR\tshowUpiQr\x12(\n" +
+	"\x10show_tax_summary\x18\t \x01(\bR\x0eshowTaxSummary\x12+\n" +
+	"\x11business_subtitle\x18\n" +
+	" \x01(\tR\x10businessSubtitle\x12'\n" +
+	"\x0fsignatory_title\x18\v \x01(\tR\x0esignatoryTitle\x12#\n" +
+	"\rdefault_terms\x18\f \x01(\tR\fdefaultTerms\x121\n" +
+	"\x14default_jurisdiction\x18\r \x01(\tR\x13defaultJurisdiction\x122\n" +
+	"\x15default_interest_rate\x18\x0e \x01(\tR\x13defaultInterestRate\x122\n" +
+	"\x15default_return_policy\x18\x0f \x01(\tR\x13defaultReturnPolicy\x122\n" +
+	"\x15template_options_json\x18\x10 \x01(\tR\x13templateOptionsJson\"\x89\x01\n" +
+	"#UpdateTenantBillingTemplateResponse\x12\x18\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage\x12H\n" +
+	"\btemplate\x18\x02 \x01(\v2,.billing.v1.GetTenantBillingTemplateResponseR\btemplate2\xcc\a\n" +
 	"\x0eBillingService\x12Q\n" +
 	"\fListInvoices\x12\x1f.billing.v1.ListInvoicesRequest\x1a .billing.v1.ListInvoicesResponse\x12K\n" +
 	"\n" +
@@ -2476,7 +3015,9 @@ const file_billing_v1_billing_proto_rawDesc = "" +
 	"\x0fUpdateLogistics\x12\".billing.v1.UpdateLogisticsRequest\x1a#.billing.v1.UpdateLogisticsResponse\x12c\n" +
 	"\x12GenerateInvoicePDF\x12%.billing.v1.GenerateInvoicePDFRequest\x1a&.billing.v1.GenerateInvoicePDFResponse\x12T\n" +
 	"\rRecordPayment\x12 .billing.v1.RecordPaymentRequest\x1a!.billing.v1.RecordPaymentResponse\x12`\n" +
-	"\x11GetBillingSummary\x12$.billing.v1.GetBillingSummaryRequest\x1a%.billing.v1.GetBillingSummaryResponseB&Z$drayya-core/gen/billing/v1;billingv1b\x06proto3"
+	"\x11GetBillingSummary\x12$.billing.v1.GetBillingSummaryRequest\x1a%.billing.v1.GetBillingSummaryResponse\x12u\n" +
+	"\x18GetTenantBillingTemplate\x12+.billing.v1.GetTenantBillingTemplateRequest\x1a,.billing.v1.GetTenantBillingTemplateResponse\x12~\n" +
+	"\x1bUpdateTenantBillingTemplate\x12..billing.v1.UpdateTenantBillingTemplateRequest\x1a/.billing.v1.UpdateTenantBillingTemplateResponseB&Z$drayya-core/gen/billing/v1;billingv1b\x06proto3"
 
 var (
 	file_billing_v1_billing_proto_rawDescOnce sync.Once
@@ -2490,28 +3031,32 @@ func file_billing_v1_billing_proto_rawDescGZIP() []byte {
 	return file_billing_v1_billing_proto_rawDescData
 }
 
-var file_billing_v1_billing_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_billing_v1_billing_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_billing_v1_billing_proto_goTypes = []any{
-	(*InvoiceItemProto)(nil),            // 0: billing.v1.InvoiceItemProto
-	(*InvoiceProto)(nil),                // 1: billing.v1.InvoiceProto
-	(*ListInvoicesRequest)(nil),         // 2: billing.v1.ListInvoicesRequest
-	(*ListInvoicesResponse)(nil),        // 3: billing.v1.ListInvoicesResponse
-	(*GetInvoiceRequest)(nil),           // 4: billing.v1.GetInvoiceRequest
-	(*GetInvoiceResponse)(nil),          // 5: billing.v1.GetInvoiceResponse
-	(*CreateInvoiceItemInputProto)(nil), // 6: billing.v1.CreateInvoiceItemInputProto
-	(*CreateInvoiceRequest)(nil),        // 7: billing.v1.CreateInvoiceRequest
-	(*CreateInvoiceResponse)(nil),       // 8: billing.v1.CreateInvoiceResponse
-	(*CancelInvoiceRequest)(nil),        // 9: billing.v1.CancelInvoiceRequest
-	(*CancelInvoiceResponse)(nil),       // 10: billing.v1.CancelInvoiceResponse
-	(*UpdateLogisticsRequest)(nil),      // 11: billing.v1.UpdateLogisticsRequest
-	(*UpdateLogisticsResponse)(nil),     // 12: billing.v1.UpdateLogisticsResponse
-	(*GenerateInvoicePDFRequest)(nil),   // 13: billing.v1.GenerateInvoicePDFRequest
-	(*GenerateInvoicePDFResponse)(nil),  // 14: billing.v1.GenerateInvoicePDFResponse
-	(*RecordPaymentRequest)(nil),        // 15: billing.v1.RecordPaymentRequest
-	(*RecordPaymentResponse)(nil),       // 16: billing.v1.RecordPaymentResponse
-	(*CustomerReceivableProto)(nil),     // 17: billing.v1.CustomerReceivableProto
-	(*GetBillingSummaryRequest)(nil),    // 18: billing.v1.GetBillingSummaryRequest
-	(*GetBillingSummaryResponse)(nil),   // 19: billing.v1.GetBillingSummaryResponse
+	(*InvoiceItemProto)(nil),                    // 0: billing.v1.InvoiceItemProto
+	(*InvoiceProto)(nil),                        // 1: billing.v1.InvoiceProto
+	(*ListInvoicesRequest)(nil),                 // 2: billing.v1.ListInvoicesRequest
+	(*ListInvoicesResponse)(nil),                // 3: billing.v1.ListInvoicesResponse
+	(*GetInvoiceRequest)(nil),                   // 4: billing.v1.GetInvoiceRequest
+	(*GetInvoiceResponse)(nil),                  // 5: billing.v1.GetInvoiceResponse
+	(*CreateInvoiceItemInputProto)(nil),         // 6: billing.v1.CreateInvoiceItemInputProto
+	(*CreateInvoiceRequest)(nil),                // 7: billing.v1.CreateInvoiceRequest
+	(*CreateInvoiceResponse)(nil),               // 8: billing.v1.CreateInvoiceResponse
+	(*CancelInvoiceRequest)(nil),                // 9: billing.v1.CancelInvoiceRequest
+	(*CancelInvoiceResponse)(nil),               // 10: billing.v1.CancelInvoiceResponse
+	(*UpdateLogisticsRequest)(nil),              // 11: billing.v1.UpdateLogisticsRequest
+	(*UpdateLogisticsResponse)(nil),             // 12: billing.v1.UpdateLogisticsResponse
+	(*GenerateInvoicePDFRequest)(nil),           // 13: billing.v1.GenerateInvoicePDFRequest
+	(*GenerateInvoicePDFResponse)(nil),          // 14: billing.v1.GenerateInvoicePDFResponse
+	(*RecordPaymentRequest)(nil),                // 15: billing.v1.RecordPaymentRequest
+	(*RecordPaymentResponse)(nil),               // 16: billing.v1.RecordPaymentResponse
+	(*CustomerReceivableProto)(nil),             // 17: billing.v1.CustomerReceivableProto
+	(*GetBillingSummaryRequest)(nil),            // 18: billing.v1.GetBillingSummaryRequest
+	(*GetBillingSummaryResponse)(nil),           // 19: billing.v1.GetBillingSummaryResponse
+	(*GetTenantBillingTemplateRequest)(nil),     // 20: billing.v1.GetTenantBillingTemplateRequest
+	(*GetTenantBillingTemplateResponse)(nil),    // 21: billing.v1.GetTenantBillingTemplateResponse
+	(*UpdateTenantBillingTemplateRequest)(nil),  // 22: billing.v1.UpdateTenantBillingTemplateRequest
+	(*UpdateTenantBillingTemplateResponse)(nil), // 23: billing.v1.UpdateTenantBillingTemplateResponse
 }
 var file_billing_v1_billing_proto_depIdxs = []int32{
 	0,  // 0: billing.v1.InvoiceProto.items:type_name -> billing.v1.InvoiceItemProto
@@ -2522,27 +3067,32 @@ var file_billing_v1_billing_proto_depIdxs = []int32{
 	1,  // 5: billing.v1.UpdateLogisticsResponse.invoice:type_name -> billing.v1.InvoiceProto
 	1,  // 6: billing.v1.RecordPaymentResponse.invoice:type_name -> billing.v1.InvoiceProto
 	17, // 7: billing.v1.GetBillingSummaryResponse.top_receivables:type_name -> billing.v1.CustomerReceivableProto
-	2,  // 8: billing.v1.BillingService.ListInvoices:input_type -> billing.v1.ListInvoicesRequest
-	4,  // 9: billing.v1.BillingService.GetInvoice:input_type -> billing.v1.GetInvoiceRequest
-	7,  // 10: billing.v1.BillingService.CreateInvoice:input_type -> billing.v1.CreateInvoiceRequest
-	9,  // 11: billing.v1.BillingService.CancelInvoice:input_type -> billing.v1.CancelInvoiceRequest
-	11, // 12: billing.v1.BillingService.UpdateLogistics:input_type -> billing.v1.UpdateLogisticsRequest
-	13, // 13: billing.v1.BillingService.GenerateInvoicePDF:input_type -> billing.v1.GenerateInvoicePDFRequest
-	15, // 14: billing.v1.BillingService.RecordPayment:input_type -> billing.v1.RecordPaymentRequest
-	18, // 15: billing.v1.BillingService.GetBillingSummary:input_type -> billing.v1.GetBillingSummaryRequest
-	3,  // 16: billing.v1.BillingService.ListInvoices:output_type -> billing.v1.ListInvoicesResponse
-	5,  // 17: billing.v1.BillingService.GetInvoice:output_type -> billing.v1.GetInvoiceResponse
-	8,  // 18: billing.v1.BillingService.CreateInvoice:output_type -> billing.v1.CreateInvoiceResponse
-	10, // 19: billing.v1.BillingService.CancelInvoice:output_type -> billing.v1.CancelInvoiceResponse
-	12, // 20: billing.v1.BillingService.UpdateLogistics:output_type -> billing.v1.UpdateLogisticsResponse
-	14, // 21: billing.v1.BillingService.GenerateInvoicePDF:output_type -> billing.v1.GenerateInvoicePDFResponse
-	16, // 22: billing.v1.BillingService.RecordPayment:output_type -> billing.v1.RecordPaymentResponse
-	19, // 23: billing.v1.BillingService.GetBillingSummary:output_type -> billing.v1.GetBillingSummaryResponse
-	16, // [16:24] is the sub-list for method output_type
-	8,  // [8:16] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	21, // 8: billing.v1.UpdateTenantBillingTemplateResponse.template:type_name -> billing.v1.GetTenantBillingTemplateResponse
+	2,  // 9: billing.v1.BillingService.ListInvoices:input_type -> billing.v1.ListInvoicesRequest
+	4,  // 10: billing.v1.BillingService.GetInvoice:input_type -> billing.v1.GetInvoiceRequest
+	7,  // 11: billing.v1.BillingService.CreateInvoice:input_type -> billing.v1.CreateInvoiceRequest
+	9,  // 12: billing.v1.BillingService.CancelInvoice:input_type -> billing.v1.CancelInvoiceRequest
+	11, // 13: billing.v1.BillingService.UpdateLogistics:input_type -> billing.v1.UpdateLogisticsRequest
+	13, // 14: billing.v1.BillingService.GenerateInvoicePDF:input_type -> billing.v1.GenerateInvoicePDFRequest
+	15, // 15: billing.v1.BillingService.RecordPayment:input_type -> billing.v1.RecordPaymentRequest
+	18, // 16: billing.v1.BillingService.GetBillingSummary:input_type -> billing.v1.GetBillingSummaryRequest
+	20, // 17: billing.v1.BillingService.GetTenantBillingTemplate:input_type -> billing.v1.GetTenantBillingTemplateRequest
+	22, // 18: billing.v1.BillingService.UpdateTenantBillingTemplate:input_type -> billing.v1.UpdateTenantBillingTemplateRequest
+	3,  // 19: billing.v1.BillingService.ListInvoices:output_type -> billing.v1.ListInvoicesResponse
+	5,  // 20: billing.v1.BillingService.GetInvoice:output_type -> billing.v1.GetInvoiceResponse
+	8,  // 21: billing.v1.BillingService.CreateInvoice:output_type -> billing.v1.CreateInvoiceResponse
+	10, // 22: billing.v1.BillingService.CancelInvoice:output_type -> billing.v1.CancelInvoiceResponse
+	12, // 23: billing.v1.BillingService.UpdateLogistics:output_type -> billing.v1.UpdateLogisticsResponse
+	14, // 24: billing.v1.BillingService.GenerateInvoicePDF:output_type -> billing.v1.GenerateInvoicePDFResponse
+	16, // 25: billing.v1.BillingService.RecordPayment:output_type -> billing.v1.RecordPaymentResponse
+	19, // 26: billing.v1.BillingService.GetBillingSummary:output_type -> billing.v1.GetBillingSummaryResponse
+	21, // 27: billing.v1.BillingService.GetTenantBillingTemplate:output_type -> billing.v1.GetTenantBillingTemplateResponse
+	23, // 28: billing.v1.BillingService.UpdateTenantBillingTemplate:output_type -> billing.v1.UpdateTenantBillingTemplateResponse
+	19, // [19:29] is the sub-list for method output_type
+	9,  // [9:19] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_billing_v1_billing_proto_init() }
@@ -2556,7 +3106,7 @@ func file_billing_v1_billing_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_billing_v1_billing_proto_rawDesc), len(file_billing_v1_billing_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   20,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

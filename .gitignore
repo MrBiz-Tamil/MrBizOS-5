@@ -72,8 +72,11 @@ venv/
 *.egg-info/
 
 # ───────────────────────── Editor / OS ───────────────────────────────────
+# Reference files
+SaaS billing/
+.vscode/
+.idea/
 .DS_Store
 Thumbs.db
-.idea/
-.vscode/
 *.swp
+

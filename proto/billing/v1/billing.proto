@@ -13,6 +13,8 @@ service BillingService {
   rpc GenerateInvoicePDF(GenerateInvoicePDFRequest) returns (GenerateInvoicePDFResponse);
   rpc RecordPayment(RecordPaymentRequest) returns (RecordPaymentResponse);
   rpc GetBillingSummary(GetBillingSummaryRequest) returns (GetBillingSummaryResponse);
+  rpc GetTenantBillingTemplate(GetTenantBillingTemplateRequest) returns (GetTenantBillingTemplateResponse);
+  rpc UpdateTenantBillingTemplate(UpdateTenantBillingTemplateRequest) returns (UpdateTenantBillingTemplateResponse);
 }
 
 message InvoiceItemProto {
@@ -96,6 +98,10 @@ message InvoiceProto {
   string utgst_total = 50;
   bool is_inter_state = 51;
   string customer_gstin = 52;
+  string template_id = 53;
+  string paper_size = 54;
+  string copy_type = 55;
+  string template_options_json = 56;
 }
 
 message ListInvoicesRequest {
@@ -166,6 +172,9 @@ message CreateInvoiceRequest {
   repeated CreateInvoiceItemInputProto items = 32;
   string subscription_period_start = 33; // service period / hostel check-in (RFC3339 or YYYY-MM-DD)
   string subscription_period_end = 34;   // service period / hostel check-out
+  string template_id = 35;
+  string paper_size = 36;
+  string template_options_json = 37;
 }
 
 message CreateInvoiceResponse {
@@ -258,5 +267,52 @@ message GetBillingSummaryResponse {
   int32 paid_invoices_count = 5;
   int32 unpaid_invoices_count = 6;
   repeated CustomerReceivableProto top_receivables = 7;
+}
+
+message GetTenantBillingTemplateRequest {
+  string tenant_id = 1;
+}
+
+message GetTenantBillingTemplateResponse {
+  string tenant_id = 1;
+  string template_id = 2;
+  string paper_size = 3;
+  string copy_type = 4;
+  string tax_mode = 5;
+  string brand_color = 6;
+  bool show_bank_details = 7;
+  bool show_upi_qr = 8;
+  bool show_tax_summary = 9;
+  string business_subtitle = 10;
+  string signatory_title = 11;
+  string default_terms = 12;
+  string default_jurisdiction = 13;
+  string default_interest_rate = 14;
+  string default_return_policy = 15;
+  string template_options_json = 16;
+}
+
+message UpdateTenantBillingTemplateRequest {
+  string tenant_id = 1;
+  string template_id = 2;
+  string paper_size = 3;
+  string copy_type = 4;
+  string tax_mode = 5;
+  string brand_color = 6;
+  bool show_bank_details = 7;
+  bool show_upi_qr = 8;
+  bool show_tax_summary = 9;
+  string business_subtitle = 10;
+  string signatory_title = 11;
+  string default_terms = 12;
+  string default_jurisdiction = 13;
+  string default_interest_rate = 14;
+  string default_return_policy = 15;
+  string template_options_json = 16;
+}
+
+message UpdateTenantBillingTemplateResponse {
+  string message = 1;
+  GetTenantBillingTemplateResponse template = 2;
 }
 
