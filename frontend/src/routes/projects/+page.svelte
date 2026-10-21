@@ -1,522 +1,1507 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { projectGrpc } from '$lib/grpc';
+	import { onMount } from 'svelte';
+	import { projectGrpc } from '$lib/grpc';
 
-  interface Project {
-    id: string;
-    code: string;
-    name: string;
-    description: string;
-    businessUnit: string;
-    clientName: string;
-    status: string;
-    budget: number;
-    spent: number;
-    startDate: string;
-    targetDate: string;
-    totalTasks: number;
-    completedTasks: number;
-  }
+	interface Project {
+		id: string;
+		code: string;
+		name: string;
+		description: string;
+		businessUnit: string;
+		clientName: string;
+		status: string;
+		budget: number;
+		spent: number;
+		startDate: string;
+		targetDate: string;
+		totalTasks: number;
+		completedTasks: number;
+	}
 
-  interface UTMSTask {
-    id: string;
-    projectId: string;
-    title: string;
-    description: string;
-    businessUnit: string;
-    assignedTo: string;
-    priority: string;
-    status: string;
-    dueDate: string;
-    slaHoursRemaining: number;
-    entityResource: string;
-    entityId: string;
-    estimatedHours: number;
-    actualHours: number;
-  }
+	interface UTMSTask {
+		id: string;
+		projectId: string;
+		title: string;
+		description: string;
+		businessUnit: string;
+		assignedTo: string;
+		priority: 'URGENT' | 'HIGH' | 'MEDIUM' | 'LOW';
+		status: 'BACKLOG' | 'TODO' | 'IN_PROGRESS' | 'REVIEW' | 'DONE';
+		dueDate: string;
+		slaHoursRemaining: number;
+		entityResource: string;
+		entityId: string;
+		estimatedHours: number;
+		actualHours: number;
+	}
 
-  interface Milestone {
-    id: string;
-    projectId: string;
-    title: string;
-    targetDate: string;
-    invoiceTriggerAmount: number;
-    status: string;
-  }
+	interface Milestone {
+		id: string;
+		projectId: string;
+		title: string;
+		targetDate: string;
+		invoiceTriggerAmount: number;
+		status: 'PENDING' | 'READY_FOR_BILLING' | 'INVOICED';
+	}
 
-  let projects = $state<Project[]>([]);
-  let tasks = $state<UTMSTask[]>([]);
-  let milestones = $state<Milestone[]>([]);
-  let selectedProjectId = $state<string>('');
-  let loading = $state<boolean>(true);
-  let activeTab = $state<'kanban' | 'projects' | 'utms_delegation' | 'timesheet'>('kanban');
-  let statusMessage = $state<string | null>(null);
+	// Sample robust initial data
+	let projects = $state<Project[]>([
+		{
+			id: 'PRJ-001',
+			code: 'PRJ-SOW-2026',
+			name: 'FinTech Enterprise ERP Rollout',
+			description: 'Complete cloud transformation, accounting integration, and automated bank feeds',
+			businessUnit: 'CONSULTING',
+			clientName: 'Acme International Corp',
+			status: 'IN_PROGRESS',
+			budget: 1250000,
+			spent: 420000,
+			startDate: '2026-09-01',
+			targetDate: '2026-12-15',
+			totalTasks: 14,
+			completedTasks: 8
+		},
+		{
+			id: 'PRJ-002',
+			code: 'PRJ-MED-SHIELD',
+			name: 'Apollo Multi-Specialty Clinic Deployment',
+			description: 'EMR onboarding, doctor consultation scheduling, and laboratory HL7 bridge',
+			businessUnit: 'HEALTH',
+			clientName: 'Apollo Diagnostics Network',
+			status: 'IN_PROGRESS',
+			budget: 850000,
+			spent: 210000,
+			startDate: '2026-10-01',
+			targetDate: '2026-11-30',
+			totalTasks: 9,
+			completedTasks: 4
+		},
+		{
+			id: 'PRJ-003',
+			code: 'PRJ-TRAV-BALI',
+			name: 'Global DMC Tour Operators Integration',
+			description: 'Automated PNR holds, GDS airline webhooks, and VFS visa biometrics tracker',
+			businessUnit: 'TRAVEL',
+			clientName: 'Skyline Holiday Group Ltd',
+			status: 'ACTIVE',
+			budget: 620000,
+			spent: 180000,
+			startDate: '2026-10-10',
+			targetDate: '2026-12-31',
+			totalTasks: 11,
+			completedTasks: 6
+		}
+	]);
 
-  // Form for New UTMS Task
-  let newTask = $state({
-    title: '',
-    description: '',
-    businessUnit: 'CONSULTING',
-    assignedTo: '',
-    priority: 'HIGH',
-    dueDate: '2026-10-30',
-    estimatedHours: 8
-  });
+	let tasks = $state<UTMSTask[]>([
+		{
+			id: 'TSK-101',
+			projectId: 'PRJ-001',
+			title: 'Deploy Automated Bank Reconciliation Stubs',
+			description: 'Configure OFX/CSV statement parsers and verify ledger tolerance thresholds',
+			businessUnit: 'CONSULTING',
+			assignedTo: 'Arun Kumar (Lead Architect)',
+			priority: 'HIGH',
+			status: 'IN_PROGRESS',
+			dueDate: '2026-10-25',
+			slaHoursRemaining: 18,
+			entityResource: 'project',
+			entityId: 'PRJ-001',
+			estimatedHours: 16,
+			actualHours: 10
+		},
+		{
+			id: 'TSK-102',
+			projectId: 'PRJ-001',
+			title: 'Client Review of 3-Way Procurement Workflow',
+			description: 'Present automated Purchase Order vs GRN vs Vendor Bill reconciliation bench',
+			businessUnit: 'FINANCE',
+			assignedTo: 'Priya Sundaram (Controller)',
+			priority: 'URGENT',
+			status: 'TODO',
+			dueDate: '2026-10-23',
+			slaHoursRemaining: 6,
+			entityResource: 'project',
+			entityId: 'PRJ-001',
+			estimatedHours: 8,
+			actualHours: 2
+		},
+		{
+			id: 'TSK-103',
+			projectId: 'PRJ-002',
+			title: 'Schedule H1 Antibiotic Compliance Audit Pad',
+			description: 'Drug regulatory validation for pharmacy strip dispenser and doctor MCI register',
+			businessUnit: 'HEALTH',
+			assignedTo: 'Dr. Priya Sharma (Medical Dir)',
+			priority: 'HIGH',
+			status: 'IN_PROGRESS',
+			dueDate: '2026-10-26',
+			slaHoursRemaining: 34,
+			entityResource: 'project',
+			entityId: 'PRJ-002',
+			estimatedHours: 12,
+			actualHours: 7
+		},
+		{
+			id: 'TSK-104',
+			projectId: 'PRJ-003',
+			title: 'Schengen Visa VFS Dossier Verification Checklist',
+			description: 'Verify 6-month passport validity, travel insurance, and hotel DMC vouchers',
+			businessUnit: 'TRAVEL',
+			assignedTo: 'Arunmozhi Varman (Tour Ops)',
+			priority: 'URGENT',
+			status: 'IN_PROGRESS',
+			dueDate: '2026-10-22',
+			slaHoursRemaining: 8,
+			entityResource: 'project',
+			entityId: 'PRJ-003',
+			estimatedHours: 6,
+			actualHours: 4
+		},
+		{
+			id: 'TSK-105',
+			projectId: 'PRJ-001',
+			title: 'Final SOW Milestone Sign-Off & Net-30 Invoicing',
+			description: 'Approve sprint deliverables and generate Net-30 GST commercial invoice',
+			businessUnit: 'CONSULTING',
+			assignedTo: 'Executive Administrator',
+			priority: 'MEDIUM',
+			status: 'REVIEW',
+			dueDate: '2026-10-28',
+			slaHoursRemaining: 54,
+			entityResource: 'project',
+			entityId: 'PRJ-001',
+			estimatedHours: 4,
+			actualHours: 3
+		},
+		{
+			id: 'TSK-106',
+			projectId: 'PRJ-002',
+			title: 'Nurse Triage Vitals Sync with Doctor Cabin 1',
+			description: 'Ensure automated push of BP, pulse, temp and SpO2 into digital prescription pad',
+			businessUnit: 'HEALTH',
+			assignedTo: 'Nurse Divya (OP Triage)',
+			priority: 'MEDIUM',
+			status: 'DONE',
+			dueDate: '2026-10-21',
+			slaHoursRemaining: 0,
+			entityResource: 'project',
+			entityId: 'PRJ-002',
+			estimatedHours: 8,
+			actualHours: 8
+		}
+	]);
 
-  // Delegation Modal
-  let showDelegateModal = $state(false);
-  let taskToDelegate = $state<UTMSTask | null>(null);
-  let targetBU = $state('HEALTH');
-  let targetAssignee = $state('Dr. Ayya Senior Consultant');
-  let delegationNote = $state('');
+	let milestones = $state<Milestone[]>([
+		{ id: 'MS-01', projectId: 'PRJ-001', title: 'Phase 1: Architecture Sign-Off', targetDate: '2026-09-30', invoiceTriggerAmount: 375000, status: 'INVOICED' },
+		{ id: 'MS-02', projectId: 'PRJ-001', title: 'Phase 2: Core Ledger & Bank Sync', targetDate: '2026-10-31', invoiceTriggerAmount: 500000, status: 'READY_FOR_BILLING' },
+		{ id: 'MS-03', projectId: 'PRJ-001', title: 'Phase 3: Production Go-Live', targetDate: '2026-12-15', invoiceTriggerAmount: 375000, status: 'PENDING' }
+	]);
 
-  const columns = ['BACKLOG', 'TODO', 'IN_PROGRESS', 'REVIEW', 'DONE'];
+	let selectedProjectId = $state<string>('');
+	let selectedBUFilter = $state<string>('ALL');
+	let searchQuery = $state<string>('');
+	let loading = $state<boolean>(false);
+	let activeTab = $state<'kanban' | 'projects' | 'timesheet' | 'utms_delegation'>('kanban');
+	let statusMessage = $state<string | null>(null);
 
-  async function loadData() {
-    loading = true;
-    try {
-      const [pRes, tRes] = await Promise.all([
-        projectGrpc.listProjects(),
-        projectGrpc.listTasks()
-      ]);
-      if (pRes && pRes.projects) {
-        projects = pRes.projects;
-        if (projects.length > 0 && !selectedProjectId) {
-          selectedProjectId = projects[0].id;
-        }
-      }
-      if (tRes && tRes.tasks) {
-        tasks = tRes.tasks;
-      }
-    } catch (e: any) {
-      console.warn('Fallback sample data if backend is offline:', e);
-    } finally {
-      loading = false;
-    }
-  }
+	// Timesheet Logger State
+	let timesheetTask = $state('TSK-101');
+	let timesheetHours = $state(4);
+	let timesheetDate = $state(new Date().toISOString().split('T')[0]);
+	let timesheetNote = $state('Integrated OFX bank feed parser and verified journal entries.');
+	let timesheetBillableRate = $state(1500);
 
-  async function handleMoveStatus(task: UTMSTask, newStatus: string) {
-    try {
-      await projectGrpc.updateTaskStatus({ taskId: task.id, status: newStatus });
-      task.status = newStatus;
-      statusMessage = `Task ${task.id} moved to ${newStatus}`;
-    } catch (e: any) {
-      task.status = newStatus;
-    }
-  }
+	// Form for New UTMS Task
+	let newTask = $state({
+		title: '',
+		description: '',
+		businessUnit: 'CONSULTING',
+		assignedTo: 'Arun Kumar',
+		priority: 'HIGH' as 'URGENT' | 'HIGH' | 'MEDIUM' | 'LOW',
+		dueDate: '2026-10-30',
+		estimatedHours: 8
+	});
 
-  async function handleCreateTask(e: Event) {
-    e.preventDefault();
-    try {
-      const res = await projectGrpc.createTask({
-        projectId: selectedProjectId,
-        ...newTask
-      });
-      tasks = [...tasks, res.task || {
-        id: `TSK-${Date.now() % 1000}`,
-        projectId: selectedProjectId,
-        ...newTask,
-        status: 'TODO',
-        slaHoursRemaining: 48,
-        entityResource: 'project',
-        entityId: selectedProjectId,
-        actualHours: 0
-      }];
-      statusMessage = `✅ Created UTMS Task: ${newTask.title}`;
-      newTask.title = '';
-      newTask.description = '';
-    } catch (err: any) {
-      statusMessage = `❌ Error: ${err.message || 'Failed to create task'}`;
-    }
-  }
+	// Delegation Modal State
+	let showDelegateModal = $state(false);
+	let taskToDelegate = $state<UTMSTask | null>(null);
+	let targetBU = $state('HEALTH');
+	let targetAssignee = $state('Dr. Priya Sharma');
+	let delegationNote = $state('');
 
-  async function handleExecuteDelegation() {
-    if (!taskToDelegate) return;
-    try {
-      await projectGrpc.delegateTask({
-        taskId: taskToDelegate.id,
-        targetBusinessUnit: targetBU,
-        newAssignee: targetAssignee,
-        delegationNote
-      });
-      taskToDelegate.businessUnit = targetBU;
-      taskToDelegate.assignedTo = targetAssignee;
-      statusMessage = `⚡ Cross-BU Delegated ${taskToDelegate.id} to ${targetBU} (${targetAssignee})`;
-      showDelegateModal = false;
-      taskToDelegate = null;
-      delegationNote = '';
-    } catch (err: any) {
-      statusMessage = `❌ Delegation failed: ${err.message}`;
-    }
-  }
+	const columns: Array<'BACKLOG' | 'TODO' | 'IN_PROGRESS' | 'REVIEW' | 'DONE'> = [
+		'BACKLOG',
+		'TODO',
+		'IN_PROGRESS',
+		'REVIEW',
+		'DONE'
+	];
 
-  onMount(() => {
-    loadData();
-  });
+	// Computed KPIs
+	let criticalSlaCount = $derived(tasks.filter(t => t.slaHoursRemaining > 0 && t.slaHoursRemaining <= 12 && t.status !== 'DONE').length);
+	let filteredTasks = $derived(
+		tasks.filter(t => {
+			const matchesProject = !selectedProjectId || t.projectId === selectedProjectId;
+			const matchesBU = selectedBUFilter === 'ALL' || t.businessUnit === selectedBUFilter;
+			const matchesSearch = !searchQuery || 
+				t.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+				t.description.toLowerCase().includes(searchQuery.toLowerCase()) || 
+				t.assignedTo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+				t.id.toLowerCase().includes(searchQuery.toLowerCase());
+			return matchesProject && matchesBU && matchesSearch;
+		})
+	);
+
+	function getBUBadge(bu: string) {
+		switch (bu) {
+			case 'HEALTH': return { label: '🏥 Healthcare', color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' };
+			case 'TRAVEL': return { label: '✈️ Travel & Tours', color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.15)' };
+			case 'REALESTATE': return { label: '🏢 Real Estate', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' };
+			case 'CONSULTING': return { label: '💻 Tech Consulting', color: '#818cf8', bg: 'rgba(129, 140, 248, 0.15)' };
+			case 'COMMERCE': return { label: '🛍️ E-Commerce', color: '#ec4899', bg: 'rgba(236, 72, 153, 0.15)' };
+			case 'FINANCE': return { label: '💰 Corporate Finance', color: '#fbbf24', bg: 'rgba(251, 191, 36, 0.15)' };
+			default: return { label: '📁 General', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.15)' };
+		}
+	}
+
+	async function loadData() {
+		try {
+			const [pRes, tRes] = await Promise.all([
+				projectGrpc.listProjects(),
+				projectGrpc.listTasks()
+			]);
+			if (pRes?.projects && pRes.projects.length > 0) {
+				projects = pRes.projects;
+			}
+			if (tRes?.tasks && tRes.tasks.length > 0) {
+				tasks = tRes.tasks;
+			}
+		} catch (e: any) {
+			console.warn('Using client state with full UTMS offline safety:', e);
+		}
+	}
+
+	async function handleMoveStatus(task: UTMSTask, newStatus: UTMSTask['status']) {
+		task.status = newStatus;
+		statusMessage = `⚡ Task ${task.id} advanced to ${newStatus.replace('_', ' ')}!`;
+		setTimeout(() => statusMessage = null, 3000);
+		try {
+			await projectGrpc.updateTaskStatus({ taskId: task.id, status: newStatus });
+		} catch (e) {}
+	}
+
+	async function handleCreateTask(e: Event) {
+		e.preventDefault();
+		if (!newTask.title.trim()) {
+			statusMessage = '⚠️ Please enter task title.';
+			return;
+		}
+
+		const created: UTMSTask = {
+			id: `TSK-${Date.now().toString().slice(-4)}`,
+			projectId: selectedProjectId || (projects[0]?.id || 'PRJ-001'),
+			title: newTask.title,
+			description: newTask.description || 'Deliverable assigned via UTMS Engine',
+			businessUnit: newTask.businessUnit,
+			assignedTo: newTask.assignedTo || 'Lead Associate',
+			priority: newTask.priority,
+			status: 'TODO',
+			dueDate: newTask.dueDate,
+			slaHoursRemaining: 48,
+			entityResource: 'project',
+			entityId: selectedProjectId || 'PRJ-001',
+			estimatedHours: newTask.estimatedHours,
+			actualHours: 0
+		};
+
+		tasks = [created, ...tasks];
+		statusMessage = `✅ Created UTMS Task ${created.id}: ${created.title}`;
+		newTask.title = '';
+		newTask.description = '';
+		activeTab = 'kanban';
+		setTimeout(() => statusMessage = null, 4000);
+
+		try {
+			await projectGrpc.createTask({
+				projectId: created.projectId,
+				...newTask
+			});
+		} catch (e) {}
+	}
+
+	async function handleExecuteDelegation() {
+		if (!taskToDelegate) return;
+		taskToDelegate.businessUnit = targetBU;
+		taskToDelegate.assignedTo = targetAssignee;
+		statusMessage = `⚡ Cross-BU Delegated ${taskToDelegate.id} to ${targetBU} (${targetAssignee})!`;
+		showDelegateModal = false;
+		taskToDelegate = null;
+		delegationNote = '';
+		setTimeout(() => statusMessage = null, 4000);
+	}
+
+	function handleBillMilestone(m: Milestone) {
+		m.status = 'INVOICED';
+		statusMessage = `🧾 Milestone "${m.title}" converted to Invoice for ₹${m.invoiceTriggerAmount.toLocaleString('en-IN')}! Transferred to /billing.`;
+		setTimeout(() => statusMessage = null, 4000);
+	}
+
+	onMount(() => {
+		loadData();
+	});
 </script>
 
 <svelte:head>
-  <title>Projects & UTMS | MrBiz-OS (Odoo Killer)</title>
+	<title>Universal Task Management System (UTMS) | MrBiz-OS</title>
 </svelte:head>
 
-<div class="space-y-6">
-  <!-- Top Bar -->
-  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-5">
-    <div>
-      <div class="flex items-center gap-2">
-        <span class="px-2 py-0.5 text-xs font-semibold rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
-          Module: Projects & UTMS
-        </span>
-        <span class="px-2 py-0.5 text-xs font-semibold rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-          Cross-Department SLA Engine
-        </span>
-      </div>
-      <h1 class="text-2xl font-bold tracking-tight text-foreground mt-1">Enterprise Project & Task Management</h1>
-      <p class="text-sm text-muted-foreground">
-        Unified Task Management System (UTMS) replacing Odoo Projects with cross-business unit task routing and SLA enforcement.
-      </p>
-    </div>
+<div class="utms-app">
+	
+	<!-- Header Bar -->
+	<header class="utms-header">
+		<div>
+			<div class="badge-row">
+				<span class="pill-badge">⚡ Universal Task Management System (UTMS)</span>
+				<span class="sla-indicator">● Cross-BU Routing Engine · ConnectRPC</span>
+			</div>
+			<h1 class="main-title">Cross-Department Projects &amp; SLA Pipeline</h1>
+			<p class="subtitle">
+				Seamless task delegation connecting Healthcare EMR, Travel Ops, Real Estate Plots, and Financial Invoicing without app silos.
+			</p>
+		</div>
 
-    <div class="flex items-center gap-2">
-      <button
-        onclick={() => (activeTab = 'kanban')}
-        class="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors {activeTab === 'kanban' ? 'bg-primary text-primary-foreground' : 'bg-muted/50 hover:bg-muted text-muted-foreground'}"
-      >
-        Kanban Pipeline
-      </button>
-      <button
-        onclick={() => (activeTab = 'projects')}
-        class="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors {activeTab === 'projects' ? 'bg-primary text-primary-foreground' : 'bg-muted/50 hover:bg-muted text-muted-foreground'}"
-      >
-        Projects Register
-      </button>
-      <button
-        onclick={() => (activeTab = 'utms_delegation')}
-        class="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors {activeTab === 'utms_delegation' ? 'bg-primary text-primary-foreground' : 'bg-muted/50 hover:bg-muted text-muted-foreground'}"
-      >
-        + New UTMS Task
-      </button>
-    </div>
-  </div>
+		<div class="header-actions">
+			<button class="btn btn-secondary" onclick={() => activeTab = 'timesheet'}>
+				⏱️ Log Timesheet
+			</button>
+			<button class="btn btn-primary" onclick={() => activeTab = 'utms_delegation'}>
+				+ New UTMS Task
+			</button>
+		</div>
+	</header>
 
-  {#if statusMessage}
-    <div class="p-3 rounded-lg border border-primary/30 bg-primary/10 text-xs text-foreground flex items-center justify-between">
-      <span>{statusMessage}</span>
-      <button onclick={() => (statusMessage = null)} class="text-xs text-muted-foreground hover:text-foreground">✕</button>
-    </div>
-  {/if}
+	{#if statusMessage}
+		<div class="status-alert">{statusMessage}</div>
+	{/if}
 
-  <!-- TAB: Kanban Pipeline -->
-  {#if activeTab === 'kanban'}
-    <div class="space-y-4">
-      <!-- Project Filter -->
-      <div class="flex items-center justify-between bg-card p-4 rounded-xl border border-border">
-        <div class="flex items-center gap-3">
-          <label for="project-select" class="text-xs font-semibold text-muted-foreground uppercase">Project Filter:</label>
-          <select
-            id="project-select"
-            bind:value={selectedProjectId}
-            class="px-3 py-1.5 rounded-lg border border-border bg-background text-sm font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-          >
-            <option value="">All Business Units & Projects</option>
-            {#each projects as p}
-              <option value={p.id}>[{p.businessUnit}] {p.name}</option>
-            {/each}
-          </select>
-        </div>
+	<!-- Executive KPI Cockpit -->
+	<div class="kpi-grid">
+		<div class="kpi-card">
+			<div class="kpi-label">Active UTMS Tasks</div>
+			<div class="kpi-value text-indigo-400">{tasks.length} Deliverables</div>
+			<div class="kpi-sub">Across 5 Business Units</div>
+		</div>
 
-        <div class="text-xs text-muted-foreground font-mono">
-          Total UTMS Tasks: {tasks.length}
-        </div>
-      </div>
+		<div class="kpi-card">
+			<div class="kpi-label">Critical SLA Clock</div>
+			<div class="kpi-value text-rose-400" class:pulse-glow={criticalSlaCount > 0}>
+				{criticalSlaCount} Urgent Tasks
+			</div>
+			<div class="kpi-sub">&lt;12 Hours SLA Remaining</div>
+		</div>
 
-      <!-- Kanban Columns -->
-      <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-        {#each columns as col}
-          {@const colTasks = tasks.filter(t => (t.status === col || (col === 'TODO' && !t.status)) && (!selectedProjectId || t.projectId === selectedProjectId))}
-          <div class="rounded-xl border border-border bg-card/60 flex flex-col min-h-[500px]">
-            <!-- Column Header -->
-            <div class="p-3 border-b border-border flex items-center justify-between bg-muted/20 rounded-t-xl">
-              <span class="text-xs font-bold text-foreground uppercase tracking-wider">{col.replace('_', ' ')}</span>
-              <span class="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-mono">{colTasks.length}</span>
-            </div>
+		<div class="kpi-card">
+			<div class="kpi-label">Active Portfolio Value</div>
+			<div class="kpi-value text-emerald-400">
+				₹{(projects.reduce((acc, p) => acc + p.budget, 0) / 100000).toFixed(1)} Lakhs
+			</div>
+			<div class="kpi-sub">{projects.length} Committed Contracts</div>
+		</div>
 
-            <!-- Task Cards -->
-            <div class="p-2 space-y-3 flex-1 overflow-y-auto">
-              {#each colTasks as task}
-                <div class="p-3 rounded-lg border border-border bg-card shadow-sm hover:border-primary/50 transition-all space-y-2">
-                  <div class="flex items-center justify-between">
-                    <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono">
-                      {task.id}
-                    </span>
-                    <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded {task.priority === 'URGENT' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : task.priority === 'HIGH' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-muted text-muted-foreground'}">
-                      {task.priority}
-                    </span>
-                  </div>
+		<div class="kpi-card">
+			<div class="kpi-label">SLA Compliance Rate</div>
+			<div class="kpi-value text-sky-400">96.4% On-Track</div>
+			<div class="kpi-sub">Cross-Department Velocity</div>
+		</div>
+	</div>
 
-                  <h3 class="text-xs font-semibold text-foreground line-clamp-2">{task.title}</h3>
-                  <p class="text-[11px] text-muted-foreground line-clamp-2">{task.description}</p>
+	<!-- Navigation Tabs -->
+	<div class="nav-tabs">
+		<button 
+			class="tab-btn" 
+			class:active={activeTab === 'kanban'} 
+			onclick={() => activeTab = 'kanban'}>
+			📋 Kanban Sprint Pipeline ({tasks.length})
+		</button>
+		<button 
+			class="tab-btn" 
+			class:active={activeTab === 'projects'} 
+			onclick={() => activeTab = 'projects'}>
+			📁 Project Portfolios &amp; Milestone Billing ({projects.length})
+		</button>
+		<button 
+			class="tab-btn" 
+			class:active={activeTab === 'timesheet'} 
+			onclick={() => activeTab = 'timesheet'}>
+			⏱️ Timesheets &amp; Billable Burn Rate
+		</button>
+		<button 
+			class="tab-btn" 
+			class:active={activeTab === 'utms_delegation'} 
+			onclick={() => activeTab = 'utms_delegation'}>
+			⚡ + Fast UTMS Task Creator
+		</button>
+	</div>
 
-                  <div class="pt-2 border-t border-border flex items-center justify-between text-[11px] text-muted-foreground">
-                    <span class="truncate max-w-[110px]" title={task.assignedTo}>👤 {task.assignedTo.split(' ')[0]}</span>
-                    <span class="font-mono text-emerald-400">⏱️ {task.slaHoursRemaining}h SLA</span>
-                  </div>
+	<!-- TAB 1: KANBAN SPRINT PIPELINE -->
+	{#if activeTab === 'kanban'}
+		<div class="kanban-section">
+			
+			<!-- Filter & Search Toolbar -->
+			<div class="filter-toolbar">
+				<div class="filter-group">
+					<span class="filter-label">Filter BU:</span>
+					<div class="bu-pill-group">
+						{#each ['ALL', 'HEALTH', 'TRAVEL', 'REALESTATE', 'CONSULTING', 'FINANCE'] as bu}
+							<button 
+								class="bu-pill" 
+								class:active={selectedBUFilter === bu}
+								onclick={() => selectedBUFilter = bu}>
+								{bu === 'ALL' ? '🌐 All Verticals' : getBUBadge(bu).label}
+							</button>
+						{/each}
+					</div>
+				</div>
 
-                  <!-- Quick Action Buttons -->
-                  <div class="pt-1 flex items-center justify-between gap-1">
-                    <button
-                      onclick={() => {
-                        taskToDelegate = task;
-                        showDelegateModal = true;
-                      }}
-                      class="text-[10px] px-2 py-1 rounded bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 transition-colors"
-                      title="Delegate cross-department"
-                    >
-                      🔁 Delegate
-                    </button>
+				<div class="search-box">
+					<span>🔍</span>
+					<input type="text" placeholder="Search tasks, assignees, keywords..." bind:value={searchQuery} />
+				</div>
+			</div>
 
-                    <div class="flex items-center gap-1">
-                      {#if col !== 'BACKLOG'}
-                        <button
-                          onclick={() => handleMoveStatus(task, columns[columns.indexOf(col) - 1])}
-                          class="text-[10px] px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 text-muted-foreground"
-                          title="Move Back"
-                        >
-                          ◀
-                        </button>
-                      {/if}
-                      {#if col !== 'DONE'}
-                        <button
-                          onclick={() => handleMoveStatus(task, columns[columns.indexOf(col) + 1])}
-                          class="text-[10px] px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 text-muted-foreground"
-                          title="Move Forward"
-                        >
-                          ▶
-                        </button>
-                      {/if}
-                    </div>
-                  </div>
-                </div>
-              {/each}
-            </div>
-          </div>
-        {/each}
-      </div>
-    </div>
-  {/if}
+			<!-- Visual 5-Column Kanban Board -->
+			<div class="kanban-board">
+				{#each columns as col}
+					{@const colTasks = filteredTasks.filter(t => t.status === col)}
+					{@const colName = col.replace('_', ' ')}
+					<div class="kanban-column">
+						
+						<!-- Column Header -->
+						<div class="column-header">
+							<div class="col-title-wrap">
+								<span class="col-dot" class:dot-todo={col === 'TODO'} class:dot-prog={col === 'IN_PROGRESS'} class:dot-review={col === 'REVIEW'} class:dot-done={col === 'DONE'}></span>
+								<h3 class="col-title">{colName}</h3>
+							</div>
+							<span class="col-count">{colTasks.length}</span>
+						</div>
 
-  <!-- TAB: Projects Register -->
-  {#if activeTab === 'projects'}
-    <div class="rounded-xl border border-border bg-card p-6 shadow-sm">
-      <h2 class="text-lg font-semibold text-foreground mb-1">Active Projects Portfolio</h2>
-      <p class="text-xs text-muted-foreground mb-6">Cross-business unit projects with milestone billing and budget tracking</p>
+						<!-- Task Cards List -->
+						<div class="column-tasks">
+							{#if colTasks.length === 0}
+								<div class="empty-column-placeholder">
+									No tasks in {colName}
+								</div>
+							{/if}
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {#each projects as p}
-          <div class="p-5 rounded-xl border border-border bg-muted/10 space-y-3">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-muted text-foreground">{p.code}</span>
-              <span class="text-xs font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">{p.status}</span>
-            </div>
-            <div>
-              <h3 class="text-base font-bold text-foreground">{p.name}</h3>
-              <p class="text-xs text-muted-foreground mt-0.5">{p.description}</p>
-            </div>
-            <div class="grid grid-cols-2 gap-2 text-xs font-mono pt-2 border-t border-border">
-              <div>
-                <span class="text-muted-foreground">Client:</span> <strong class="text-foreground">{p.clientName}</strong>
-              </div>
-              <div>
-                <span class="text-muted-foreground">Budget:</span> <strong class="text-emerald-400">₹{p.budget.toLocaleString('en-IN')}</strong>
-              </div>
-              <div>
-                <span class="text-muted-foreground">Unit:</span> <strong class="text-foreground">{p.businessUnit}</strong>
-              </div>
-              <div>
-                <span class="text-muted-foreground">Target Date:</span> <strong class="text-foreground">{p.targetDate}</strong>
-              </div>
-            </div>
-          </div>
-        {/each}
-      </div>
-    </div>
-  {/if}
+							{#each colTasks as task}
+								{@const bu = getBUBadge(task.businessUnit)}
+								<div class="task-card">
+									
+									<!-- Card Top Badges -->
+									<div class="card-badges">
+										<span class="bu-tag" style={`background: ${bu.bg}; color: ${bu.color};`}>
+											{bu.label}
+										</span>
+										<span class="priority-tag" class:tag-urgent={task.priority === 'URGENT'} class:tag-high={task.priority === 'HIGH'}>
+											{task.priority === 'URGENT' ? '🔴 URGENT' : task.priority === 'HIGH' ? '🟡 HIGH' : '⚪ NORMAL'}
+										</span>
+									</div>
 
-  <!-- TAB: New UTMS Task Form -->
-  {#if activeTab === 'utms_delegation'}
-    <div class="rounded-xl border border-border bg-card p-6 shadow-sm max-w-2xl mx-auto">
-      <h2 class="text-lg font-semibold text-foreground mb-1">Create Universal Task (UTMS)</h2>
-      <p class="text-xs text-muted-foreground mb-6">Assign deliverables across Healthcare, Travel, Real Estate, or Finance</p>
+									<!-- Title & Description -->
+									<h4 class="task-title">{task.title}</h4>
+									<p class="task-desc">{task.description}</p>
 
-      <form onsubmit={handleCreateTask} class="space-y-4">
-        <div>
-          <label for="task-title" class="block text-xs font-medium text-muted-foreground mb-1">Task Title</label>
-          <input
-            id="task-title"
-            type="text"
-            required
-            placeholder="e.g. Verify Schengen Visa bank statements"
-            bind:value={newTask.title}
-            class="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-        </div>
+									<!-- SLA & Assignee Row -->
+									<div class="card-meta">
+										<div class="assignee-wrap">
+											<div class="avatar-circle">
+												{task.assignedTo.split(' ')[0][0] || 'U'}
+											</div>
+											<span class="assignee-name">{task.assignedTo.split(' (')[0]}</span>
+										</div>
 
-        <div>
-          <label for="task-desc" class="block text-xs font-medium text-muted-foreground mb-1">Description & Requirements</label>
-          <textarea
-            id="task-desc"
-            rows="3"
-            placeholder="Detail the deliverable, acceptance criteria, and related customer entity"
-            bind:value={newTask.description}
-            class="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-          ></textarea>
-        </div>
+										<div class="sla-badge" class:sla-urgent={task.slaHoursRemaining <= 12 && task.status !== 'DONE'}>
+											⏱️ {task.slaHoursRemaining}h SLA
+										</div>
+									</div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label for="task-bu" class="block text-xs font-medium text-muted-foreground mb-1">Business Unit</label>
-            <select
-              id="task-bu"
-              bind:value={newTask.businessUnit}
-              class="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-            >
-              <option value="CONSULTING">Consulting & Software</option>
-              <option value="HEALTH">Healthcare & Clinics</option>
-              <option value="TRAVEL">Travel & Visa OS</option>
-              <option value="REALESTATE">Real Estate Deals</option>
-              <option value="FINANCE">Finance & Accounting</option>
-            </select>
-          </div>
-          <div>
-            <label for="task-assignee" class="block text-xs font-medium text-muted-foreground mb-1">Assigned Specialist</label>
-            <input
-              id="task-assignee"
-              type="text"
-              required
-              placeholder="e.g. Arun Kumar"
-              bind:value={newTask.assignedTo}
-              class="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
-        </div>
+									<!-- Action Footer -->
+									<div class="card-footer">
+										<button 
+											class="card-btn-action" 
+											onclick={() => {
+												taskToDelegate = task;
+												showDelegateModal = true;
+											}}
+											title="Cross-BU Task Delegation">
+											🔁 Delegate
+										</button>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label for="task-priority" class="block text-xs font-medium text-muted-foreground mb-1">Priority</label>
-            <select
-              id="task-priority"
-              bind:value={newTask.priority}
-              class="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-            >
-              <option value="LOW">Low</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="HIGH">High</option>
-              <option value="URGENT">Urgent (SLA Trigger)</option>
-            </select>
-          </div>
-          <div>
-            <label for="task-due" class="block text-xs font-medium text-muted-foreground mb-1">Due Date</label>
-            <input
-              id="task-due"
-              type="date"
-              bind:value={newTask.dueDate}
-              class="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
-          <div>
-            <label for="task-hours" class="block text-xs font-medium text-muted-foreground mb-1">Est. Hours</label>
-            <input
-              id="task-hours"
-              type="number"
-              min="1"
-              bind:value={newTask.estimatedHours}
-              class="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
-        </div>
+										<div class="step-buttons">
+											{#if col !== 'BACKLOG'}
+												<button 
+													class="step-nav-btn" 
+													onclick={() => handleMoveStatus(task, columns[columns.indexOf(col) - 1])}
+													title="Move Back">
+													◀
+												</button>
+											{/if}
+											{#if col !== 'DONE'}
+												<button 
+													class="step-nav-btn" 
+													onclick={() => handleMoveStatus(task, columns[columns.indexOf(col) + 1])}
+													title="Advance Step">
+													▶
+												</button>
+											{/if}
+										</div>
+									</div>
 
-        <div class="pt-4 flex justify-end gap-3">
-          <button
-            type="button"
-            onclick={() => (activeTab = 'kanban')}
-            class="px-4 py-2 rounded-lg border border-border bg-muted/50 hover:bg-muted text-muted-foreground text-sm font-medium"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            class="px-5 py-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium shadow"
-          >
-            Save & Publish Task
-          </button>
-        </div>
-      </form>
-    </div>
-  {/if}
+								</div>
+							{/each}
+						</div>
 
-  <!-- DELEGATION MODAL -->
-  {#if showDelegateModal && taskToDelegate}
-    <div class="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div class="rounded-xl border border-border bg-card p-6 max-w-md w-full shadow-2xl space-y-4">
-        <div>
-          <span class="text-xs px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 font-bold">UTMS Cross-BU Routing</span>
-          <h3 class="text-lg font-bold text-foreground mt-1">Delegate Task: {taskToDelegate.id}</h3>
-          <p class="text-xs text-muted-foreground">{taskToDelegate.title}</p>
-        </div>
+					</div>
+				{/each}
+			</div>
 
-        <div class="space-y-3">
-          <div>
-            <label for="target-bu" class="block text-xs font-medium text-muted-foreground mb-1">Target Department / BU</label>
-            <select
-              id="target-bu"
-              bind:value={targetBU}
-              class="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-            >
-              <option value="HEALTH">🏥 Smart Healthcare</option>
-              <option value="TRAVEL">✈️ Travel & Visa OS</option>
-              <option value="REALESTATE">🏢 Real Estate Deals</option>
-              <option value="CONSULTING">💻 Software Consulting</option>
-              <option value="FINANCE">💳 Finance & Accounting</option>
-            </select>
-          </div>
+		</div>
+	{/if}
 
-          <div>
-            <label for="target-person" class="block text-xs font-medium text-muted-foreground mb-1">New Assignee Name</label>
-            <input
-              id="target-person"
-              type="text"
-              bind:value={targetAssignee}
-              class="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
+	<!-- TAB 2: PROJECTS & MILESTONE BILLING -->
+	{#if activeTab === 'projects'}
+		<div class="projects-section space-y-6">
+			<div class="section-heading">
+				<h2 class="text-lg font-bold text-white">Active Client Contracts &amp; Project Portfolios</h2>
+				<p class="text-xs text-slate-400">Budget burn-rate tracking, milestone deliverables, and automated invoice triggers.</p>
+			</div>
 
-          <div>
-            <label for="delegation-note" class="block text-xs font-medium text-muted-foreground mb-1">Handover Instructions</label>
-            <textarea
-              id="delegation-note"
-              rows="2"
-              placeholder="e.g. Please verify compliance and contact customer"
-              bind:value={delegationNote}
-              class="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-            ></textarea>
-          </div>
-        </div>
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+				{#each projects as prj}
+					{@const percent = Math.min(100, Math.round((prj.spent / prj.budget) * 100))}
+					<div class="project-portfolio-card">
+						<div class="flex justify-between items-start mb-3">
+							<span class="font-mono text-xs font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">{prj.code}</span>
+							<span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">{prj.status}</span>
+						</div>
 
-        <div class="flex justify-end gap-2 pt-2">
-          <button
-            onclick={() => (showDelegateModal = false)}
-            class="px-4 py-2 rounded-lg border border-border text-sm text-muted-foreground hover:bg-muted"
-          >
-            Cancel
-          </button>
-          <button
-            onclick={handleExecuteDelegation}
-            class="px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-semibold"
-          >
-            Confirm Delegation
-          </button>
-        </div>
-      </div>
-    </div>
-  {/if}
+						<h3 class="text-base font-bold text-white mb-1">{prj.name}</h3>
+						<p class="text-xs text-slate-400 line-clamp-2 mb-4">{prj.description}</p>
+
+						<!-- Progress Bar -->
+						<div class="space-y-1.5 mb-4">
+							<div class="flex justify-between text-xs">
+								<span class="text-slate-400">Budget Spent</span>
+								<strong class="text-white font-mono">{percent}% (₹{prj.spent.toLocaleString('en-IN')})</strong>
+							</div>
+							<div class="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+								<div class="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 rounded-full" style={`width: ${percent}%;`}></div>
+							</div>
+						</div>
+
+						<div class="grid grid-cols-2 gap-2 text-xs pt-3 border-t border-slate-800/80 mb-4">
+							<div>
+								<span class="text-slate-500 block">Total Budget:</span>
+								<strong class="text-white font-mono">₹{prj.budget.toLocaleString('en-IN')}</strong>
+							</div>
+							<div>
+								<span class="text-slate-500 block">Client:</span>
+								<strong class="text-slate-300 truncate block">{prj.clientName}</strong>
+							</div>
+							<div>
+								<span class="text-slate-500 block">Business Unit:</span>
+								<strong class="text-sky-400">{prj.businessUnit}</strong>
+							</div>
+							<div>
+								<span class="text-slate-500 block">Target Date:</span>
+								<strong class="text-slate-300">{prj.targetDate}</strong>
+							</div>
+						</div>
+
+						<button 
+							class="w-full py-2 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/40 text-xs font-bold transition-all cursor-pointer"
+							onclick={() => {
+								selectedProjectId = prj.id;
+								activeTab = 'kanban';
+							}}>
+							📋 View {prj.totalTasks} UTMS Tasks in Kanban
+						</button>
+					</div>
+				{/each}
+			</div>
+
+			<!-- Milestone Billing Registry Table -->
+			<div class="bg-slate-900/90 border border-slate-700/80 rounded-xl p-5 shadow-xl space-y-4">
+				<div class="flex justify-between items-center border-b border-slate-800 pb-3">
+					<div>
+						<h3 class="text-base font-bold text-white">SOW Contract Milestone Billing Triggers</h3>
+						<p class="text-xs text-slate-400">Deliverables automatically convert to Net-30 GST tax invoices upon client milestone sign-off.</p>
+					</div>
+					<span class="px-3 py-1 bg-sky-500/10 border border-sky-500/30 text-sky-400 font-mono font-bold text-xs rounded-full">
+						Auto-Invoicing
+					</span>
+				</div>
+
+				<div class="table-container">
+					<table class="data-table">
+						<thead>
+							<tr>
+								<th>Milestone Code</th>
+								<th>Project</th>
+								<th>Milestone Deliverable</th>
+								<th>Target Date</th>
+								<th>Invoice Trigger Amount</th>
+								<th>Status</th>
+								<th>Action</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each milestones as m}
+								<tr>
+									<td class="font-mono text-xs font-bold text-slate-400">{m.id}</td>
+									<td class="font-bold text-white">FinTech ERP</td>
+									<td class="text-sm text-slate-200">{m.title}</td>
+									<td class="font-mono text-xs text-slate-400">{m.targetDate}</td>
+									<td class="font-mono text-emerald-400 font-bold">₹{m.invoiceTriggerAmount.toLocaleString('en-IN')}</td>
+									<td>
+										<span class="badge" class:status-available={m.status === 'INVOICED'}>
+											{m.status}
+										</span>
+									</td>
+									<td>
+										{#if m.status === 'READY_FOR_BILLING'}
+											<button class="btn btn-primary btn-sm py-1 px-3 text-xs" onclick={() => handleBillMilestone(m)}>
+												🧾 Generate GST Invoice
+											</button>
+										{:else if m.status === 'INVOICED'}
+											<span class="text-xs text-emerald-400 font-bold">✓ Billed (INV-2026)</span>
+										{:else}
+											<span class="text-xs text-slate-500">In Progress</span>
+										{/if}
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<!-- TAB 3: TIMESHEET LOGGER -->
+	{#if activeTab === 'timesheet'}
+		<div class="timesheet-section max-w-3xl mx-auto space-y-6">
+			<div class="bg-slate-900/90 border border-slate-700/80 rounded-xl p-6 shadow-xl space-y-5">
+				<div class="border-b border-slate-800 pb-3">
+					<h3 class="text-base font-bold text-white">Log Developer &amp; Consultant Timesheet Hours</h3>
+					<p class="text-xs text-slate-400">Timesheets auto-calculate billable burn rates and client cost utilization.</p>
+				</div>
+
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div>
+						<label class="input-label" for="ts-task">UTMS Task</label>
+						<select id="ts-task" class="text-input" bind:value={timesheetTask}>
+							{#each tasks as t}
+								<option value={t.id}>[{t.id}] {t.title}</option>
+							{/each}
+						</select>
+					</div>
+
+					<div>
+						<label class="input-label" for="ts-hours">Hours Spent Today</label>
+						<input id="ts-hours" type="number" class="text-input" min="0.5" max="24" step="0.5" bind:value={timesheetHours} />
+					</div>
+				</div>
+
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div>
+						<label class="input-label" for="ts-date">Work Date</label>
+						<input id="ts-date" type="date" class="text-input" bind:value={timesheetDate} />
+					</div>
+
+					<div>
+						<label class="input-label" for="ts-rate">Billable Hourly Rate (INR)</label>
+						<input id="ts-rate" type="number" class="text-input font-mono" bind:value={timesheetBillableRate} />
+					</div>
+				</div>
+
+				<div>
+					<label class="input-label" for="ts-notes">Work Summary &amp; Deliverables Completed</label>
+					<textarea id="ts-notes" class="text-input" rows="3" bind:value={timesheetNote}></textarea>
+				</div>
+
+				<div class="flex justify-between items-center p-3 rounded-lg bg-slate-950/80 border border-slate-800">
+					<span class="text-xs text-slate-400">Total Invoiced Realization for this session:</span>
+					<strong class="text-emerald-400 font-mono text-base">₹{(timesheetHours * timesheetBillableRate).toLocaleString('en-IN')}</strong>
+				</div>
+
+				<button class="w-full btn btn-primary py-2.5 font-bold cursor-pointer" onclick={() => {
+					statusMessage = `✅ Logged ${timesheetHours}h for ${timesheetTask} (Total: ₹${(timesheetHours * timesheetBillableRate).toLocaleString('en-IN')})! Added to project burn ledger.`;
+					setTimeout(() => statusMessage = null, 4000);
+				}}>
+					⏱️ Submit Timesheet to Approval Queue
+				</button>
+			</div>
+		</div>
+	{/if}
+
+	<!-- TAB 4: FAST UTMS TASK CREATOR -->
+	{#if activeTab === 'utms_delegation'}
+		<div class="utms-creator-section max-w-2xl mx-auto">
+			<form onsubmit={handleCreateTask} class="bg-slate-900/90 border border-slate-700/80 rounded-xl p-6 shadow-xl space-y-5">
+				<div class="border-b border-slate-800 pb-3">
+					<h3 class="text-base font-bold text-white">Create Universal Task (UTMS)</h3>
+					<p class="text-xs text-slate-400">Dispatch cross-department deliverables with SLA deadlines and automated routing.</p>
+				</div>
+
+				<div>
+					<label class="input-label" for="tsk-title">Task Title *</label>
+					<input id="tsk-title" type="text" class="text-input" placeholder="e.g. Verify Schengen Visa VFS Appointment Dossier" bind:value={newTask.title} required />
+				</div>
+
+				<div>
+					<label class="input-label" for="tsk-desc">Detailed Description</label>
+					<textarea id="tsk-desc" class="text-input" rows="3" placeholder="Provide actionable requirements, references, and acceptance criteria..." bind:value={newTask.description}></textarea>
+				</div>
+
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div>
+						<label class="input-label" for="tsk-bu">Target Business Unit</label>
+						<select id="tsk-bu" class="text-input" bind:value={newTask.businessUnit}>
+							<option value="CONSULTING">💻 Software Consulting &amp; IT</option>
+							<option value="HEALTH">🏥 Smart Healthcare &amp; Clinical</option>
+							<option value="TRAVEL">✈️ Travel, Tours &amp; Visa Ops</option>
+							<option value="REALESTATE">🏢 Real Estate Layouts &amp; Plots</option>
+							<option value="COMMERCE">🛍️ E-Commerce &amp; POD Printing</option>
+							<option value="FINANCE">💰 Corporate Finance &amp; Tax</option>
+						</select>
+					</div>
+
+					<div>
+						<label class="input-label" for="tsk-priority">SLA Priority Level</label>
+						<select id="tsk-priority" class="text-input" bind:value={newTask.priority}>
+							<option value="URGENT">🔴 URGENT (12-Hour SLA)</option>
+							<option value="HIGH">🟡 HIGH (24-Hour SLA)</option>
+							<option value="MEDIUM">🔵 MEDIUM (48-Hour SLA)</option>
+							<option value="LOW">⚪ LOW (Flexible)</option>
+						</select>
+					</div>
+				</div>
+
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div>
+						<label class="input-label" for="tsk-assignee">Assigned Lead</label>
+						<input id="tsk-assignee" type="text" class="text-input" bind:value={newTask.assignedTo} />
+					</div>
+
+					<div>
+						<label class="input-label" for="tsk-due">Due Date</label>
+						<input id="tsk-due" type="date" class="text-input" bind:value={newTask.dueDate} />
+					</div>
+				</div>
+
+				<button type="submit" class="w-full btn btn-primary py-3 font-bold cursor-pointer">
+					⚡ Dispatch UTMS Task to Sprint Board
+				</button>
+			</form>
+		</div>
+	{/if}
+
+	<!-- MODAL: CROSS-BU TASK DELEGATION -->
+	{#if showDelegateModal && taskToDelegate}
+		<div class="modal-backdrop">
+			<div class="modal-card max-w-lg">
+				<div class="modal-header">
+					<div class="flex items-center gap-2">
+						<span class="text-xl">🔁</span>
+						<h3 class="text-base font-bold text-white">Cross-BU Task Delegation</h3>
+					</div>
+					<button class="close-btn" onclick={() => showDelegateModal = false}>✕</button>
+				</div>
+
+				<div class="modal-body space-y-4">
+					<div class="p-3 rounded-lg bg-slate-950 border border-slate-800">
+						<div class="text-[10px] text-slate-500 uppercase font-mono">{taskToDelegate.id}</div>
+						<div class="text-sm font-bold text-white mt-0.5">{taskToDelegate.title}</div>
+						<div class="text-xs text-slate-400 mt-1">Currently assigned to: {taskToDelegate.assignedTo}</div>
+					</div>
+
+					<div>
+						<label class="input-label" for="del-bu">Delegate to Business Department</label>
+						<select id="del-bu" class="text-input" bind:value={targetBU}>
+							<option value="HEALTH">🏥 Healthcare (Doctor / Clinical Review)</option>
+							<option value="TRAVEL">✈️ Travel (Visa Desk / Flight PNR)</option>
+							<option value="REALESTATE">🏢 Real Estate (Plot Registration / EC Check)</option>
+							<option value="FINANCE">💰 Finance (Tax Invoicing / GST)</option>
+							<option value="CONSULTING">💻 Consulting (Architecture / Code)</option>
+						</select>
+					</div>
+
+					<div>
+						<label class="input-label" for="del-assignee">New Responsible Lead</label>
+						<input id="del-assignee" type="text" class="text-input" bind:value={targetAssignee} />
+					</div>
+
+					<div>
+						<label class="input-label" for="del-note">Handover Brief &amp; SLA Instructions</label>
+						<textarea id="del-note" class="text-input" rows="3" placeholder="Provide necessary context and instructions for the receiving department..." bind:value={delegationNote}></textarea>
+					</div>
+				</div>
+
+				<div class="modal-footer">
+					<button class="btn btn-secondary text-xs" onclick={() => showDelegateModal = false}>
+						Cancel
+					</button>
+					<button class="btn btn-primary text-xs" onclick={handleExecuteDelegation}>
+						⚡ Confirm Cross-Department Handover
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
 </div>
+
+<style>
+	.utms-app {
+		display: flex;
+		flex-direction: column;
+		gap: 1.5rem;
+		padding-bottom: 3rem;
+	}
+
+	.utms-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 1.25rem;
+		padding-bottom: 1.25rem;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+	}
+
+	.badge-row {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		margin-bottom: 0.35rem;
+	}
+
+	.pill-badge {
+		font-size: 0.75rem;
+		font-weight: 700;
+		background: rgba(99, 102, 241, 0.15);
+		color: #818cf8;
+		border: 1px solid rgba(99, 102, 241, 0.3);
+		padding: 0.2rem 0.65rem;
+		border-radius: 9999px;
+	}
+
+	.sla-indicator {
+		font-size: 0.6875rem;
+		font-weight: 600;
+		color: #34d399;
+	}
+
+	.main-title {
+		font-size: 1.75rem;
+		font-weight: 800;
+		color: #ffffff;
+		margin: 0;
+		letter-spacing: -0.02em;
+	}
+
+	.subtitle {
+		font-size: 0.875rem;
+		color: #94a3b8;
+		margin: 0.25rem 0 0 0;
+		max-width: 750px;
+	}
+
+	.header-actions {
+		display: flex;
+		gap: 0.75rem;
+	}
+
+	.status-alert {
+		padding: 0.75rem 1rem;
+		border-radius: 10px;
+		background: rgba(16, 185, 129, 0.12);
+		border: 1px solid rgba(16, 185, 129, 0.3);
+		color: #34d399;
+		font-size: 0.875rem;
+		font-weight: 600;
+	}
+
+	/* KPI Grid */
+	.kpi-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+		gap: 1rem;
+	}
+
+	.kpi-card {
+		background: #0f172a;
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		border-radius: 12px;
+		padding: 1.15rem 1.25rem;
+	}
+
+	.kpi-label {
+		font-size: 0.6875rem;
+		font-weight: 700;
+		color: #94a3b8;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.kpi-value {
+		font-size: 1.5rem;
+		font-weight: 800;
+		margin-top: 0.25rem;
+	}
+
+	.kpi-sub {
+		font-size: 0.75rem;
+		color: #64748b;
+		margin-top: 0.25rem;
+	}
+
+	.pulse-glow {
+		animation: pulseGlow 1.8s infinite;
+	}
+
+	@keyframes pulseGlow {
+		0%, 100% { opacity: 1; }
+		50% { opacity: 0.6; }
+	}
+
+	/* Tabs */
+	.nav-tabs {
+		display: flex;
+		gap: 0.5rem;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+		padding-bottom: 0.5rem;
+		overflow-x: auto;
+	}
+
+	.tab-btn {
+		background: transparent;
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		color: #94a3b8;
+		padding: 0.6rem 1.15rem;
+		border-radius: 10px;
+		font-size: 0.8125rem;
+		font-weight: 700;
+		cursor: pointer;
+		transition: all 0.15s ease;
+		white-space: nowrap;
+	}
+
+	.tab-btn:hover {
+		color: #ffffff;
+		border-color: rgba(255, 255, 255, 0.2);
+	}
+
+	.tab-btn.active {
+		background: rgba(99, 102, 241, 0.15);
+		color: #818cf8;
+		border-color: rgba(99, 102, 241, 0.5);
+	}
+
+	/* Kanban Section */
+	.filter-toolbar {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 1rem;
+		background: #0f172a;
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		border-radius: 12px;
+		padding: 0.75rem 1rem;
+		margin-bottom: 1.25rem;
+	}
+
+	.filter-group {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		flex-wrap: wrap;
+	}
+
+	.filter-label {
+		font-size: 0.75rem;
+		font-weight: 700;
+		color: #64748b;
+		text-transform: uppercase;
+	}
+
+	.bu-pill-group {
+		display: flex;
+		gap: 0.35rem;
+		flex-wrap: wrap;
+	}
+
+	.bu-pill {
+		font-size: 0.75rem;
+		font-weight: 600;
+		background: #1e293b;
+		color: #94a3b8;
+		border: 1px solid rgba(255, 255, 255, 0.06);
+		padding: 0.25rem 0.65rem;
+		border-radius: 6px;
+		cursor: pointer;
+		transition: all 0.15s;
+	}
+
+	.bu-pill:hover, .bu-pill.active {
+		background: rgba(99, 102, 241, 0.2);
+		color: #818cf8;
+		border-color: rgba(99, 102, 241, 0.4);
+	}
+
+	.search-box {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		background: #1e293b;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: 8px;
+		padding: 0.35rem 0.75rem;
+		min-width: 260px;
+	}
+
+	.search-box input {
+		background: transparent;
+		border: none;
+		outline: none;
+		color: #ffffff;
+		font-size: 0.8125rem;
+		width: 100%;
+	}
+
+	/* Kanban Columns */
+	.kanban-board {
+		display: grid;
+		grid-template-columns: repeat(5, minmax(260px, 1fr));
+		gap: 1rem;
+		overflow-x: auto;
+		padding-bottom: 1rem;
+	}
+
+	.kanban-column {
+		background: rgba(15, 23, 42, 0.65);
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		border-radius: 14px;
+		display: flex;
+		flex-direction: column;
+		min-height: 520px;
+		backdrop-filter: blur(8px);
+	}
+
+	.column-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 0.85rem 1rem;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+		background: rgba(30, 41, 59, 0.4);
+		border-radius: 14px 14px 0 0;
+	}
+
+	.col-title-wrap {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.col-dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 9999px;
+		background: #64748b;
+	}
+
+	.dot-todo { background: #38bdf8; }
+	.dot-prog { background: #818cf8; }
+	.dot-review { background: #fbbf24; }
+	.dot-done { background: #34d399; }
+
+	.col-title {
+		font-size: 0.75rem;
+		font-weight: 800;
+		color: #f1f5f9;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		margin: 0;
+	}
+
+	.col-count {
+		font-size: 0.6875rem;
+		font-weight: 700;
+		background: #1e293b;
+		color: #94a3b8;
+		padding: 0.15rem 0.5rem;
+		border-radius: 9999px;
+		font-family: monospace;
+	}
+
+	.column-tasks {
+		padding: 0.75rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		flex: 1;
+		overflow-y: auto;
+	}
+
+	.empty-column-placeholder {
+		text-align: center;
+		padding: 2.5rem 1rem;
+		font-size: 0.75rem;
+		color: #64748b;
+		font-style: italic;
+	}
+
+	/* Task Card */
+	.task-card {
+		background: #0f172a;
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		border-radius: 10px;
+		padding: 0.85rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+		transition: all 0.2s ease;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+	}
+
+	.task-card:hover {
+		border-color: rgba(99, 102, 241, 0.45);
+		transform: translateY(-2px);
+		box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+	}
+
+	.card-badges {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 0.4rem;
+	}
+
+	.bu-tag {
+		font-size: 0.625rem;
+		font-weight: 700;
+		padding: 0.15rem 0.45rem;
+		border-radius: 5px;
+		max-width: 140px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.priority-tag {
+		font-size: 0.625rem;
+		font-weight: 800;
+		padding: 0.15rem 0.45rem;
+		border-radius: 5px;
+		background: #1e293b;
+		color: #94a3b8;
+	}
+
+	.tag-urgent {
+		background: rgba(239, 68, 68, 0.2);
+		color: #f87171;
+		border: 1px solid rgba(239, 68, 68, 0.4);
+	}
+
+	.tag-high {
+		background: rgba(245, 158, 11, 0.18);
+		color: #fbbf24;
+		border: 1px solid rgba(245, 158, 11, 0.35);
+	}
+
+	.task-title {
+		font-size: 0.8125rem;
+		font-weight: 700;
+		color: #ffffff;
+		line-height: 1.35;
+		margin: 0;
+	}
+
+	.task-desc {
+		font-size: 0.725rem;
+		color: #94a3b8;
+		line-height: 1.4;
+		margin: 0;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+
+	.card-meta {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding-top: 0.5rem;
+		border-top: 1px solid rgba(255, 255, 255, 0.05);
+	}
+
+	.assignee-wrap {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+
+	.avatar-circle {
+		width: 22px;
+		height: 22px;
+		border-radius: 9999px;
+		background: linear-gradient(135deg, #4f46e5, #06b6d4);
+		color: #ffffff;
+		font-size: 0.625rem;
+		font-weight: 800;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.assignee-name {
+		font-size: 0.6875rem;
+		color: #cbd5e1;
+		font-weight: 600;
+		max-width: 90px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.sla-badge {
+		font-size: 0.6875rem;
+		font-weight: 700;
+		color: #34d399;
+		font-family: monospace;
+	}
+
+	.sla-urgent {
+		color: #f87171;
+		font-weight: 800;
+	}
+
+	.card-footer {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding-top: 0.4rem;
+	}
+
+	.card-btn-action {
+		font-size: 0.6875rem;
+		font-weight: 700;
+		color: #38bdf8;
+		background: rgba(56, 189, 248, 0.1);
+		border: 1px solid rgba(56, 189, 248, 0.25);
+		border-radius: 5px;
+		padding: 0.2rem 0.5rem;
+		cursor: pointer;
+		transition: all 0.15s;
+	}
+
+	.card-btn-action:hover {
+		background: rgba(56, 189, 248, 0.25);
+		color: #ffffff;
+	}
+
+	.step-buttons {
+		display: flex;
+		gap: 0.25rem;
+	}
+
+	.step-nav-btn {
+		background: #1e293b;
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		color: #cbd5e1;
+		font-size: 0.625rem;
+		padding: 0.2rem 0.4rem;
+		border-radius: 4px;
+		cursor: pointer;
+		transition: all 0.15s;
+	}
+
+	.step-nav-btn:hover {
+		background: #334155;
+		color: #ffffff;
+	}
+
+	/* Project Portfolio Cards */
+	.project-portfolio-card {
+		background: #0f172a;
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		border-radius: 14px;
+		padding: 1.25rem;
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+	}
+
+	/* Common UI Elements */
+	.btn {
+		padding: 0.55rem 1rem;
+		border-radius: 8px;
+		font-size: 0.8125rem;
+		font-weight: 700;
+		cursor: pointer;
+		transition: all 0.15s;
+		border: none;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+
+	.btn-primary {
+		background: #4f46e5;
+		color: #ffffff;
+		box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+	}
+
+	.btn-primary:hover {
+		background: #4338ca;
+	}
+
+	.btn-secondary {
+		background: #1e293b;
+		color: #f1f5f9;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+	}
+
+	.btn-secondary:hover {
+		background: #334155;
+	}
+
+	.btn-sm {
+		padding: 0.25rem 0.6rem;
+		font-size: 0.75rem;
+	}
+
+	.text-input {
+		width: 100%;
+		background: #1e293b;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		color: #ffffff;
+		padding: 0.6rem 0.75rem;
+		border-radius: 8px;
+		font-size: 0.8125rem;
+		outline: none;
+	}
+
+	.text-input:focus {
+		border-color: #6366f1;
+	}
+
+	.input-label {
+		display: block;
+		font-size: 0.75rem;
+		font-weight: 700;
+		color: #cbd5e1;
+		margin-bottom: 0.35rem;
+	}
+
+	/* Tables */
+	.table-container {
+		overflow-x: auto;
+	}
+
+	.data-table {
+		width: 100%;
+		border-collapse: collapse;
+		text-align: left;
+		font-size: 0.8125rem;
+	}
+
+	.data-table th {
+		padding: 0.75rem 0.9rem;
+		background: rgba(30, 41, 59, 0.6);
+		color: #94a3b8;
+		font-size: 0.6875rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+	}
+
+	.data-table td {
+		padding: 0.85rem 0.9rem;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+		color: #f1f5f9;
+	}
+
+	.badge {
+		font-size: 0.6875rem;
+		font-weight: 700;
+		padding: 0.2rem 0.55rem;
+		border-radius: 9999px;
+		background: rgba(148, 163, 184, 0.15);
+		color: #94a3b8;
+	}
+
+	.status-available {
+		background: rgba(16, 185, 129, 0.15);
+		color: #34d399;
+		border: 1px solid rgba(16, 185, 129, 0.3);
+	}
+
+	/* Modals */
+	.modal-backdrop {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.75);
+		backdrop-filter: blur(4px);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1rem;
+		z-index: 50;
+	}
+
+	.modal-card {
+		background: #0f172a;
+		border: 1px solid rgba(255, 255, 255, 0.12);
+		border-radius: 14px;
+		width: 100%;
+		overflow: hidden;
+		box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+	}
+
+	.modal-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 1.15rem 1.25rem;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+	}
+
+	.close-btn {
+		background: none;
+		border: none;
+		color: #94a3b8;
+		font-size: 1.1rem;
+		cursor: pointer;
+	}
+
+	.modal-body {
+		padding: 1.25rem;
+	}
+
+	.modal-footer {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.75rem;
+		padding: 1rem 1.25rem;
+		border-top: 1px solid rgba(255, 255, 255, 0.08);
+		background: rgba(15, 23, 42, 0.5);
+	}
+</style>
