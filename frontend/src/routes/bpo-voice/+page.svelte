@@ -456,3 +456,58 @@
     </div>
   {/if}
 </div>
+
+<style>
+  /* BPO VOICE AGENT SCOPED STYLES */
+  .space-y-6 > * + * { margin-top: 1.5rem; }
+  .space-y-4 > * + * { margin-top: 1rem; }
+  .space-y-3 > * + * { margin-top: 0.75rem; }
+  .space-y-2 > * + * { margin-top: 0.5rem; }
+  .space-y-1 > * + * { margin-top: 0.25rem; }
+
+  .bg-card { background: rgba(15, 23, 42, 0.75); }
+  .border-border { border-color: rgba(255, 255, 255, 0.08); }
+  .bg-muted\/10 { background: rgba(11, 15, 25, 0.6); }
+  .bg-muted\/20 { background: rgba(255, 255, 255, 0.03); }
+  .bg-muted\/30 { background: rgba(255, 255, 255, 0.05); }
+  .bg-muted\/50 { background: rgba(255, 255, 255, 0.08); }
+  .bg-background { background: #090d16; }
+  .text-foreground { color: #f8fafc; }
+  .text-muted-foreground { color: #94a3b8; }
+  .bg-primary { background: #6366f1; }
+  .bg-primary\/10 { background: rgba(99, 102, 241, 0.12); }
+  .text-primary { color: #818cf8; }
+  .text-primary-foreground { color: #ffffff; }
+
+  .flex { display: flex; }
+  .flex-col { flex-direction: column; }
+  .items-center { align-items: center; }
+  .justify-between { justify-content: space-between; }
+  .justify-end { justify-content: flex-end; }
+  .gap-1 { gap: 0.25rem; }
+  .gap-2 { gap: 0.5rem; }
+  .gap-3 { gap: 0.75rem; }
+  .gap-4 { gap: 1rem; }
+  .gap-6 { gap: 1.5rem; }
+  .grid { display: grid; }
+  .h-full { height: 100%; }
+  .flex-1 { flex: 1; }
+  .overflow-hidden { overflow: hidden; }
+  .overflow-y-auto { overflow-y: auto; }
+  .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  @media (min-width: 768px) {
+    .md\:flex-row { flex-direction: row; }
+    .md\:items-center { align-items: center; }
+    .md\:grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+  }
+
+  @media (min-width: 1024px) {
+    .lg\:grid-cols-12 { grid-template-columns: repeat(12, 1fr); }
+    .lg\:col-span-4 { grid-column: span 4 / span 4; }
+    .lg\:col-span-5 { grid-column: span 5 / span 5; }
+    .lg\:col-span-3 { grid-column: span 3 / span 3; }
+  }
+
+  button { cursor: pointer; }
+</style>

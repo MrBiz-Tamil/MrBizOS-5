@@ -413,73 +413,16 @@
 						</button>
 					</div>
 
-					<!-- Primary Works Studio Button -->
+					<!-- Clean Compact Studio Trigger -->
 					<button
 						type="button"
 						class="ws-studio-btn"
 						onclick={() => (showWorkspaceManagerModal = true)}
 						title="Manage & Customize Works Workspace"
 					>
-						<span>🛠️ Works Studio & Presets</span>
-						<span style="font-size: 0.65rem; color: #a5b4fc; font-weight: 700;">⚙️ Setup</span>
+						<span>🛠️ Customize Workspace</span>
+						<span style="font-size: 0.65rem; color: #a5b4fc; font-weight: 700;">Studio ⚙️</span>
 					</button>
-
-					<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem; margin-top: 0.35rem;">
-						<button
-							type="button"
-							class="ws-btn"
-							class:active={activeWorkspacePreset === 'COUNTER'}
-							onclick={() => setWorkspacePreset('COUNTER')}
-							title="Express Counter & Retail POS"
-						>
-							⚡ Counter
-						</button>
-						<button
-							type="button"
-							class="ws-btn"
-							class:active={activeWorkspacePreset === 'HEALTHCARE'}
-							onclick={() => setWorkspacePreset('HEALTHCARE')}
-							title="Smart Healthcare Hub"
-						>
-							🏥 Clinic
-						</button>
-						<button
-							type="button"
-							class="ws-btn"
-							class:active={activeWorkspacePreset === 'TRAVEL'}
-							onclick={() => setWorkspacePreset('TRAVEL')}
-							title="Travel & Tour Agency OS"
-						>
-							✈️ Travel
-						</button>
-						<button
-							type="button"
-							class="ws-btn"
-							class:active={activeWorkspacePreset === 'REALESTATE'}
-							onclick={() => setWorkspacePreset('REALESTATE')}
-							title="Real Estate Matrix"
-						>
-							🏢 Real Estate
-						</button>
-						<button
-							type="button"
-							class="ws-btn"
-							class:active={activeWorkspacePreset === 'PROJECTS'}
-							onclick={() => setWorkspacePreset('PROJECTS')}
-							title="UTMS Projects & SOW"
-						>
-							📁 UTMS
-						</button>
-						<button
-							type="button"
-							class="ws-btn"
-							class:active={activeWorkspacePreset === 'FULL'}
-							onclick={() => setWorkspacePreset('FULL')}
-							title="Full Enterprise ERP"
-						>
-							🌐 Full ERP
-						</button>
-					</div>
 				</div>
 
 				{#if activeWorkspacePreset === 'COUNTER'}

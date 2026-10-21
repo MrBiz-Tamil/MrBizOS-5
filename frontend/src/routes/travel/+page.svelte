@@ -252,7 +252,14 @@
 			packages = pkgRes?.packages || [];
 			applications = appRes?.applications || [];
 			if (packages.length > 0 && !selectedPackage) {
-				openItineraryPreview(packages[0]);
+				selectedPackage = packages[0];
+				if (packages[0].itineraryJson) {
+					try {
+						parsedItinerary = JSON.parse(packages[0].itineraryJson);
+					} catch {
+						// ignore parse error
+					}
+				}
 			}
 		} catch (err: any) {
 			error = err.message || 'Failed to connect to Travel & Visa gRPC backend';
@@ -410,24 +417,24 @@
 
 	<!-- Quick KPI Metric Cards -->
 	<div class="kpi-grid">
-		<div class="kpi-card">
+		<div class="kpi-card kpi-card-emerald">
 			<div class="kpi-label">Active Trip Bookings</div>
-			<div class="kpi-value text-emerald-400">{activeBookings.length} Bookings</div>
+			<div class="kpi-value kpi-val-emerald">{activeBookings.length} Bookings</div>
 			<div class="kpi-sub">Total ₹{(activeBookings.reduce((sum, b) => sum + b.totalAmount, 0)).toLocaleString('en-IN')} Turn</div>
 		</div>
-		<div class="kpi-card">
+		<div class="kpi-card kpi-card-amber">
 			<div class="kpi-label">Accounts Balance Due</div>
-			<div class="kpi-value text-amber-400">₹{(activeBookings.reduce((sum, b) => sum + b.balanceDue, 0)).toLocaleString('en-IN')}</div>
+			<div class="kpi-value kpi-val-amber">₹{(activeBookings.reduce((sum, b) => sum + b.balanceDue, 0)).toLocaleString('en-IN')}</div>
 			<div class="kpi-sub">GST &amp; TCS Invoices Synced</div>
 		</div>
-		<div class="kpi-card">
+		<div class="kpi-card kpi-card-sky">
 			<div class="kpi-label">PNR / Voucher Holds</div>
-			<div class="kpi-value text-sky-400">1 Expiring &lt;24h</div>
+			<div class="kpi-value kpi-val-sky">1 Expiring &lt;24h</div>
 			<div class="kpi-sub">GDS Ticketing Deadlines</div>
 		</div>
-		<div class="kpi-card">
+		<div class="kpi-card kpi-card-purple">
 			<div class="kpi-label">Visa Cases Pipeline</div>
-			<div class="kpi-value text-purple-400">{applications.length} Applicants</div>
+			<div class="kpi-value kpi-val-purple">{applications.length} Applicants</div>
 			<div class="kpi-sub">VFS &amp; Consulate Biometrics</div>
 		</div>
 	</div>
@@ -1282,15 +1289,39 @@
 	}
 
 	.kpi-card {
-		background: #1e293b;
+		background: rgba(15, 23, 42, 0.75);
+		backdrop-filter: blur(12px);
 		border: 1px solid rgba(255, 255, 255, 0.08);
-		border-radius: 12px;
+		border-radius: 14px;
 		padding: 1.25rem;
+		position: relative;
+		overflow: hidden;
+		transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 	}
+
+	.kpi-card:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+		border-color: rgba(255, 255, 255, 0.16);
+	}
+
+	.kpi-card::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 3px;
+	}
+
+	.kpi-card-emerald::before { background: linear-gradient(90deg, #10b981, #059669); }
+	.kpi-card-amber::before { background: linear-gradient(90deg, #f59e0b, #d97706); }
+	.kpi-card-sky::before { background: linear-gradient(90deg, #0ea5e9, #0284c7); }
+	.kpi-card-purple::before { background: linear-gradient(90deg, #a855f7, #7c3aed); }
 
 	.kpi-label {
 		font-size: 0.75rem;
-		font-weight: 600;
+		font-weight: 700;
 		color: #94a3b8;
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
@@ -1299,13 +1330,20 @@
 	.kpi-value {
 		font-size: 1.75rem;
 		font-weight: 800;
-		color: #ffffff;
-		margin: 0.25rem 0;
+		margin: 0.35rem 0 0.25rem;
+		font-family: var(--font-sans, sans-serif);
+		letter-spacing: -0.02em;
 	}
+
+	.kpi-val-emerald { color: #34d399 !important; text-shadow: 0 0 20px rgba(16, 185, 129, 0.25); }
+	.kpi-val-amber { color: #fbbf24 !important; text-shadow: 0 0 20px rgba(245, 158, 11, 0.25); }
+	.kpi-val-sky { color: #38bdf8 !important; text-shadow: 0 0 20px rgba(56, 189, 248, 0.25); }
+	.kpi-val-purple { color: #c084fc !important; text-shadow: 0 0 20px rgba(168, 85, 247, 0.25); }
 
 	.kpi-sub {
 		font-size: 0.75rem;
-		color: #64748b;
+		color: #94a3b8;
+		font-weight: 500;
 	}
 
 	/* NAVIGATION TABS */
