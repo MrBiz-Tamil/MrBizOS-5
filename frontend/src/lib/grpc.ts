@@ -165,4 +165,26 @@ export const voiceBpoGrpc = {
 	launchOutboundCampaign: (req: any) => callRpc('bpo.v1.VoiceBPOService', 'LaunchOutboundCampaign', req),
 };
 
+// 13. E-Commerce & Print-on-Demand Client
+export const ecommerceGrpc = {
+	listOrders: (params = {}) => callRpc('ecommerce.v1.ECommerceService', 'ListOrders', params),
+	getOrder: (req: any) => callRpc('ecommerce.v1.ECommerceService', 'GetOrder', req),
+	createOrder: (req: any) => callRpc('ecommerce.v1.ECommerceService', 'CreateOrder', req),
+	updateShipmentStatus: (req: any) => callRpc('ecommerce.v1.ECommerceService', 'UpdateShipmentStatus', req),
+	listInventoryItems: (params = {}) => callRpc('ecommerce.v1.ECommerceService', 'ListInventoryItems', params),
+	syncEtsyOrders: (params = {}) => callRpc('ecommerce.v1.ECommerceService', 'SyncEtsyOrders', params),
+};
+
+// 14. Software Consulting & SOW Client
+export const consultingGrpc = {
+	listProjects: (params = {}) => callRpc('consulting.v1.ConsultingService', 'ListProjects', params),
+	getProject: (req: any) => callRpc('consulting.v1.ConsultingService', 'GetProject', req),
+	createProject: (req: any) => callRpc('consulting.v1.ConsultingService', 'CreateProject', req),
+	logTimesheet: (req: any) => callRpc('consulting.v1.ConsultingService', 'LogTimesheet', req),
+	listTimesheets: (params = {}) => callRpc('consulting.v1.ConsultingService', 'ListTimesheets', params),
+	createSOWContract: (req: any) => callRpc('consulting.v1.ConsultingService', 'CreateSOWContract', req),
+	listSOWContracts: (params = {}) => callRpc('consulting.v1.ConsultingService', 'ListSOWContracts', params),
+};
+
+
 

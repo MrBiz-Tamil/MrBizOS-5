@@ -3,6 +3,8 @@ package grpcserver
 import (
 	"drayya-core/gen/banking/v1/bankingv1connect"
 	"drayya-core/gen/bpo/v1/bpov1connect"
+	"drayya-core/gen/consulting/v1/consultingv1connect"
+	"drayya-core/gen/ecommerce/v1/ecommercev1connect"
 	"drayya-core/gen/healthcare/v1/healthcarev1connect"
 	"drayya-core/gen/hrms/v1/hrmsv1connect"
 	"drayya-core/gen/iam/v1/iamv1connect"
@@ -17,6 +19,8 @@ import (
 
 	"drayya-core/internal/grpcservices/banking"
 	"drayya-core/internal/grpcservices/bpo"
+	"drayya-core/internal/grpcservices/consulting"
+	"drayya-core/internal/grpcservices/ecommerce"
 	"drayya-core/internal/grpcservices/healthcare"
 	"drayya-core/internal/grpcservices/hrms"
 	"drayya-core/internal/grpcservices/iam"
@@ -98,4 +102,14 @@ func (s *Server) RegisterAllServices() {
 	bpoSvc := bpo.NewService(s.db)
 	bpoPath, bpoHandler := bpov1connect.NewVoiceBPOServiceHandler(bpoSvc, opt)
 	s.mux.Handle(bpoPath, bpoHandler)
+
+	// 14. E-Commerce & Print-on-Demand Service
+	ecomSvc := ecommerce.NewService(s.db)
+	ecomPath, ecomHandler := ecommercev1connect.NewECommerceServiceHandler(ecomSvc, opt)
+	s.mux.Handle(ecomPath, ecomHandler)
+
+	// 15. Software Consulting & SOW Service
+	consultSvc := consulting.NewService(s.db)
+	consultPath, consultHandler := consultingv1connect.NewConsultingServiceHandler(consultSvc, opt)
+	s.mux.Handle(consultPath, consultHandler)
 }
