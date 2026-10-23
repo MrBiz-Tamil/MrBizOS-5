@@ -87,6 +87,9 @@ export const workspaces: Record<Exclude<WorkspacePreset, 'CUSTOM'>, Workspace> =
 				label: 'Business Applications',
 				items: [
 					{ href: '/services', label: 'All Services Hub', icon: '🌐', exact: true, primary: true },
+					{ href: '/websites', label: 'Multi-Site CMS Builder', icon: '🖥️' },
+					{ href: '/marketing', label: 'Omnichannel Marketing Hub', icon: '📣' },
+					{ href: '/ecommerce', label: 'Universal E-Commerce', icon: '🛍️' },
 					{ href: '/inbox', label: 'Omnichannel Social Inbox', icon: '💬' },
 					{ href: '/bpo-voice', label: 'AI Voice Agent BPO Desk', icon: '🎙️' },
 					{ href: '/support', label: 'Support Helpdesk & SLAs', icon: '🎫' },
@@ -218,34 +221,47 @@ export const workspaces: Record<Exclude<WorkspacePreset, 'CUSTOM'>, Workspace> =
 		id: 'TRAVEL',
 		icon: '✈️',
 		name: 'Travel & Tours OS',
-		badge: 'GDS & DMC Hub',
-		desc: 'Tour packages, PNR hold clocks & DMC vouchers',
+		badge: 'Agency Operations',
+		desc: 'Complete Tour Operator & Travel Agency OS',
 		unit: 'travel',
 		landing: '/travel',
 		groups: [
 			{
-				label: 'Agency Desk',
-				badge: 'GDS & DMC',
+				label: 'Agency Operations',
 				items: [
-					{ href: '/travel', label: 'Travel Agency Desk (PNR & Visa)', icon: '✈️', primary: true },
-					{ href: '/inbox', label: 'Omnichannel WhatsApp Leads', icon: '💬' },
-					{ href: '/bpo-voice', label: 'AI Voice Flight / Visa Bot', icon: '🎙️' },
-					{ href: '/journeys', label: 'Tour Itinerary Engine', icon: '🛤️' },
-					{ href: '/customers', label: 'Travelers & Passport DB', icon: '👥', exact: true }
+					{ href: '/travel', label: 'Dashboard', icon: '📊', exact: true, primary: true },
+					{ href: '/travel/book', label: '⚡ Book a Trip (1-Page)', icon: '📝' },
+					{ href: '/travel/booking', label: '🛒 Consumer Booking Wizard', icon: '🎫' },
+					{ href: '/travel/crm', label: 'CRM & Leads (Odoo)', icon: '👥' },
+					{ href: '/travel/packages', label: 'Tour Packages & Costing', icon: '📦' },
+					{ href: '/travel/visa', label: 'Visa Processing & Fees', icon: '🛂' },
+					{ href: '/travel?view=bookings', label: 'Bookings List', icon: '✈️', exact: true },
+					{ href: '/travel?view=customers', label: 'Customers', icon: '👤', exact: true },
+					{ href: '/travel?view=departures', label: 'Departures', icon: '🛫', exact: true },
+					{ href: '/travel?view=itineraries', label: 'Itineraries & Planning', icon: '🗺️', exact: true },
+					{ href: '/travel?view=tickets', label: 'Ticket Management', icon: '🎟️', exact: true }
 				]
 			},
 			{
-				label: 'Finance & Billing',
+				label: 'Client & Partner Portals',
 				items: [
-					{ href: '/billing', label: 'Quick Tour Booking Bill', icon: '⚡' },
-					{ href: '/invoices', label: 'Tax Invoices & DMC Vouchers', icon: '📄' },
-					{ href: '/quotations', label: 'Custom Tour Quotations', icon: '📝' },
-					{ href: '/accounting', label: 'Tour Operator Ledger & P&L', icon: '📖' }
+					{ href: '/customer/services', label: 'Customer Concierge & PNR', icon: '🛎️' },
+					{ href: '/travel/partners', label: 'B2B Partner Portal & Tiers', icon: '🤝' },
+					{ href: '/login/partner', label: 'Partner Khata Ledger Login', icon: '🔐' },
+					{ href: '/login/crew', label: 'Chauffeur / Guide Duty Slip', icon: '🚗' }
 				]
 			},
 			{
-				label: 'Administration',
-				items: [{ href: '/settings', label: 'Agency Setup & Airlines', icon: '⚙️', exact: true }]
+				label: 'Fleet & Partner Logistics',
+				items: [
+					{ href: '/travel/drivers', label: 'Drivers & Car Agencies', icon: '🚗' },
+					{ href: '/travel/guides', label: 'Local Tour Guides', icon: '🧭' },
+					{ href: '/travel/agents', label: 'Tour Agents & Partners', icon: '🤝' },
+					{ href: '/travel?view=vendors', label: 'Vendors & Suppliers', icon: '🏢', exact: true },
+					{ href: '/travel?view=finance', label: 'Finance & Billing', icon: '💳', exact: true },
+					{ href: '/travel?view=reports', label: 'Reports & Analytics', icon: '📈', exact: true },
+					{ href: '/travel?view=settings', label: 'Settings', icon: '⚙️', exact: true }
+				]
 			}
 		]
 	},
@@ -322,17 +338,19 @@ export const workspaces: Record<Exclude<WorkspacePreset, 'CUSTOM'>, Workspace> =
 	COMMERCE: {
 		id: 'COMMERCE',
 		icon: '🛍️',
-		name: 'E-Commerce & POD',
-		badge: 'Apparel & Labs',
-		desc: 'Etsy sync, blank matrix & print lab queue',
+		name: 'E-Commerce & Multi-Site',
+		badge: 'Store & Labs',
+		desc: 'Online storefronts, social marketing & blank matrix',
 		unit: 'ecommerce',
 		landing: '/ecommerce',
 		groups: [
 			{
-				label: 'Store Desk',
-				badge: 'Apparel & Labs',
+				label: 'Store & Marketing',
+				badge: 'Online & Physical',
 				items: [
-					{ href: '/ecommerce', label: 'Blank Matrix & Print Lab Queue', icon: '🛍️', primary: true },
+					{ href: '/ecommerce', label: 'Universal Store & Catalog', icon: '🛍️', primary: true },
+					{ href: '/websites', label: 'Multi-Business Web Builder', icon: '🖥️' },
+					{ href: '/marketing', label: 'Omnichannel Social Marketing', icon: '📣' },
 					{ href: '/pos', label: 'Retail Counter POS', icon: '🛒' },
 					{ href: '/inventory', label: 'Garment Stock & Color/Size', icon: '📋', exact: true },
 					{ href: '/trade/shipments', label: 'Courier Logistics & NDR', icon: '🚢' },
@@ -439,7 +457,11 @@ export const workspaceList: Workspace[] = workspaceOrder
 	.map((id) => workspaces[id]);
 
 /** Is a nav item the active route for the given path? */
-export function isNavItemActive(item: NavItem, path: string): boolean {
+export function isNavItemActive(item: NavItem, path: string, search = ''): boolean {
 	const target = item.match ?? item.href;
-	return item.exact ? path === target : path.startsWith(target);
+	const fullCurrent = search ? `${path}${search}` : path;
+	if (target.includes('?')) {
+		return fullCurrent === target;
+	}
+	return item.exact ? (path === target && (!search || target !== '/travel')) : path.startsWith(target);
 }

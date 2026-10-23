@@ -116,7 +116,196 @@
   let loading = $state<boolean>(false);
   let statusMessage = $state<string | null>(null);
   let syncingEtsy = $state<boolean>(false);
-  let activeTab = $state<'orders' | 'inventory'>('orders');
+  let activeTab = $state<'orders' | 'services-catalog' | 'multi-websites' | 'social-marketing' | 'inventory'>('orders');
+
+  interface UniversalCatalogItem {
+    id: string;
+    title: string;
+    businessUnit: string;
+    itemType: 'SERVICE_APPOINTMENT' | 'TOUR_PACKAGE' | 'PHYSICAL_GOODS' | 'CONSULTING_RETAINER' | 'REAL_ESTATE_TOKEN' | 'B2B_TRADE';
+    sku: string;
+    price: number;
+    currency: string;
+    taxRate: number;
+    stockOrSlots: string;
+    status: 'ACTIVE' | 'DRAFT' | 'LOW_CAPACITY';
+    storefrontUrl: string;
+  }
+
+  let catalogItems = $state<UniversalCatalogItem[]>([
+    {
+      id: 'CAT-TRV-01',
+      title: 'Kashmir Valley Paradise & Gulmarg Snow (5N/6D)',
+      businessUnit: 'TRAVEL',
+      itemType: 'TOUR_PACKAGE',
+      sku: 'SRV-TRV-KSH01',
+      price: 18500,
+      currency: 'INR',
+      taxRate: 5,
+      stockOrSlots: 'Daily Departures • 14 Slots Left',
+      status: 'ACTIVE',
+      storefrontUrl: '/travel/booking'
+    },
+    {
+      id: 'CAT-MED-02',
+      title: 'Senior Cardiologist Telehealth Video Consultation (30 Mins)',
+      businessUnit: 'HEALTHCARE',
+      itemType: 'SERVICE_APPOINTMENT',
+      sku: 'SRV-MED-CARD01',
+      price: 850,
+      currency: 'INR',
+      taxRate: 0,
+      stockOrSlots: '8 Time-slots Available Today',
+      status: 'ACTIVE',
+      storefrontUrl: '/healthcare'
+    },
+    {
+      id: 'CAT-EST-03',
+      title: 'Commercial Office 2,400 sq.ft Escrow Reservation Token',
+      businessUnit: 'REALESTATE',
+      itemType: 'REAL_ESTATE_TOKEN',
+      sku: 'TKN-EST-OFFICE24',
+      price: 100000,
+      currency: 'INR',
+      taxRate: 18,
+      stockOrSlots: '2 Units Remaining',
+      status: 'ACTIVE',
+      storefrontUrl: '/realestate'
+    },
+    {
+      id: 'CAT-SOW-04',
+      title: 'Enterprise Architecture & ConnectRPC Audit (2-Week SOW)',
+      businessUnit: 'CONSULTING',
+      itemType: 'CONSULTING_RETAINER',
+      sku: 'SOW-CSL-ARCH02',
+      price: 120000,
+      currency: 'INR',
+      taxRate: 18,
+      stockOrSlots: '2 Client Engagements / Month',
+      status: 'ACTIVE',
+      storefrontUrl: '/consulting'
+    },
+    {
+      id: 'CAT-TRD-05',
+      title: 'Indian 1121 Steam Basmati Rice (24 MT Export Container)',
+      businessUnit: 'TRADE',
+      itemType: 'B2B_TRADE',
+      sku: 'TRD-AGR-RICE1121',
+      price: 2400000,
+      currency: 'INR',
+      taxRate: 5,
+      stockOrSlots: 'Container Allocations Ready',
+      status: 'ACTIVE',
+      storefrontUrl: '/trade'
+    },
+    {
+      id: 'CAT-POD-06',
+      title: 'Matterhorn Alpine Expedition Heavyweight Hoodie (L)',
+      businessUnit: 'RETAIL_POD',
+      itemType: 'PHYSICAL_GOODS',
+      sku: 'BLANK-HOODIE-BLK-L',
+      price: 2400,
+      currency: 'INR',
+      taxRate: 12,
+      stockOrSlots: '240 Units in Central Hub',
+      status: 'ACTIVE',
+      storefrontUrl: '/shop'
+    },
+    {
+      id: 'CAT-QRY-07',
+      title: '20mm Blue Metal Granite Tonnage (30-Tonne Tipper Lorry)',
+      businessUnit: 'QUARRY',
+      itemType: 'PHYSICAL_GOODS',
+      sku: 'QRY-BLU-20MM',
+      price: 18500,
+      currency: 'INR',
+      taxRate: 5,
+      stockOrSlots: 'Weighbridge Instant DC Active',
+      status: 'ACTIVE',
+      storefrontUrl: '/billing?mode=quarry'
+    }
+  ]);
+
+  interface MultiStorefrontSite {
+    id: string;
+    businessUnit: string;
+    businessName: string;
+    domain: string;
+    routePath: string;
+    activeItemsCount: number;
+    monthlyTraffic: string;
+    status: 'ONLINE' | 'MAINTENANCE';
+    sslActive: boolean;
+  }
+
+  let storefrontSites = $state<MultiStorefrontSite[]>([
+    {
+      id: 'SITE-TRV',
+      businessUnit: 'TRAVEL',
+      businessName: 'MrBiz Travel Concierge & Tour OS',
+      domain: 'travel.mrbiz.group',
+      routePath: '/customer/services',
+      activeItemsCount: 16,
+      monthlyTraffic: '42.8k visits',
+      status: 'ONLINE',
+      sslActive: true
+    },
+    {
+      id: 'SITE-MED',
+      businessUnit: 'HEALTHCARE',
+      businessName: 'DrAyya Telehealth & Doctor Clinic',
+      domain: 'clinic.mrbiz.group',
+      routePath: '/healthcare',
+      activeItemsCount: 24,
+      monthlyTraffic: '18.2k visits',
+      status: 'ONLINE',
+      sslActive: true
+    },
+    {
+      id: 'SITE-EST',
+      businessUnit: 'REALESTATE',
+      businessName: 'Prime Realty & Commercial Properties',
+      domain: 'realty.mrbiz.group',
+      routePath: '/realestate',
+      activeItemsCount: 12,
+      monthlyTraffic: '9.4k visits',
+      status: 'ONLINE',
+      sslActive: true
+    },
+    {
+      id: 'SITE-RET',
+      businessUnit: 'ECOMMERCE',
+      businessName: 'MrBiz D2C Print-on-Demand & Retail',
+      domain: 'shop.mrbiz.group',
+      routePath: '/ecommerce',
+      activeItemsCount: 110,
+      monthlyTraffic: '31.5k visits',
+      status: 'ONLINE',
+      sslActive: true
+    },
+    {
+      id: 'SITE-CSL',
+      businessUnit: 'CONSULTING',
+      businessName: 'MrBiz Software Architecture & SOW Agency',
+      domain: 'agency.mrbiz.group',
+      routePath: '/consulting',
+      activeItemsCount: 8,
+      monthlyTraffic: '12.1k visits',
+      status: 'ONLINE',
+      sslActive: true
+    },
+    {
+      id: 'SITE-BPO',
+      businessUnit: 'BPO_VOICE',
+      businessName: 'AI Voice Receptionist & BPO Call Center',
+      domain: 'voice.mrbiz.group',
+      routePath: '/bpo-voice',
+      activeItemsCount: 4,
+      monthlyTraffic: '6.7k visits',
+      status: 'ONLINE',
+      sslActive: true
+    }
+  ]);
 
   async function loadData() {
     loading = true;
@@ -306,16 +495,39 @@
         onclick={() => (activeTab = 'orders')}
         class="tab-btn {activeTab === 'orders' ? 'active' : ''}"
       >
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-        Orders Register
+        <span>🛍️ Orders Register</span>
         <span class="tab-count">{orders.length}</span>
       </button>
+
+      <button
+        onclick={() => (activeTab = 'services-catalog')}
+        class="tab-btn {activeTab === 'services-catalog' ? 'active' : ''}"
+      >
+        <span>📦 Services & Products Catalog</span>
+        <span class="tab-count">{catalogItems.length}</span>
+      </button>
+
+      <button
+        onclick={() => (activeTab = 'multi-websites')}
+        class="tab-btn {activeTab === 'multi-websites' ? 'active' : ''}"
+      >
+        <span>🌐 Multi-Business Websites</span>
+        <span class="tab-count">{storefrontSites.length}</span>
+      </button>
+
+      <button
+        onclick={() => (activeTab = 'social-marketing')}
+        class="tab-btn {activeTab === 'social-marketing' ? 'active' : ''}"
+      >
+        <span>📣 Social & Marketing Hub</span>
+        <span class="tab-badge-new">4 Channels</span>
+      </button>
+
       <button
         onclick={() => (activeTab = 'inventory')}
         class="tab-btn {activeTab === 'inventory' ? 'active' : ''}"
       >
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-        POD Raw Blank Inventory
+        <span>🏭 Raw POD Stock</span>
         <span class="tab-count">{inventory.length}</span>
       </button>
     </div>
@@ -396,7 +608,223 @@
     </div>
   {/if}
 
-  <!-- TAB 2: INVENTORY -->
+  <!-- TAB 2: SERVICES & PRODUCTS CATALOG -->
+  {#if activeTab === 'services-catalog'}
+    <div class="table-card">
+      <div class="table-card-header">
+        <div>
+          <h2 class="table-title">Universal Multi-Business Services & Products Catalog</h2>
+          <p class="table-desc">One unified commerce catalog powering both bookable services (Tours, Clinics, Consultations, Tokens) and physical merchandise across every group subsidiary.</p>
+        </div>
+        <button class="btn-create-item" onclick={() => alert('New Service Catalog Item form opened')}>
+          + Add New Service / Product
+        </button>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>SKU / Item</th>
+              <th>Business Vertical</th>
+              <th>Commerce Type</th>
+              <th class="text-right">Price / Tariff</th>
+              <th>GST Rate</th>
+              <th>Availability / Capacity</th>
+              <th class="text-right">Public Storefront</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each catalogItems as itm}
+              <tr>
+                <td>
+                  <div class="item-cell-title">{itm.title}</div>
+                  <span class="font-mono sku-tag">{itm.sku}</span>
+                </td>
+                <td>
+                  <span class="unit-tag {itm.businessUnit.toLowerCase()}">{itm.businessUnit}</span>
+                </td>
+                <td>
+                  <span class="type-badge">{itm.itemType.replace('_', ' ')}</span>
+                </td>
+                <td class="text-right font-mono bold-price">
+                  ₹{itm.price.toLocaleString('en-IN')}
+                </td>
+                <td>
+                  <span class="tax-tag">{itm.taxRate}% GST</span>
+                </td>
+                <td>
+                  <span class="capacity-text">⚡ {itm.stockOrSlots}</span>
+                </td>
+                <td class="text-right">
+                  <a href={itm.storefrontUrl} class="preview-storefront-btn">
+                    <span>View Storefront</span>
+                    <span>↗</span>
+                  </a>
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {/if}
+
+  <!-- TAB 3: MULTI-BUSINESS WEBSITES -->
+  {#if activeTab === 'multi-websites'}
+    <div class="websites-section">
+      <div class="table-card-header">
+        <div>
+          <h2 class="table-title">Multi-Business Websites & Headless Storefronts</h2>
+          <p class="table-desc">Centralized domain management, SSL routing, and content publishing for all group commercial portals.</p>
+        </div>
+        <button class="btn-create-item" onclick={() => alert('New Storefront Website Wizard opened')}>
+          + Add New Storefront Domain
+        </button>
+      </div>
+
+      <div class="storefronts-grid">
+        {#each storefrontSites as site}
+          <div class="site-card">
+            <div class="site-card-top">
+              <span class="site-unit-pill">{site.businessUnit}</span>
+              <span class="ssl-badge">
+                <span class="ssl-dot"></span> SSL SECURE
+              </span>
+            </div>
+
+            <h3 class="site-title">{site.businessName}</h3>
+            
+            <div class="domain-box">
+              <span class="domain-icon">🌐</span>
+              <span class="domain-text font-mono">{site.domain}</span>
+            </div>
+
+            <div class="site-metrics-row">
+              <div class="s-metric">
+                <span class="s-label">Active Offerings</span>
+                <span class="s-val font-mono">{site.activeItemsCount} Services</span>
+              </div>
+              <div class="s-metric">
+                <span class="s-label">Monthly Traffic</span>
+                <span class="s-val font-mono green">{site.monthlyTraffic}</span>
+              </div>
+            </div>
+
+            <div class="site-actions">
+              <a href={site.routePath} class="btn-visit-site">
+                <span>Launch Public Portal</span>
+                <span>➔</span>
+              </a>
+              <button type="button" class="btn-cms-edit" onclick={() => alert(`CMS Page & Theme Editor launched for ${site.businessName}`)}>
+                <span>Page Editor</span>
+              </button>
+            </div>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/if}
+
+  <!-- TAB 4: SOCIAL & MARKETING HUB (Email, WhatsApp, Instagram, LinkedIn) -->
+  {#if activeTab === 'social-marketing'}
+    <div class="marketing-hub-wrap">
+      <div class="table-card-header">
+        <div>
+          <h2 class="table-title">Omnichannel Social & Marketing Command Suite</h2>
+          <p class="table-desc">Centralized automation, campaigns, and lead generation across Email, WhatsApp, Instagram, and LinkedIn.</p>
+        </div>
+        <a href="/inbox" class="btn-open-inbox">
+          <span>💬 Open Unified Social Inbox</span>
+          <span>➔</span>
+        </a>
+      </div>
+
+      <div class="social-channels-grid">
+        <!-- WHATSAPP -->
+        <div class="social-channel-card whatsapp">
+          <div class="channel-top">
+            <div class="channel-icon-box wa">🟢</div>
+            <div>
+              <div class="channel-name">WhatsApp Business Cloud API</div>
+              <div class="channel-handle font-mono">+91 98840 11223 (Verified Green Tick)</div>
+            </div>
+          </div>
+          <p class="channel-desc">2-way customer concierge, dynamic catalog messages, automated booking confirmation vouchers, and broadcast promotions.</p>
+          <div class="channel-stats">
+            <div class="c-stat"><span>Last Broadcast:</span> <strong>1,420 sent</strong></div>
+            <div class="c-stat"><span>Delivery Rate:</span> <strong style="color: #34d399;">98.4%</strong></div>
+          </div>
+          <div class="channel-actions">
+            <a href="/inbox" class="c-btn wa">Chat in Inbox</a>
+            <button class="c-btn secondary" onclick={() => alert('WhatsApp Broadcast Campaign Creator opened')}>New Broadcast</button>
+          </div>
+        </div>
+
+        <!-- INSTAGRAM -->
+        <div class="social-channel-card instagram">
+          <div class="channel-top">
+            <div class="channel-icon-box ig">🟣</div>
+            <div>
+              <div class="channel-name">Instagram Direct & Reel Bots</div>
+              <div class="channel-handle font-mono">@mrbiz_group (28.4k followers)</div>
+            </div>
+          </div>
+          <p class="channel-desc">2-way direct messages, story mentions, and <strong>Reel Comment-to-DM bots</strong> (auto DM coupon code when user comments "PRICE").</p>
+          <div class="channel-stats">
+            <div class="c-stat"><span>Reel Lead Bot:</span> <strong style="color: #34d399;">ACTIVE</strong></div>
+            <div class="c-stat"><span>DMs Handled Today:</span> <strong>48 conversations</strong></div>
+          </div>
+          <div class="channel-actions">
+            <a href="/inbox" class="c-btn ig">Open IG DMs</a>
+            <button class="c-btn secondary" onclick={() => alert('Comment-to-DM Keyword Rules configured')}>Bot Rules</button>
+          </div>
+        </div>
+
+        <!-- LINKEDIN -->
+        <div class="social-channel-card linkedin">
+          <div class="channel-top">
+            <div class="channel-icon-box li">👔</div>
+            <div>
+              <div class="channel-name">LinkedIn Marketing & B2B Leads</div>
+              <div class="channel-handle font-mono">MrBiz Multi-Group OS (14.8k followers)</div>
+            </div>
+          </div>
+          <p class="channel-desc">Scheduled company page posts, B2B Lead Gen Forms auto-ingest into CRM in &lt;2s, and high-ticket consulting InMail management.</p>
+          <div class="channel-stats">
+            <div class="c-stat"><span>Lead Forms Sync:</span> <strong style="color: #34d399;">LIVE (2s ingest)</strong></div>
+            <div class="c-stat"><span>B2B Leads MTD:</span> <strong>34 Qualified</strong></div>
+          </div>
+          <div class="channel-actions">
+            <a href="/inbox" class="c-btn li">B2B Messages</a>
+            <button class="c-btn secondary" onclick={() => alert('LinkedIn Post Publisher & Scheduler opened')}>Schedule Post</button>
+          </div>
+        </div>
+
+        <!-- EMAIL -->
+        <div class="social-channel-card email">
+          <div class="channel-top">
+            <div class="channel-icon-box em">📧</div>
+            <div>
+              <div class="channel-name">Enterprise Email & Campaigns</div>
+              <div class="channel-handle font-mono">concierge@mrbiz.group (IMAP/SMTP)</div>
+            </div>
+          </div>
+          <p class="channel-desc">2-way email synchronization auto-threaded to client CRM tickets, visual HTML newsletter designer, and automated tax invoices.</p>
+          <div class="channel-stats">
+            <div class="c-stat"><span>Open Rate:</span> <strong style="color: #38bdf8;">41.2%</strong></div>
+            <div class="c-stat"><span>2-Way Sync:</span> <strong style="color: #34d399;">Active (0s delay)</strong></div>
+          </div>
+          <div class="channel-actions">
+            <a href="/inbox" class="c-btn em">Email Inbox</a>
+            <button class="c-btn secondary" onclick={() => alert('Visual Newsletter & Drip Campaign Builder opened')}>New Campaign</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  <!-- TAB 5: INVENTORY -->
   {#if activeTab === 'inventory'}
     <div class="inventory-card">
       <div class="table-card-header">
@@ -1015,6 +1443,354 @@
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }
+
+  /* Tab Badge New */
+  .tab-badge-new {
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 0.15rem 0.45rem;
+    border-radius: 9999px;
+    background: rgba(168, 85, 247, 0.2);
+    color: #c084fc;
+    border: 1px solid rgba(168, 85, 247, 0.4);
+  }
+
+  .btn-create-item {
+    padding: 0.55rem 1rem;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+    color: #ffffff;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+  }
+
+  .item-cell-title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 0.2rem;
+  }
+
+  .sku-tag {
+    font-size: 0.6875rem;
+    color: #94a3b8;
+  }
+
+  .unit-tag {
+    font-size: 0.6875rem;
+    font-weight: 800;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    text-transform: uppercase;
+  }
+
+  .unit-tag.travel { background: rgba(2, 132, 199, 0.2); color: #38bdf8; }
+  .unit-tag.healthcare { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+  .unit-tag.realestate { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+  .unit-tag.consulting { background: rgba(99, 102, 241, 0.2); color: #a5b4fc; }
+  .unit-tag.trade { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+  .unit-tag.retail_pod { background: rgba(236, 72, 153, 0.2); color: #f472b6; }
+  .unit-tag.quarry { background: rgba(100, 116, 139, 0.25); color: #cbd5e1; }
+
+  .type-badge {
+    font-size: 0.72rem;
+    color: #cbd5e1;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+  }
+
+  .bold-price {
+    font-size: 0.9375rem;
+    font-weight: 800;
+    color: #38bdf8;
+  }
+
+  .tax-tag {
+    font-size: 0.72rem;
+    color: #94a3b8;
+  }
+
+  .capacity-text {
+    font-size: 0.75rem;
+    color: #34d399;
+    font-weight: 600;
+  }
+
+  .preview-storefront-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+    background: rgba(2, 132, 199, 0.15);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.15s;
+  }
+
+  .preview-storefront-btn:hover {
+    background: #0284c7;
+    color: #ffffff;
+  }
+
+  /* Multi-Websites Tab */
+  .websites-section {
+    background: var(--color-surface, #0f172a);
+    border: 1px solid var(--color-border, #334155);
+    border-radius: 14px;
+    padding: 1.5rem;
+  }
+
+  .storefronts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.25rem;
+    margin-top: 1.5rem;
+  }
+
+  .site-card {
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    transition: all 0.2s;
+  }
+
+  .site-card:hover {
+    border-color: rgba(99, 102, 241, 0.4);
+    transform: translateY(-2px);
+  }
+
+  .site-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .site-unit-pill {
+    font-size: 0.6875rem;
+    font-weight: 800;
+    color: #a5b4fc;
+    background: rgba(99, 102, 241, 0.15);
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+  }
+
+  .ssl-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.6875rem;
+    font-weight: 800;
+    color: #34d399;
+  }
+
+  .ssl-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #34d399;
+  }
+
+  .site-title {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #ffffff;
+    margin: 0;
+  }
+
+  .domain-box {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    background: rgba(255, 255, 255, 0.04);
+    padding: 0.45rem 0.75rem;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .domain-text {
+    font-size: 0.8125rem;
+    color: #38bdf8;
+  }
+
+  .site-metrics-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .s-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .s-label { font-size: 0.6875rem; color: #64748b; }
+  .s-val { font-size: 0.8125rem; font-weight: 700; color: #f1f5f9; }
+  .s-val.green { color: #34d399; }
+
+  .site-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+  }
+
+  .btn-visit-site {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.55rem;
+    border-radius: 8px;
+    background: rgba(99, 102, 241, 0.2);
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    color: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .btn-cms-edit {
+    padding: 0.55rem 0.9rem;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #cbd5e1;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* Social & Marketing Hub Tab */
+  .marketing-hub-wrap {
+    background: var(--color-surface, #0f172a);
+    border: 1px solid var(--color-border, #334155);
+    border-radius: 14px;
+    padding: 1.5rem;
+  }
+
+  .btn-open-inbox {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.6rem 1.1rem;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ffffff;
+    font-size: 0.8125rem;
+    font-weight: 800;
+    text-decoration: none;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+  }
+
+  .social-channels-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.25rem;
+    margin-top: 1.5rem;
+  }
+
+  .social-channel-card {
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .social-channel-card.whatsapp { border-color: rgba(37, 211, 102, 0.3); }
+  .social-channel-card.instagram { border-color: rgba(225, 48, 108, 0.3); }
+  .social-channel-card.linkedin { border-color: rgba(10, 102, 194, 0.3); }
+  .social-channel-card.email { border-color: rgba(234, 67, 53, 0.3); }
+
+  .channel-top {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .channel-icon-box {
+    font-size: 1.4rem;
+  }
+
+  .channel-name {
+    font-size: 0.9375rem;
+    font-weight: 800;
+    color: #ffffff;
+  }
+
+  .channel-handle {
+    font-size: 0.72rem;
+    color: #94a3b8;
+  }
+
+  .channel-desc {
+    font-size: 0.8125rem;
+    color: #cbd5e1;
+    line-height: 1.45;
+    margin: 0 0 1rem;
+    flex: 1;
+  }
+
+  .channel-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    margin-bottom: 1rem;
+  }
+
+  .c-stat {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: #94a3b8;
+  }
+
+  .c-stat strong { color: #f1f5f9; }
+
+  .channel-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .c-btn {
+    flex: 1;
+    padding: 0.55rem;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+  }
+
+  .c-btn.wa { background: #25d366; color: #ffffff; }
+  .c-btn.ig { background: #e1306c; color: #ffffff; }
+  .c-btn.li { background: #0a66c2; color: #ffffff; }
+  .c-btn.em { background: #ea4335; color: #ffffff; }
+  .c-btn.secondary { background: rgba(255, 255, 255, 0.08); color: #cbd5e1; }
 
   @keyframes spin {
     from { transform: rotate(0deg); }

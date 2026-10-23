@@ -8,7 +8,18 @@
 		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 		%sveltekit.head%
 	</head>
-	<body data-sveltekit-preload-data="hover" class="theme-dark">
+	<body data-sveltekit-preload-data="hover">
+		<script>
+			(function() {
+				try {
+					var stored = localStorage.getItem('mrbiz_theme') || 'light';
+					document.documentElement.setAttribute('data-theme', stored);
+					document.body.className = 'theme-' + stored;
+				} catch (e) {
+					document.documentElement.setAttribute('data-theme', 'light');
+				}
+			})();
+		</script>
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>

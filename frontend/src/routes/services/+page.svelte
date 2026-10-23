@@ -256,6 +256,48 @@
 			summary: 'Automated Gross-Tare-Net weighbridge tonnage billing, Lorry trip pass, mineral transit challan, and heavy boxed Indian quarry GST.',
 			features: ['Gross & Tare Digital Weighbridge', '20mm/40mm/M-Sand Quick Palette', 'Lorry Trip Pass & Mineral Challan', 'Heavy Grid Template 11 Print'],
 			stats: 'Weighbridge Instant DC'
+		},
+		// 18. Customer Travel & Concierge Services
+		{
+			id: 'travel-portal',
+			title: 'Customer Travel & Concierge Services',
+			category: 'VERTICALS',
+			categoryLabel: 'Industry Verticals',
+			icon: '🛎️',
+			badge: 'Customer-Facing',
+			badgeColor: '#0284c7',
+			href: '/customer/services',
+			summary: 'Public customer-side travel desk with live PNR tracking, VIP chauffeur airport meet, e-Visa expediting, and 24/7 WhatsApp concierge.',
+			features: ['Live PNR Trip Tracker', 'Airport VIP Chauffeur Transfer', 'Express e-Visa Filing', '24/7 Travel Care SOS'],
+			stats: 'Sub-15m Emergency SOS'
+		},
+		// 19. Customer Tour Booking Wizard
+		{
+			id: 'tour-booking',
+			title: 'Customer Tour Booking & DMC Engine',
+			category: 'VERTICALS',
+			categoryLabel: 'Industry Verticals',
+			icon: '🗺️',
+			badge: 'Instant PNR',
+			badgeColor: '#10b981',
+			href: '/travel/booking',
+			summary: 'Interactive consumer tour booking wizard with customizable circuits (Kashmir, Kerala, Dubai, Bali), hotel tiers, fleet selection, and instant vouchers.',
+			features: ['Circuit & Package Customizer', '3★/4★/5★ Hotel Upgrades', 'Chauffeur Cab Selection', 'Instant Digital Voucher PDF'],
+			stats: 'Zero Walkout Record'
+		},
+		// 20. Tour & Travel Partners Hub (B2B)
+		{
+			id: 'travel-partners',
+			title: 'Tour & Travel Partners Hub (B2B)',
+			category: 'VERTICALS',
+			categoryLabel: 'Industry Verticals',
+			icon: '🤝',
+			badge: '12.5% Margin',
+			badgeColor: '#34d399',
+			href: '/travel/partners',
+			summary: 'B2B affiliate network for 1,200+ travel agencies with wholesale DMC net tariffs, sub-agent credit khata, and instant partner registration.',
+			features: ['B2B Wholesale Net Rates', '₹10L Khata Credit Facility', 'White-label Client Itineraries', 'Interactive Profit Calculator'],
+			stats: '1,200+ Active Partners'
 		}
 	];
 
@@ -287,8 +329,27 @@
 			MrBiz-OS Business Services & Verticals
 		</h1>
 		<p class="hero-subtitle">
-			Explore all 16 integrated enterprise modules. Built for multi-business groups, retail counters, and digital agencies with zero bloat and sub-150MB server memory.
+			Explore all 19 integrated enterprise modules and customer-facing travel portals. Built for multi-business groups, tour operators, retail counters, and digital agencies.
 		</p>
+
+		<!-- Dedicated Customer & Partner Portals Banner -->
+		<div class="portals-highlight-banner">
+			<span class="highlight-tag">PUBLIC & PARTNER PORTALS:</span>
+			<div class="portals-links">
+				<a href="/customer/services" class="portal-chip customer">
+					<span>🛎️ Customer Travel Services</span>
+				</a>
+				<a href="/travel/booking" class="portal-chip booking">
+					<span>🗺️ Book a Tour (Instant PNR)</span>
+				</a>
+				<a href="/travel/partners" class="portal-chip partner">
+					<span>🤝 Tour & Travel Partners (B2B)</span>
+				</a>
+				<a href="/login/customer" class="portal-chip login">
+					<span>🔐 Traveler Login</span>
+				</a>
+			</div>
+		</div>
 
 		<!-- Search Bar -->
 		<div class="search-bar-wrap">
@@ -471,7 +532,77 @@
 		color: #94a3b8;
 		max-width: 680px;
 		line-height: 1.6;
-		margin: 0 0 2rem 0;
+		margin: 0 0 1.25rem 0;
+	}
+
+	.portals-highlight-banner {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.6rem;
+		background: rgba(15, 23, 42, 0.7);
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: 14px;
+		padding: 0.85rem 1.25rem;
+		margin-bottom: 2rem;
+		max-width: 820px;
+		width: 100%;
+		box-sizing: border-box;
+	}
+
+	.highlight-tag {
+		font-size: 0.7rem;
+		font-weight: 800;
+		color: #38bdf8;
+		letter-spacing: 0.08em;
+	}
+
+	.portals-links {
+		display: flex;
+		gap: 0.65rem;
+		flex-wrap: wrap;
+		justify-content: center;
+	}
+
+	.portal-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.45rem 0.85rem;
+		border-radius: 8px;
+		font-size: 0.82rem;
+		font-weight: 700;
+		text-decoration: none;
+		transition: all 0.15s ease;
+	}
+
+	.portal-chip.customer {
+		background: rgba(2, 132, 199, 0.2);
+		border: 1px solid rgba(56, 189, 248, 0.4);
+		color: #38bdf8;
+	}
+
+	.portal-chip.booking {
+		background: rgba(16, 185, 129, 0.2);
+		border: 1px solid rgba(52, 211, 153, 0.4);
+		color: #34d399;
+	}
+
+	.portal-chip.partner {
+		background: rgba(245, 158, 11, 0.2);
+		border: 1px solid rgba(245, 158, 11, 0.4);
+		color: #fbbf24;
+	}
+
+	.portal-chip.login {
+		background: rgba(124, 58, 237, 0.2);
+		border: 1px solid rgba(167, 139, 250, 0.4);
+		color: #c084fc;
+	}
+
+	.portal-chip:hover {
+		transform: translateY(-1px);
+		filter: brightness(1.2);
 	}
 
 	.search-bar-wrap {

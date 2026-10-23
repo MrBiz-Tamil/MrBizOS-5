@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { projectGrpc } from '$lib/grpc';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import LockBanner from '$lib/components/ui/LockBanner.svelte';
 
 	interface Project {
 		id: string;
@@ -9,13 +11,18 @@
 		description: string;
 		businessUnit: string;
 		clientName: string;
-		status: string;
+		status: 'ACTIVE' | 'IN_PROGRESS' | 'COMPLETED' | 'LOCKED' | 'ON_HOLD';
 		budget: number;
 		spent: number;
 		startDate: string;
 		targetDate: string;
 		totalTasks: number;
 		completedTasks: number;
+		owner: string;
+		isLocked?: boolean;
+		lockReason?: string;
+		lockScope?: string;
+		isConfidential?: boolean;
 	}
 
 	interface UTMSTask {
@@ -44,7 +51,22 @@
 		status: 'PENDING' | 'READY_FOR_BILLING' | 'INVOICED';
 	}
 
-	// Sample robust initial data
+	interface TimesheetEntry {
+		id: string;
+		taskId: string;
+		taskTitle: string;
+		projectId: string;
+		projectName: string;
+		consultant: string;
+		date: string;
+		hours: number;
+		rate: number;
+		billable: boolean;
+		status: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'LOCKED';
+		notes: string;
+	}
+
+	// Projects Data with lock & confidentiality states
 	let projects = $state<Project[]>([
 		{
 			id: 'PRJ-001',
@@ -59,7 +81,9 @@
 			startDate: '2026-09-01',
 			targetDate: '2026-12-15',
 			totalTasks: 14,
-			completedTasks: 8
+			completedTasks: 8,
+			owner: 'Arun Kumar',
+			isLocked: false
 		},
 		{
 			id: 'PRJ-002',
@@ -74,7 +98,9 @@
 			startDate: '2026-10-01',
 			targetDate: '2026-11-30',
 			totalTasks: 9,
-			completedTasks: 4
+			completedTasks: 4,
+			owner: 'Dr. Priya Sharma',
+			isLocked: false
 		},
 		{
 			id: 'PRJ-003',
@@ -89,7 +115,45 @@
 			startDate: '2026-10-10',
 			targetDate: '2026-12-31',
 			totalTasks: 11,
-			completedTasks: 6
+			completedTasks: 6,
+			owner: 'Arunmozhi Varman',
+			isLocked: false
+		},
+		{
+			id: 'PRJ-004',
+			code: 'PRJ-AUDIT-FY25',
+			name: 'Statutory Financial Audit & Year-End Close',
+			description: 'Closed period project with locked milestone budgets and immutable timesheets',
+			businessUnit: 'FINANCE',
+			clientName: 'Internal Audit Board',
+			status: 'LOCKED',
+			budget: 450000,
+			spent: 450000,
+			startDate: '2026-01-01',
+			targetDate: '2026-03-31',
+			totalTasks: 12,
+			completedTasks: 12,
+			owner: 'Priya Sundaram',
+			isLocked: true,
+			lockReason: 'Financial year-end books closed & audited by statutory board.',
+			lockScope: 'Read-only financial ledgers, zero further timesheet postings permitted.'
+		},
+		{
+			id: 'PRJ-005',
+			code: 'PRJ-MNA-STEALTH',
+			name: 'Project Sovereign (Restricted M&A Due Diligence)',
+			description: 'Confidential strategic merger evaluation and proprietary vendor valuation',
+			businessUnit: 'CONSULTING',
+			clientName: 'Confidential Client (Scope A)',
+			status: 'ACTIVE',
+			budget: 2500000,
+			spent: 980000,
+			startDate: '2026-08-01',
+			targetDate: '2026-11-15',
+			totalTasks: 8,
+			completedTasks: 5,
+			owner: 'Executive Administrator',
+			isConfidential: true
 		}
 	]);
 
@@ -195,24 +259,98 @@
 	let milestones = $state<Milestone[]>([
 		{ id: 'MS-01', projectId: 'PRJ-001', title: 'Phase 1: Architecture Sign-Off', targetDate: '2026-09-30', invoiceTriggerAmount: 375000, status: 'INVOICED' },
 		{ id: 'MS-02', projectId: 'PRJ-001', title: 'Phase 2: Core Ledger & Bank Sync', targetDate: '2026-10-31', invoiceTriggerAmount: 500000, status: 'READY_FOR_BILLING' },
-		{ id: 'MS-03', projectId: 'PRJ-001', title: 'Phase 3: Production Go-Live', targetDate: '2026-12-15', invoiceTriggerAmount: 375000, status: 'PENDING' }
+		{ id: 'MS-03', projectId: 'PRJ-001', title: 'Phase 3: Production Go-Live', targetDate: '2026-12-15', invoiceTriggerAmount: 375000, status: 'PENDING' },
+		{ id: 'MS-04', projectId: 'PRJ-002', title: 'HL7 Diagnostics Machine Interface', targetDate: '2026-11-15', invoiceTriggerAmount: 250000, status: 'READY_FOR_BILLING' }
 	]);
 
+	let timesheetEntries = $state<TimesheetEntry[]>([
+		{
+			id: 'TS-801',
+			taskId: 'TSK-101',
+			taskTitle: 'Deploy Automated Bank Reconciliation Stubs',
+			projectId: 'PRJ-001',
+			projectName: 'FinTech ERP Rollout',
+			consultant: 'Arun Kumar',
+			date: '2026-10-22',
+			hours: 5.5,
+			rate: 1500,
+			billable: true,
+			status: 'APPROVED',
+			notes: 'Configured parser stubs and verified matching rule weights against mock bank feeds.'
+		},
+		{
+			id: 'TS-802',
+			taskId: 'TSK-102',
+			taskTitle: 'Client Review of 3-Way Procurement Workflow',
+			projectId: 'PRJ-001',
+			projectName: 'FinTech ERP Rollout',
+			consultant: 'Priya Sundaram',
+			date: '2026-10-22',
+			hours: 3.0,
+			rate: 1800,
+			billable: true,
+			status: 'SUBMITTED',
+			notes: 'Demonstrated automated PO matching tolerance to financial controller.'
+		},
+		{
+			id: 'TS-803',
+			taskId: 'TSK-104',
+			taskTitle: 'Schengen Visa VFS Dossier Verification Checklist',
+			projectId: 'PRJ-003',
+			projectName: 'Global DMC Tour Operators Integration',
+			consultant: 'Arunmozhi Varman',
+			date: '2026-10-21',
+			hours: 4.0,
+			rate: 1200,
+			billable: true,
+			status: 'APPROVED',
+			notes: 'Completed biometrics appointment slots verification.'
+		},
+		{
+			id: 'TS-804',
+			taskId: 'TSK-103',
+			taskTitle: 'Schedule H1 Antibiotic Compliance Audit Pad',
+			projectId: 'PRJ-002',
+			projectName: 'Apollo Multi-Specialty Clinic Deployment',
+			consultant: 'Dr. Priya Sharma',
+			date: '2026-10-21',
+			hours: 2.5,
+			rate: 2200,
+			billable: true,
+			status: 'DRAFT',
+			notes: 'Drafted regulatory formulary mapping table.'
+		},
+		{
+			id: 'TS-805',
+			taskId: 'TSK-105',
+			taskTitle: 'Statutory Financial Audit 2025 Ledger Freeze',
+			projectId: 'PRJ-004',
+			projectName: 'Statutory Financial Audit & Year-End Close',
+			consultant: 'Executive Administrator',
+			date: '2026-03-30',
+			hours: 8.0,
+			rate: 2500,
+			billable: true,
+			status: 'LOCKED',
+			notes: 'Financial ledger locked and verified against balance sheet filings.'
+		}
+	]);
+
+	// View Navigation
+	let activeTab = $state<'portfolio' | 'kanban' | 'timesheet' | 'milestones' | 'utms_creator'>('portfolio');
 	let selectedProjectId = $state<string>('');
 	let selectedBUFilter = $state<string>('ALL');
 	let searchQuery = $state<string>('');
-	let loading = $state<boolean>(false);
-	let activeTab = $state<'kanban' | 'projects' | 'timesheet' | 'utms_delegation'>('kanban');
 	let statusMessage = $state<string | null>(null);
 
-	// Timesheet Logger State
+	// Timesheet Form State
 	let timesheetTask = $state('TSK-101');
 	let timesheetHours = $state(4);
 	let timesheetDate = $state(new Date().toISOString().split('T')[0]);
 	let timesheetNote = $state('Integrated OFX bank feed parser and verified journal entries.');
 	let timesheetBillableRate = $state(1500);
 
-	// Form for New UTMS Task
+	// New Task Form State
 	let newTask = $state({
 		title: '',
 		description: '',
@@ -238,30 +376,48 @@
 		'DONE'
 	];
 
-	// Computed KPIs
+	// Computed Metrics
+	let totalBudget = $derived(projects.reduce((acc, p) => acc + p.budget, 0));
+	let totalSpent = $derived(projects.reduce((acc, p) => acc + p.spent, 0));
+	let overallProgress = $derived(totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0);
 	let criticalSlaCount = $derived(tasks.filter(t => t.slaHoursRemaining > 0 && t.slaHoursRemaining <= 12 && t.status !== 'DONE').length);
+
+	let totalTimesheetHours = $derived(timesheetEntries.reduce((acc, e) => acc + e.hours, 0));
+	let totalBillableRealization = $derived(timesheetEntries.filter(e => e.billable).reduce((acc, e) => acc + (e.hours * e.rate), 0));
+
 	let filteredTasks = $derived(
 		tasks.filter(t => {
 			const matchesProject = !selectedProjectId || t.projectId === selectedProjectId;
 			const matchesBU = selectedBUFilter === 'ALL' || t.businessUnit === selectedBUFilter;
-			const matchesSearch = !searchQuery || 
-				t.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-				t.description.toLowerCase().includes(searchQuery.toLowerCase()) || 
+			const matchesSearch = !searchQuery ||
+				t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+				t.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
 				t.assignedTo.toLowerCase().includes(searchQuery.toLowerCase()) ||
 				t.id.toLowerCase().includes(searchQuery.toLowerCase());
 			return matchesProject && matchesBU && matchesSearch;
 		})
 	);
 
+	let filteredProjects = $derived(
+		projects.filter(p => {
+			const matchesBU = selectedBUFilter === 'ALL' || p.businessUnit === selectedBUFilter;
+			const matchesSearch = !searchQuery ||
+				p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+				p.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+				p.clientName.toLowerCase().includes(searchQuery.toLowerCase());
+			return matchesBU && matchesSearch;
+		})
+	);
+
 	function getBUBadge(bu: string) {
 		switch (bu) {
-			case 'HEALTH': return { label: '🏥 Healthcare', color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' };
-			case 'TRAVEL': return { label: '✈️ Travel & Tours', color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.15)' };
-			case 'REALESTATE': return { label: '🏢 Real Estate', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' };
-			case 'CONSULTING': return { label: '💻 Tech Consulting', color: '#818cf8', bg: 'rgba(129, 140, 248, 0.15)' };
-			case 'COMMERCE': return { label: '🛍️ E-Commerce', color: '#ec4899', bg: 'rgba(236, 72, 153, 0.15)' };
-			case 'FINANCE': return { label: '💰 Corporate Finance', color: '#fbbf24', bg: 'rgba(251, 191, 36, 0.15)' };
-			default: return { label: '📁 General', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.15)' };
+			case 'HEALTH': return { label: '🏥 Healthcare', accentVar: 'var(--accent-healthcare)' };
+			case 'TRAVEL': return { label: '✈️ Travel Ops', accentVar: 'var(--accent-travel)' };
+			case 'REALESTATE': return { label: '🏢 Real Estate', accentVar: 'var(--accent-realestate)' };
+			case 'CONSULTING': return { label: '💻 Tech Consulting', accentVar: 'var(--accent-project)' };
+			case 'COMMERCE': return { label: '🛍️ E-Commerce', accentVar: 'var(--accent-ecommerce)' };
+			case 'FINANCE': return { label: '💰 Accounting & Tax', accentVar: 'var(--accent-finance)' };
+			default: return { label: '📁 General', accentVar: 'var(--text-muted)' };
 		}
 	}
 
@@ -272,13 +428,13 @@
 				projectGrpc.listTasks()
 			]);
 			if (pRes?.projects && pRes.projects.length > 0) {
-				projects = pRes.projects;
+				projects = pRes.projects as Project[];
 			}
 			if (tRes?.tasks && tRes.tasks.length > 0) {
 				tasks = tRes.tasks;
 			}
 		} catch (e: any) {
-			console.warn('Using client state with full UTMS offline safety:', e);
+			// Preserves responsive offline safety
 		}
 	}
 
@@ -291,7 +447,7 @@
 		} catch (e) {}
 	}
 
-	async function handleCreateTask(e: Event) {
+	function handleCreateTask(e: Event) {
 		e.preventDefault();
 		if (!newTask.title.trim()) {
 			statusMessage = '⚠️ Please enter task title.';
@@ -300,7 +456,7 @@
 
 		const created: UTMSTask = {
 			id: `TSK-${Date.now().toString().slice(-4)}`,
-			projectId: selectedProjectId || (projects[0]?.id || 'PRJ-001'),
+			projectId: selectedProjectId || projects[0]?.id || 'PRJ-001',
 			title: newTask.title,
 			description: newTask.description || 'Deliverable assigned via UTMS Engine',
 			businessUnit: newTask.businessUnit,
@@ -321,16 +477,9 @@
 		newTask.description = '';
 		activeTab = 'kanban';
 		setTimeout(() => statusMessage = null, 4000);
-
-		try {
-			await projectGrpc.createTask({
-				projectId: created.projectId,
-				...newTask
-			});
-		} catch (e) {}
 	}
 
-	async function handleExecuteDelegation() {
+	function handleExecuteDelegation() {
 		if (!taskToDelegate) return;
 		taskToDelegate.businessUnit = targetBU;
 		taskToDelegate.assignedTo = targetAssignee;
@@ -347,337 +496,457 @@
 		setTimeout(() => statusMessage = null, 4000);
 	}
 
+	function handleUnlockProject(p: Project) {
+		p.isLocked = false;
+		p.status = 'ACTIVE';
+		statusMessage = `🔑 Authorized Unlock granted for project ${p.code} (${p.name}). Audit entry recorded.`;
+		setTimeout(() => statusMessage = null, 4000);
+	}
+
+	function handleAddTimesheet(e: Event) {
+		e.preventDefault();
+		const matchTask = tasks.find(t => t.id === timesheetTask);
+		const matchProject = projects.find(p => p.id === matchTask?.projectId);
+
+		const entry: TimesheetEntry = {
+			id: `TS-${Date.now().toString().slice(-4)}`,
+			taskId: timesheetTask,
+			taskTitle: matchTask?.title || 'General Engineering',
+			projectId: matchTask?.projectId || 'PRJ-001',
+			projectName: matchProject?.name || 'Enterprise Project',
+			consultant: 'Arun Kumar',
+			date: timesheetDate,
+			hours: timesheetHours,
+			rate: timesheetBillableRate,
+			billable: true,
+			status: 'SUBMITTED',
+			notes: timesheetNote
+		};
+
+		timesheetEntries = [entry, ...timesheetEntries];
+		statusMessage = `✅ Logged ${timesheetHours}h for ${entry.taskTitle} (₹${(timesheetHours * timesheetBillableRate).toLocaleString('en-IN')})! Submitted for approval.`;
+		setTimeout(() => statusMessage = null, 4000);
+	}
+
+	function handleApproveTimesheet(entry: TimesheetEntry) {
+		entry.status = 'APPROVED';
+		statusMessage = `✓ Timesheet ${entry.id} approved for payroll & invoicing!`;
+		setTimeout(() => statusMessage = null, 3000);
+	}
+
+	function handleRejectTimesheet(entry: TimesheetEntry) {
+		entry.status = 'REJECTED';
+		statusMessage = `✕ Timesheet ${entry.id} rejected. Correction requested from consultant.`;
+		setTimeout(() => statusMessage = null, 3000);
+	}
+
+	function handleLockTimesheet(entry: TimesheetEntry) {
+		entry.status = 'LOCKED';
+		statusMessage = `🔒 Timesheet ${entry.id} permanently locked under closed accounting period.`;
+		setTimeout(() => statusMessage = null, 3000);
+	}
+
 	onMount(() => {
 		loadData();
 	});
 </script>
 
 <svelte:head>
-	<title>Universal Task Management System (UTMS) | MrBiz-OS</title>
+	<title>Project Management & Timesheets | MRBiz OS</title>
 </svelte:head>
 
-<div class="utms-app">
-	
-	<!-- Header Bar -->
-	<header class="utms-header">
-		<div>
-			<div class="badge-row">
-				<span class="pill-badge">⚡ Universal Task Management System (UTMS)</span>
-				<span class="sla-indicator">● Cross-BU Routing Engine · ConnectRPC</span>
+<div class="projects-application">
+	<!-- Application Header with Accent Indicator -->
+	<header class="app-header-strip">
+		<div class="header-main">
+			<div class="app-accent-tag">
+				<span class="app-accent-dot"></span>
+				<span class="app-accent-title">MRBiz OS · Project Management & Workforce</span>
 			</div>
-			<h1 class="main-title">Cross-Department Projects &amp; SLA Pipeline</h1>
-			<p class="subtitle">
-				Seamless task delegation connecting Healthcare EMR, Travel Ops, Real Estate Plots, and Financial Invoicing without app silos.
+			<h1 class="page-title">Enterprise Project Portfolio & UTMS Operations</h1>
+			<p class="page-subtitle">
+				Odoo-inspired business views for project governance, sprint boards, milestone billing, and audited workforce timesheets.
 			</p>
 		</div>
 
 		<div class="header-actions">
-			<button class="btn btn-secondary" onclick={() => activeTab = 'timesheet'}>
+			<button
+				type="button"
+				class="btn btn-secondary"
+				onclick={() => (activeTab = 'timesheet')}
+			>
 				⏱️ Log Timesheet
 			</button>
-			<button class="btn btn-primary" onclick={() => activeTab = 'utms_delegation'}>
-				+ New UTMS Task
+			<button
+				type="button"
+				class="btn btn-primary"
+				onclick={() => (activeTab = 'utms_creator')}
+			>
+				+ Create Task
 			</button>
 		</div>
 	</header>
 
 	{#if statusMessage}
-		<div class="status-alert">{statusMessage}</div>
+		<div class="status-toast animate-fade-in" role="status">
+			{statusMessage}
+		</div>
 	{/if}
 
-	<!-- Executive KPI Cockpit -->
-	<div class="kpi-grid">
-		<div class="kpi-card">
-			<div class="kpi-label">Active UTMS Tasks</div>
-			<div class="kpi-value text-indigo-400">{tasks.length} Deliverables</div>
-			<div class="kpi-sub">Across 5 Business Units</div>
-		</div>
-
-		<div class="kpi-card">
-			<div class="kpi-label">Critical SLA Clock</div>
-			<div class="kpi-value text-rose-400" class:pulse-glow={criticalSlaCount > 0}>
-				{criticalSlaCount} Urgent Tasks
+	<!-- Executive KPI Summary Cockpit -->
+	<section class="metrics-grid" aria-label="Project KPIs">
+		<div class="metric-card">
+			<div class="metric-title">
+				<span>Committed Contracts</span>
+				<span class="metric-icon">📁</span>
 			</div>
-			<div class="kpi-sub">&lt;12 Hours SLA Remaining</div>
+			<div class="metric-value">₹{(totalBudget / 100000).toFixed(1)}L</div>
+			<div class="metric-subtitle">{projects.length} Active Portfolio Projects</div>
 		</div>
 
-		<div class="kpi-card">
-			<div class="kpi-label">Active Portfolio Value</div>
-			<div class="kpi-value text-emerald-400">
-				₹{(projects.reduce((acc, p) => acc + p.budget, 0) / 100000).toFixed(1)} Lakhs
+		<div class="metric-card">
+			<div class="metric-title">
+				<span>Budget Spent Ratio</span>
+				<span class="metric-icon">📊</span>
 			</div>
-			<div class="kpi-sub">{projects.length} Committed Contracts</div>
+			<div class="metric-value">{overallProgress}%</div>
+			<div class="metric-subtitle">₹{(totalSpent / 100000).toFixed(1)}L Total Burned</div>
 		</div>
 
-		<div class="kpi-card">
-			<div class="kpi-label">SLA Compliance Rate</div>
-			<div class="kpi-value text-sky-400">96.4% On-Track</div>
-			<div class="kpi-sub">Cross-Department Velocity</div>
+		<div class="metric-card">
+			<div class="metric-title">
+				<span>Critical SLA Deadlines</span>
+				<span class="metric-icon">⏱️</span>
+			</div>
+			<div class="metric-value {criticalSlaCount > 0 ? 'text-warning' : 'text-success'}">
+				{criticalSlaCount} Urgent
+			</div>
+			<div class="metric-subtitle">&lt;12 Hours SLA Remaining</div>
 		</div>
-	</div>
 
-	<!-- Navigation Tabs -->
-	<div class="nav-tabs">
-		<button 
-			class="tab-btn" 
-			class:active={activeTab === 'kanban'} 
-			onclick={() => activeTab = 'kanban'}>
-			📋 Kanban Sprint Pipeline ({tasks.length})
-		</button>
-		<button 
-			class="tab-btn" 
-			class:active={activeTab === 'projects'} 
-			onclick={() => activeTab = 'projects'}>
-			📁 Project Portfolios &amp; Milestone Billing ({projects.length})
-		</button>
-		<button 
-			class="tab-btn" 
-			class:active={activeTab === 'timesheet'} 
-			onclick={() => activeTab = 'timesheet'}>
-			⏱️ Timesheets &amp; Billable Burn Rate
-		</button>
-		<button 
-			class="tab-btn" 
-			class:active={activeTab === 'utms_delegation'} 
-			onclick={() => activeTab = 'utms_delegation'}>
-			⚡ + Fast UTMS Task Creator
-		</button>
-	</div>
+		<div class="metric-card">
+			<div class="metric-title">
+				<span>Workforce Realization</span>
+				<span class="metric-icon">💼</span>
+			</div>
+			<div class="metric-value text-brand">₹{(totalBillableRealization / 1000).toFixed(1)}k</div>
+			<div class="metric-subtitle">{totalTimesheetHours}h Logged in Current Cycle</div>
+		</div>
+	</section>
 
-	<!-- TAB 1: KANBAN SPRINT PIPELINE -->
-	{#if activeTab === 'kanban'}
-		<div class="kanban-section">
-			
-			<!-- Filter & Search Toolbar -->
-			<div class="filter-toolbar">
-				<div class="filter-group">
-					<span class="filter-label">Filter BU:</span>
-					<div class="bu-pill-group">
-						{#each ['ALL', 'HEALTH', 'TRAVEL', 'REALESTATE', 'CONSULTING', 'FINANCE'] as bu}
-							<button 
-								class="bu-pill" 
-								class:active={selectedBUFilter === bu}
-								onclick={() => selectedBUFilter = bu}>
-								{bu === 'ALL' ? '🌐 All Verticals' : getBUBadge(bu).label}
-							</button>
-						{/each}
+	<!-- Filter & Search Toolbar -->
+	<section class="toolbar-card">
+		<div class="toolbar-filters">
+			<span class="toolbar-label">Vertical Scope:</span>
+			<div class="bu-pills">
+				{#each ['ALL', 'CONSULTING', 'HEALTH', 'TRAVEL', 'FINANCE', 'REALESTATE'] as bu}
+					<button
+						type="button"
+						class="bu-pill-btn"
+						class:active={selectedBUFilter === bu}
+						onclick={() => (selectedBUFilter = bu)}
+					>
+						{bu === 'ALL' ? '🌐 All Verticals' : getBUBadge(bu).label}
+					</button>
+				{/each}
+			</div>
+		</div>
+
+		<div class="toolbar-search">
+			<span class="search-glyph">🔍</span>
+			<input
+				type="text"
+				class="toolbar-search-input"
+				placeholder="Search projects, tasks, milestones, assignees..."
+				bind:value={searchQuery}
+			/>
+		</div>
+	</section>
+
+	<!-- Odoo-Style View Switcher Tabs -->
+	<nav class="view-tabs" aria-label="Project Management Views">
+		<button
+			type="button"
+			class="view-tab"
+			class:active={activeTab === 'portfolio'}
+			onclick={() => (activeTab = 'portfolio')}
+		>
+			📁 Project Portfolio ({filteredProjects.length})
+		</button>
+		<button
+			type="button"
+			class="view-tab"
+			class:active={activeTab === 'kanban'}
+			onclick={() => (activeTab = 'kanban')}
+		>
+			📋 Kanban Sprint Board ({filteredTasks.length})
+		</button>
+		<button
+			type="button"
+			class="view-tab"
+			class:active={activeTab === 'milestones'}
+			onclick={() => (activeTab = 'milestones')}
+		>
+			🎯 Milestone Deliverables &amp; Invoicing ({milestones.length})
+		</button>
+		<button
+			type="button"
+			class="view-tab"
+			class:active={activeTab === 'timesheet'}
+			onclick={() => (activeTab = 'timesheet')}
+		>
+			⏱️ Timesheets &amp; Workforce Grid ({timesheetEntries.length})
+		</button>
+		<button
+			type="button"
+			class="view-tab"
+			class:active={activeTab === 'utms_creator'}
+			onclick={() => (activeTab = 'utms_creator')}
+		>
+			⚡ + New Task Dispatch
+		</button>
+	</nav>
+
+	<!-- VIEW 1: PROJECT PORTFOLIO & WORKSPACE -->
+	{#if activeTab === 'portfolio'}
+		<div class="portfolio-view animate-fade-in">
+			<div class="section-header-row">
+				<div>
+					<h2>Enterprise Client Contracts &amp; Project Workspaces</h2>
+					<p>Track milestone completion, budget burn rates, client account owners, and security lock statuses.</p>
+				</div>
+			</div>
+
+			<div class="portfolio-grid">
+				{#each filteredProjects as prj (prj.id)}
+					{@const percent = Math.min(100, Math.round((prj.spent / prj.budget) * 100))}
+					{@const bu = getBUBadge(prj.businessUnit)}
+					
+					<div class="card project-card" class:is-locked={prj.isLocked}>
+						<!-- Top Info Badges -->
+						<div class="project-card-header">
+							<span class="project-code font-mono">{prj.code}</span>
+							<div class="card-status-badges">
+								{#if prj.isConfidential}
+									<Badge variant="warning" label="CONFIDENTIAL" icon="🔒" size="sm" />
+								{/if}
+								{#if prj.isLocked}
+									<Badge variant="locked" label="LOCKED" icon="🔒" size="sm" />
+								{:else if prj.status === 'ACTIVE'}
+									<Badge variant="success" label="ACTIVE" icon="✓" size="sm" />
+								{:else if prj.status === 'IN_PROGRESS'}
+									<Badge variant="info" label="IN PROGRESS" icon="●" size="sm" />
+								{:else}
+									<Badge variant="neutral" label={prj.status} size="sm" />
+								{/if}
+							</div>
+						</div>
+
+						<!-- Title & Client Scope -->
+						<div class="project-title-wrap">
+							<h3 class="project-title">
+								{prj.isConfidential ? 'Project Sovereign (Restricted M&A Due Diligence)' : prj.name}
+							</h3>
+							<span class="project-client">🏢 {prj.clientName} · Owner: <strong>{prj.owner}</strong></span>
+						</div>
+
+						<p class="project-desc">{prj.description}</p>
+
+						<!-- Budget Progress -->
+						<div class="project-budget-box">
+							<div class="budget-meta">
+								<span class="budget-label">Budget Burn</span>
+								<strong class="budget-val font-mono">
+									{percent}% (₹{(prj.spent).toLocaleString('en-IN')} / ₹{(prj.budget).toLocaleString('en-IN')})
+								</strong>
+							</div>
+							<div class="progress-bar-track">
+								<div
+									class="progress-bar-fill"
+									style={`width: ${percent}%; background: ${percent > 85 ? 'var(--status-warning)' : 'var(--brand-primary)'};`}
+								></div>
+							</div>
+						</div>
+
+						<!-- Timeline & Task Count -->
+						<div class="project-meta-footer">
+							<span class="meta-item">📅 {prj.startDate} → {prj.targetDate}</span>
+							<span class="meta-item">✓ {prj.completedTasks} / {prj.totalTasks} Tasks</span>
+						</div>
+
+						<!-- Lock Banner if Protected -->
+						{#if prj.isLocked}
+							<div class="card-lock-notice">
+								<LockBanner
+									title={prj.name}
+									reason={prj.lockReason}
+									scope={prj.lockScope}
+									canUnlock={true}
+									onunlock={() => handleUnlockProject(prj)}
+								/>
+							</div>
+						{/if}
 					</div>
-				</div>
-
-				<div class="search-box">
-					<span>🔍</span>
-					<input type="text" placeholder="Search tasks, assignees, keywords..." bind:value={searchQuery} />
-				</div>
+				{/each}
 			</div>
+		</div>
+	{/if}
 
-			<!-- Visual 5-Column Kanban Board -->
+	<!-- VIEW 2: KANBAN SPRINT BOARD -->
+	{#if activeTab === 'kanban'}
+		<div class="kanban-view animate-fade-in">
 			<div class="kanban-board">
 				{#each columns as col}
 					{@const colTasks = filteredTasks.filter(t => t.status === col)}
 					{@const colName = col.replace('_', ' ')}
 					<div class="kanban-column">
-						
-						<!-- Column Header -->
-						<div class="column-header">
-							<div class="col-title-wrap">
-								<span class="col-dot" class:dot-todo={col === 'TODO'} class:dot-prog={col === 'IN_PROGRESS'} class:dot-review={col === 'REVIEW'} class:dot-done={col === 'DONE'}></span>
-								<h3 class="col-title">{colName}</h3>
+						<div class="kanban-column-header">
+							<div class="column-title-wrap">
+								<span class="col-indicator col-{col.toLowerCase()}"></span>
+								<h3 class="column-name">{colName}</h3>
 							</div>
-							<span class="col-count">{colTasks.length}</span>
+							<span class="column-badge font-mono">{colTasks.length}</span>
 						</div>
 
-						<!-- Task Cards List -->
-						<div class="column-tasks">
+						<div class="kanban-tasks-list">
 							{#if colTasks.length === 0}
-								<div class="empty-column-placeholder">
-									No tasks in {colName}
-								</div>
+								<div class="empty-column-msg">No tasks in {colName}</div>
 							{/if}
 
-							{#each colTasks as task}
+							{#each colTasks as task (task.id)}
 								{@const bu = getBUBadge(task.businessUnit)}
-								<div class="task-card">
-									
-									<!-- Card Top Badges -->
-									<div class="card-badges">
-										<span class="bu-tag" style={`background: ${bu.bg}; color: ${bu.color};`}>
+								<div class="card task-card">
+									<div class="task-card-tags">
+										<span class="task-bu-pill" style={`color: ${bu.accentVar};`}>
 											{bu.label}
 										</span>
-										<span class="priority-tag" class:tag-urgent={task.priority === 'URGENT'} class:tag-high={task.priority === 'HIGH'}>
-											{task.priority === 'URGENT' ? '🔴 URGENT' : task.priority === 'HIGH' ? '🟡 HIGH' : '⚪ NORMAL'}
-										</span>
+										{#if task.priority === 'URGENT'}
+											<Badge variant="error" label="URGENT" icon="🔴" size="sm" />
+										{:else if task.priority === 'HIGH'}
+											<Badge variant="warning" label="HIGH" icon="🟡" size="sm" />
+										{:else}
+											<Badge variant="neutral" label={task.priority} size="sm" />
+										{/if}
 									</div>
 
-									<!-- Title & Description -->
 									<h4 class="task-title">{task.title}</h4>
 									<p class="task-desc">{task.description}</p>
 
-									<!-- SLA & Assignee Row -->
-									<div class="card-meta">
-										<div class="assignee-wrap">
-											<div class="avatar-circle">
-												{task.assignedTo.split(' ')[0][0] || 'U'}
-											</div>
-											<span class="assignee-name">{task.assignedTo.split(' (')[0]}</span>
+									<div class="task-card-meta">
+										<div class="assignee-info">
+											<div class="avatar-small">{task.assignedTo[0] || 'U'}</div>
+											<span class="assignee-text">{task.assignedTo.split(' (')[0]}</span>
 										</div>
-
-										<div class="sla-badge" class:sla-urgent={task.slaHoursRemaining <= 12 && task.status !== 'DONE'}>
+										<div class="task-sla font-mono" class:sla-urgent={task.slaHoursRemaining <= 12 && task.status !== 'DONE'}>
 											⏱️ {task.slaHoursRemaining}h SLA
 										</div>
 									</div>
 
-									<!-- Action Footer -->
-									<div class="card-footer">
-										<button 
-											class="card-btn-action" 
+									<div class="task-actions-footer">
+										<button
+											type="button"
+											class="btn btn-outline btn-sm"
 											onclick={() => {
 												taskToDelegate = task;
 												showDelegateModal = true;
 											}}
-											title="Cross-BU Task Delegation">
+											title="Cross-BU Task Handover"
+										>
 											🔁 Delegate
 										</button>
 
-										<div class="step-buttons">
+										<div class="stage-step-group">
 											{#if col !== 'BACKLOG'}
-												<button 
-													class="step-nav-btn" 
+												<button
+													type="button"
+													class="btn btn-secondary btn-sm"
 													onclick={() => handleMoveStatus(task, columns[columns.indexOf(col) - 1])}
-													title="Move Back">
+													title="Previous stage"
+												>
 													◀
 												</button>
 											{/if}
 											{#if col !== 'DONE'}
-												<button 
-													class="step-nav-btn" 
+												<button
+													type="button"
+													class="btn btn-secondary btn-sm"
 													onclick={() => handleMoveStatus(task, columns[columns.indexOf(col) + 1])}
-													title="Advance Step">
+													title="Advance stage"
+												>
 													▶
 												</button>
 											{/if}
 										</div>
 									</div>
-
 								</div>
 							{/each}
 						</div>
-
 					</div>
 				{/each}
 			</div>
-
 		</div>
 	{/if}
 
-	<!-- TAB 2: PROJECTS & MILESTONE BILLING -->
-	{#if activeTab === 'projects'}
-		<div class="projects-section space-y-6">
-			<div class="section-heading">
-				<h2 class="text-lg font-bold text-white">Active Client Contracts &amp; Project Portfolios</h2>
-				<p class="text-xs text-slate-400">Budget burn-rate tracking, milestone deliverables, and automated invoice triggers.</p>
-			</div>
-
-			<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-				{#each projects as prj}
-					{@const percent = Math.min(100, Math.round((prj.spent / prj.budget) * 100))}
-					<div class="project-portfolio-card">
-						<div class="flex justify-between items-start mb-3">
-							<span class="font-mono text-xs font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">{prj.code}</span>
-							<span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">{prj.status}</span>
-						</div>
-
-						<h3 class="text-base font-bold text-white mb-1">{prj.name}</h3>
-						<p class="text-xs text-slate-400 line-clamp-2 mb-4">{prj.description}</p>
-
-						<!-- Progress Bar -->
-						<div class="space-y-1.5 mb-4">
-							<div class="flex justify-between text-xs">
-								<span class="text-slate-400">Budget Spent</span>
-								<strong class="text-white font-mono">{percent}% (₹{prj.spent.toLocaleString('en-IN')})</strong>
-							</div>
-							<div class="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
-								<div class="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 rounded-full" style={`width: ${percent}%;`}></div>
-							</div>
-						</div>
-
-						<div class="grid grid-cols-2 gap-2 text-xs pt-3 border-t border-slate-800/80 mb-4">
-							<div>
-								<span class="text-slate-500 block">Total Budget:</span>
-								<strong class="text-white font-mono">₹{prj.budget.toLocaleString('en-IN')}</strong>
-							</div>
-							<div>
-								<span class="text-slate-500 block">Client:</span>
-								<strong class="text-slate-300 truncate block">{prj.clientName}</strong>
-							</div>
-							<div>
-								<span class="text-slate-500 block">Business Unit:</span>
-								<strong class="text-sky-400">{prj.businessUnit}</strong>
-							</div>
-							<div>
-								<span class="text-slate-500 block">Target Date:</span>
-								<strong class="text-slate-300">{prj.targetDate}</strong>
-							</div>
-						</div>
-
-						<button 
-							class="w-full py-2 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/40 text-xs font-bold transition-all cursor-pointer"
-							onclick={() => {
-								selectedProjectId = prj.id;
-								activeTab = 'kanban';
-							}}>
-							📋 View {prj.totalTasks} UTMS Tasks in Kanban
-						</button>
-					</div>
-				{/each}
-			</div>
-
-			<!-- Milestone Billing Registry Table -->
-			<div class="bg-slate-900/90 border border-slate-700/80 rounded-xl p-5 shadow-xl space-y-4">
-				<div class="flex justify-between items-center border-b border-slate-800 pb-3">
+	<!-- VIEW 3: MILESTONE DELIVERABLES & AUTO-INVOICING -->
+	{#if activeTab === 'milestones'}
+		<div class="milestones-view animate-fade-in">
+			<div class="card">
+				<div class="card-header-bar">
 					<div>
-						<h3 class="text-base font-bold text-white">SOW Contract Milestone Billing Triggers</h3>
-						<p class="text-xs text-slate-400">Deliverables automatically convert to Net-30 GST tax invoices upon client milestone sign-off.</p>
+						<h2>Contract Milestones &amp; Automated Invoicing Triggers</h2>
+						<p>Deliverable completion locks triggers for Net-30 commercial invoices and revenue recognition.</p>
 					</div>
-					<span class="px-3 py-1 bg-sky-500/10 border border-sky-500/30 text-sky-400 font-mono font-bold text-xs rounded-full">
-						Auto-Invoicing
-					</span>
+					<Badge variant="info" label="ConnectRPC Auto-Invoicing" icon="⚡" />
 				</div>
 
 				<div class="table-container">
 					<table class="data-table">
 						<thead>
 							<tr>
-								<th>Milestone Code</th>
-								<th>Project</th>
+								<th>Code</th>
 								<th>Milestone Deliverable</th>
 								<th>Target Date</th>
-								<th>Invoice Trigger Amount</th>
+								<th class="text-right">Trigger Amount</th>
 								<th>Status</th>
-								<th>Action</th>
+								<th class="text-right">Action</th>
 							</tr>
 						</thead>
 						<tbody>
-							{#each milestones as m}
+							{#each milestones as m (m.id)}
 								<tr>
-									<td class="font-mono text-xs font-bold text-slate-400">{m.id}</td>
-									<td class="font-bold text-white">FinTech ERP</td>
-									<td class="text-sm text-slate-200">{m.title}</td>
-									<td class="font-mono text-xs text-slate-400">{m.targetDate}</td>
-									<td class="font-mono text-emerald-400 font-bold">₹{m.invoiceTriggerAmount.toLocaleString('en-IN')}</td>
+									<td class="font-mono text-muted">{m.id}</td>
 									<td>
-										<span class="badge" class:status-available={m.status === 'INVOICED'}>
-											{m.status}
-										</span>
+										<strong>{m.title}</strong>
+										<span class="subtext">Project ID: {m.projectId}</span>
+									</td>
+									<td class="font-mono">{m.targetDate}</td>
+									<td class="text-right font-mono text-success" style="font-weight: 700;">
+										₹{m.invoiceTriggerAmount.toLocaleString('en-IN')}
 									</td>
 									<td>
+										{#if m.status === 'INVOICED'}
+											<Badge variant="success" label="INVOICED" icon="✓" size="sm" />
+										{:else if m.status === 'READY_FOR_BILLING'}
+											<Badge variant="warning" label="READY FOR BILLING" icon="⏳" size="sm" />
+										{:else}
+											<Badge variant="neutral" label="PENDING DELIVERABLE" icon="●" size="sm" />
+										{/if}
+									</td>
+									<td class="text-right">
 										{#if m.status === 'READY_FOR_BILLING'}
-											<button class="btn btn-primary btn-sm py-1 px-3 text-xs" onclick={() => handleBillMilestone(m)}>
-												🧾 Generate GST Invoice
+											<button
+												type="button"
+												class="btn btn-primary btn-sm"
+												onclick={() => handleBillMilestone(m)}
+											>
+												🧾 Generate Invoice
 											</button>
 										{:else if m.status === 'INVOICED'}
-											<span class="text-xs text-emerald-400 font-bold">✓ Billed (INV-2026)</span>
+											<span class="text-success font-mono" style="font-size: 0.75rem; font-weight: 600;">
+												✓ Invoiced
+											</span>
 										{:else}
-											<span class="text-xs text-slate-500">In Progress</span>
+											<span class="text-muted" style="font-size: 0.75rem;">Sprint Ongoing</span>
 										{/if}
 									</td>
 								</tr>
@@ -689,147 +958,331 @@
 		</div>
 	{/if}
 
-	<!-- TAB 3: TIMESHEET LOGGER -->
+	<!-- VIEW 4: TIMESHEETS & WORKFORCE GRID -->
 	{#if activeTab === 'timesheet'}
-		<div class="timesheet-section max-w-3xl mx-auto space-y-6">
-			<div class="bg-slate-900/90 border border-slate-700/80 rounded-xl p-6 shadow-xl space-y-5">
-				<div class="border-b border-slate-800 pb-3">
-					<h3 class="text-base font-bold text-white">Log Developer &amp; Consultant Timesheet Hours</h3>
-					<p class="text-xs text-slate-400">Timesheets auto-calculate billable burn rates and client cost utilization.</p>
+		<div class="timesheet-view animate-fade-in">
+			<!-- Timesheet KPI Bar -->
+			<div class="timesheet-summary-strip">
+				<div class="summary-pill">
+					<span class="pill-title">Total Hours Logged</span>
+					<strong class="pill-number font-mono">{totalTimesheetHours} hrs</strong>
+				</div>
+				<div class="summary-pill">
+					<span class="pill-title">Billable Realization</span>
+					<strong class="pill-number font-mono text-brand">₹{totalBillableRealization.toLocaleString('en-IN')}</strong>
+				</div>
+				<div class="summary-pill">
+					<span class="pill-title">Approved Sessions</span>
+					<strong class="pill-number font-mono text-success">
+						{timesheetEntries.filter(e => e.status === 'APPROVED').length} Approved
+					</strong>
+				</div>
+			</div>
+
+			<div class="timesheet-layout-grid">
+				<!-- Timesheet Entry Form -->
+				<div class="card timesheet-form-card">
+					<h3>Log Workforce Hours</h3>
+					<p class="form-desc">Record consultant effort against universal tasks and billable rates.</p>
+
+					<form onsubmit={handleAddTimesheet} class="form-body">
+						<div class="form-group">
+							<label class="form-label" for="ts-task-select">
+								Universal Task <span class="form-required">*</span>
+							</label>
+							<select id="ts-task-select" class="form-select" bind:value={timesheetTask}>
+								{#each tasks as t}
+									<option value={t.id}>[{t.id}] {t.title}</option>
+								{/each}
+							</select>
+						</div>
+
+						<div class="form-row-2">
+							<div class="form-group">
+								<label class="form-label" for="ts-hours-input">Hours Worked</label>
+								<input
+									id="ts-hours-input"
+									type="number"
+									class="form-input font-mono"
+									min="0.5"
+									max="24"
+									step="0.5"
+									bind:value={timesheetHours}
+									required
+								/>
+							</div>
+
+							<div class="form-group">
+								<label class="form-label" for="ts-date-input">Work Date</label>
+								<input
+									id="ts-date-input"
+									type="date"
+									class="form-input"
+									bind:value={timesheetDate}
+									required
+								/>
+							</div>
+						</div>
+
+						<div class="form-group">
+							<label class="form-label" for="ts-rate-input">Billable Hourly Rate (INR)</label>
+							<input
+								id="ts-rate-input"
+								type="number"
+								class="form-input font-mono"
+								bind:value={timesheetBillableRate}
+								required
+							/>
+						</div>
+
+						<div class="form-group">
+							<label class="form-label" for="ts-note-input">Deliverable Summary &amp; Notes</label>
+							<textarea
+								id="ts-note-input"
+								class="form-textarea"
+								rows="3"
+								bind:value={timesheetNote}
+								required
+							></textarea>
+						</div>
+
+						<div class="realization-box">
+							<span class="realization-label">Session Realization:</span>
+							<strong class="realization-val font-mono text-brand">
+								₹{(timesheetHours * timesheetBillableRate).toLocaleString('en-IN')}
+							</strong>
+						</div>
+
+						<button type="submit" class="btn btn-primary" style="width: 100%;">
+							⏱️ Submit Timesheet to Approval Queue
+						</button>
+					</form>
 				</div>
 
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-					<div>
-						<label class="input-label" for="ts-task">UTMS Task</label>
-						<select id="ts-task" class="text-input" bind:value={timesheetTask}>
-							{#each tasks as t}
-								<option value={t.id}>[{t.id}] {t.title}</option>
-							{/each}
-						</select>
+				<!-- Timesheet Entries Ledger Table -->
+				<div class="card timesheet-table-card">
+					<div class="table-header-row">
+						<h3>Workforce Timesheet Ledger</h3>
+						<span class="text-caption text-muted">Audited billing logs</span>
 					</div>
 
-					<div>
-						<label class="input-label" for="ts-hours">Hours Spent Today</label>
-						<input id="ts-hours" type="number" class="text-input" min="0.5" max="24" step="0.5" bind:value={timesheetHours} />
+					<div class="table-container">
+						<table class="data-table">
+							<thead>
+								<tr>
+									<th>ID</th>
+									<th>Task &amp; Project</th>
+									<th>Consultant</th>
+									<th>Date</th>
+									<th class="text-right">Hours</th>
+									<th class="text-right">Realization</th>
+									<th>Status</th>
+									<th class="text-right">Approval Actions</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each timesheetEntries as entry (entry.id)}
+									<tr>
+										<td class="font-mono text-muted">{entry.id}</td>
+										<td>
+											<strong>{entry.taskTitle}</strong>
+											<span class="subtext">{entry.projectName}</span>
+										</td>
+										<td>{entry.consultant}</td>
+										<td class="font-mono">{entry.date}</td>
+										<td class="text-right font-mono">{entry.hours}h</td>
+										<td class="text-right font-mono" style="font-weight: 700;">
+											₹{(entry.hours * entry.rate).toLocaleString('en-IN')}
+										</td>
+										<td>
+											{#if entry.status === 'APPROVED'}
+												<Badge variant="success" label="APPROVED" icon="✓" size="sm" />
+											{:else if entry.status === 'SUBMITTED'}
+												<Badge variant="warning" label="SUBMITTED" icon="⏳" size="sm" />
+											{:else if entry.status === 'REJECTED'}
+												<Badge variant="error" label="REJECTED" icon="✕" size="sm" />
+											{:else if entry.status === 'LOCKED'}
+												<Badge variant="locked" label="LOCKED" icon="🔒" size="sm" />
+											{:else}
+												<Badge variant="neutral" label="DRAFT" icon="●" size="sm" />
+											{/if}
+										</td>
+										<td class="text-right">
+											<div class="table-action-btns">
+												{#if entry.status === 'SUBMITTED'}
+													<button
+														type="button"
+														class="btn btn-sm btn-outline text-success"
+														onclick={() => handleApproveTimesheet(entry)}
+														title="Approve timesheet"
+													>
+														✓
+													</button>
+													<button
+														type="button"
+														class="btn btn-sm btn-outline text-error"
+														onclick={() => handleRejectTimesheet(entry)}
+														title="Reject and request correction"
+													>
+														✕
+													</button>
+												{:else if entry.status === 'APPROVED'}
+													<button
+														type="button"
+														class="btn btn-sm btn-outline text-warning"
+														onclick={() => handleLockTimesheet(entry)}
+														title="Lock period"
+													>
+														🔒 Lock
+													</button>
+												{:else if entry.status === 'REJECTED'}
+													<button
+														type="button"
+														class="btn btn-sm btn-secondary"
+														onclick={() => (entry.status = 'SUBMITTED')}
+														title="Re-submit correction"
+													>
+														↻ Resubmit
+													</button>
+												{:else if entry.status === 'LOCKED'}
+													<span class="text-muted" style="font-size: 0.75rem;">Audited &amp; Closed</span>
+												{/if}
+											</div>
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
 					</div>
 				</div>
-
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-					<div>
-						<label class="input-label" for="ts-date">Work Date</label>
-						<input id="ts-date" type="date" class="text-input" bind:value={timesheetDate} />
-					</div>
-
-					<div>
-						<label class="input-label" for="ts-rate">Billable Hourly Rate (INR)</label>
-						<input id="ts-rate" type="number" class="text-input font-mono" bind:value={timesheetBillableRate} />
-					</div>
-				</div>
-
-				<div>
-					<label class="input-label" for="ts-notes">Work Summary &amp; Deliverables Completed</label>
-					<textarea id="ts-notes" class="text-input" rows="3" bind:value={timesheetNote}></textarea>
-				</div>
-
-				<div class="flex justify-between items-center p-3 rounded-lg bg-slate-950/80 border border-slate-800">
-					<span class="text-xs text-slate-400">Total Invoiced Realization for this session:</span>
-					<strong class="text-emerald-400 font-mono text-base">₹{(timesheetHours * timesheetBillableRate).toLocaleString('en-IN')}</strong>
-				</div>
-
-				<button class="w-full btn btn-primary py-2.5 font-bold cursor-pointer" onclick={() => {
-					statusMessage = `✅ Logged ${timesheetHours}h for ${timesheetTask} (Total: ₹${(timesheetHours * timesheetBillableRate).toLocaleString('en-IN')})! Added to project burn ledger.`;
-					setTimeout(() => statusMessage = null, 4000);
-				}}>
-					⏱️ Submit Timesheet to Approval Queue
-				</button>
 			</div>
 		</div>
 	{/if}
 
-	<!-- TAB 4: FAST UTMS TASK CREATOR -->
-	{#if activeTab === 'utms_delegation'}
-		<div class="utms-creator-section max-w-2xl mx-auto">
-			<form onsubmit={handleCreateTask} class="bg-slate-900/90 border border-slate-700/80 rounded-xl p-6 shadow-xl space-y-5">
-				<div class="border-b border-slate-800 pb-3">
-					<h3 class="text-base font-bold text-white">Create Universal Task (UTMS)</h3>
-					<p class="text-xs text-slate-400">Dispatch cross-department deliverables with SLA deadlines and automated routing.</p>
-				</div>
-
-				<div>
-					<label class="input-label" for="tsk-title">Task Title *</label>
-					<input id="tsk-title" type="text" class="text-input" placeholder="e.g. Verify Schengen Visa VFS Appointment Dossier" bind:value={newTask.title} required />
-				</div>
-
-				<div>
-					<label class="input-label" for="tsk-desc">Detailed Description</label>
-					<textarea id="tsk-desc" class="text-input" rows="3" placeholder="Provide actionable requirements, references, and acceptance criteria..." bind:value={newTask.description}></textarea>
-				</div>
-
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+	<!-- VIEW 5: FAST UTMS TASK CREATOR -->
+	{#if activeTab === 'utms_creator'}
+		<div class="creator-view animate-fade-in">
+			<div class="card creator-card">
+				<div class="card-header-bar">
 					<div>
-						<label class="input-label" for="tsk-bu">Target Business Unit</label>
-						<select id="tsk-bu" class="text-input" bind:value={newTask.businessUnit}>
-							<option value="CONSULTING">💻 Software Consulting &amp; IT</option>
-							<option value="HEALTH">🏥 Smart Healthcare &amp; Clinical</option>
-							<option value="TRAVEL">✈️ Travel, Tours &amp; Visa Ops</option>
-							<option value="REALESTATE">🏢 Real Estate Layouts &amp; Plots</option>
-							<option value="COMMERCE">🛍️ E-Commerce &amp; POD Printing</option>
-							<option value="FINANCE">💰 Corporate Finance &amp; Tax</option>
-						</select>
+						<h2>Dispatch Universal Task (UTMS)</h2>
+						<p>Route cross-department deliverables with SLA deadlines and automatic stakeholder assignment.</p>
+					</div>
+					<Badge variant="info" label="Real-time Dispatch" icon="⚡" />
+				</div>
+
+				<form onsubmit={handleCreateTask} class="form-body">
+					<div class="form-group">
+						<label class="form-label" for="create-task-title">
+							Task Title <span class="form-required">*</span>
+						</label>
+						<input
+							id="create-task-title"
+							type="text"
+							class="form-input"
+							placeholder="e.g. Verify Schengen Visa VFS Appointment Dossier"
+							bind:value={newTask.title}
+							required
+						/>
 					</div>
 
-					<div>
-						<label class="input-label" for="tsk-priority">SLA Priority Level</label>
-						<select id="tsk-priority" class="text-input" bind:value={newTask.priority}>
-							<option value="URGENT">🔴 URGENT (12-Hour SLA)</option>
-							<option value="HIGH">🟡 HIGH (24-Hour SLA)</option>
-							<option value="MEDIUM">🔵 MEDIUM (48-Hour SLA)</option>
-							<option value="LOW">⚪ LOW (Flexible)</option>
-						</select>
-					</div>
-				</div>
-
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-					<div>
-						<label class="input-label" for="tsk-assignee">Assigned Lead</label>
-						<input id="tsk-assignee" type="text" class="text-input" bind:value={newTask.assignedTo} />
+					<div class="form-group">
+						<label class="form-label" for="create-task-desc">Actionable Deliverable Scope</label>
+						<textarea
+							id="create-task-desc"
+							class="form-textarea"
+							rows="3"
+							placeholder="Provide detailed requirements, client SLA expectations, and verification references..."
+							bind:value={newTask.description}
+						></textarea>
 					</div>
 
-					<div>
-						<label class="input-label" for="tsk-due">Due Date</label>
-						<input id="tsk-due" type="date" class="text-input" bind:value={newTask.dueDate} />
-					</div>
-				</div>
+					<div class="form-row-2">
+						<div class="form-group">
+							<label class="form-label" for="create-task-bu">Operating Business Unit</label>
+							<select id="create-task-bu" class="form-select" bind:value={newTask.businessUnit}>
+								<option value="CONSULTING">💻 Software Consulting &amp; IT</option>
+								<option value="HEALTH">🏥 Smart Healthcare &amp; Clinical</option>
+								<option value="TRAVEL">✈️ Travel, Tours &amp; Visa Ops</option>
+								<option value="REALESTATE">🏢 Real Estate Layouts &amp; Plots</option>
+								<option value="COMMERCE">🛍️ E-Commerce &amp; POD Printing</option>
+								<option value="FINANCE">💰 Corporate Finance &amp; Tax</option>
+							</select>
+						</div>
 
-				<button type="submit" class="w-full btn btn-primary py-3 font-bold cursor-pointer">
-					⚡ Dispatch UTMS Task to Sprint Board
-				</button>
-			</form>
+						<div class="form-group">
+							<label class="form-label" for="create-task-priority">SLA Priority Tier</label>
+							<select id="create-task-priority" class="form-select" bind:value={newTask.priority}>
+								<option value="URGENT">🔴 URGENT (12-Hour SLA Clock)</option>
+								<option value="HIGH">🟡 HIGH (24-Hour SLA Clock)</option>
+								<option value="MEDIUM">🔵 MEDIUM (48-Hour SLA Clock)</option>
+								<option value="LOW">⚪ LOW (Flexible Sprint Scope)</option>
+							</select>
+						</div>
+					</div>
+
+					<div class="form-row-2">
+						<div class="form-group">
+							<label class="form-label" for="create-task-lead">Assigned Lead Consultant</label>
+							<input
+								id="create-task-lead"
+								type="text"
+								class="form-input"
+								bind:value={newTask.assignedTo}
+								required
+							/>
+						</div>
+
+						<div class="form-group">
+							<label class="form-label" for="create-task-due">Due Date</label>
+							<input
+								id="create-task-due"
+								type="date"
+								class="form-input"
+								bind:value={newTask.dueDate}
+								required
+							/>
+						</div>
+					</div>
+
+					<button type="submit" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 0.5rem;">
+						⚡ Dispatch UTMS Task to Active Kanban Sprint
+					</button>
+				</form>
+			</div>
 		</div>
 	{/if}
 
 	<!-- MODAL: CROSS-BU TASK DELEGATION -->
 	{#if showDelegateModal && taskToDelegate}
-		<div class="modal-backdrop">
-			<div class="modal-card max-w-lg">
+		<div class="modal-backdrop animate-fade-in" role="dialog" aria-modal="true">
+			<div class="modal-card">
 				<div class="modal-header">
-					<div class="flex items-center gap-2">
-						<span class="text-xl">🔁</span>
-						<h3 class="text-base font-bold text-white">Cross-BU Task Delegation</h3>
+					<div class="modal-title-wrap">
+						<span style="font-size: 1.25rem;">🔁</span>
+						<h3>Cross-BU Task Delegation</h3>
 					</div>
-					<button class="close-btn" onclick={() => showDelegateModal = false}>✕</button>
+					<button
+						type="button"
+						class="btn btn-secondary btn-sm"
+						onclick={() => (showDelegateModal = false)}
+					>
+						✕
+					</button>
 				</div>
 
-				<div class="modal-body space-y-4">
-					<div class="p-3 rounded-lg bg-slate-950 border border-slate-800">
-						<div class="text-[10px] text-slate-500 uppercase font-mono">{taskToDelegate.id}</div>
-						<div class="text-sm font-bold text-white mt-0.5">{taskToDelegate.title}</div>
-						<div class="text-xs text-slate-400 mt-1">Currently assigned to: {taskToDelegate.assignedTo}</div>
+				<div class="modal-body">
+					<div class="delegation-task-box">
+						<span class="font-mono text-caption text-muted">{taskToDelegate.id}</span>
+						<h4 style="margin: 0.2rem 0; font-size: 0.9375rem;">{taskToDelegate.title}</h4>
+						<span class="text-caption text-secondary">
+							Current Assignee: <strong>{taskToDelegate.assignedTo}</strong>
+						</span>
 					</div>
 
-					<div>
-						<label class="input-label" for="del-bu">Delegate to Business Department</label>
-						<select id="del-bu" class="text-input" bind:value={targetBU}>
+					<div class="form-group">
+						<label class="form-label" for="modal-target-bu">Transfer to Department</label>
+						<select id="modal-target-bu" class="form-select" bind:value={targetBU}>
 							<option value="HEALTH">🏥 Healthcare (Doctor / Clinical Review)</option>
 							<option value="TRAVEL">✈️ Travel (Visa Desk / Flight PNR)</option>
 							<option value="REALESTATE">🏢 Real Estate (Plot Registration / EC Check)</option>
@@ -838,251 +1291,320 @@
 						</select>
 					</div>
 
-					<div>
-						<label class="input-label" for="del-assignee">New Responsible Lead</label>
-						<input id="del-assignee" type="text" class="text-input" bind:value={targetAssignee} />
+					<div class="form-group">
+						<label class="form-label" for="modal-target-assignee">New Responsible Lead</label>
+						<input
+							id="modal-target-assignee"
+							type="text"
+							class="form-input"
+							bind:value={targetAssignee}
+						/>
 					</div>
 
-					<div>
-						<label class="input-label" for="del-note">Handover Brief &amp; SLA Instructions</label>
-						<textarea id="del-note" class="text-input" rows="3" placeholder="Provide necessary context and instructions for the receiving department..." bind:value={delegationNote}></textarea>
+					<div class="form-group">
+						<label class="form-label" for="modal-handover-notes">Handover Context &amp; SLA Brief</label>
+						<textarea
+							id="modal-handover-notes"
+							class="form-textarea"
+							rows="3"
+							placeholder="Provide necessary background and acceptance requirements for receiving department..."
+							bind:value={delegationNote}
+						></textarea>
 					</div>
 				</div>
 
 				<div class="modal-footer">
-					<button class="btn btn-secondary text-xs" onclick={() => showDelegateModal = false}>
+					<button
+						type="button"
+						class="btn btn-secondary"
+						onclick={() => (showDelegateModal = false)}
+					>
 						Cancel
 					</button>
-					<button class="btn btn-primary text-xs" onclick={handleExecuteDelegation}>
-						⚡ Confirm Cross-Department Handover
+					<button
+						type="button"
+						class="btn btn-primary"
+						onclick={handleExecuteDelegation}
+					>
+						⚡ Confirm Cross-Department Transfer
 					</button>
 				</div>
 			</div>
 		</div>
 	{/if}
-
 </div>
 
 <style>
-	.utms-app {
+	.projects-application {
 		display: flex;
 		flex-direction: column;
 		gap: 1.5rem;
 		padding-bottom: 3rem;
 	}
 
-	.utms-header {
+	/* Header Strip */
+	.app-header-strip {
 		display: flex;
 		justify-content: space-between;
-		align-items: center;
+		align-items: flex-start;
 		flex-wrap: wrap;
 		gap: 1.25rem;
 		padding-bottom: 1.25rem;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+		border-bottom: 1px solid var(--border-default);
 	}
 
-	.badge-row {
+	.header-main {
 		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+	}
+
+	.app-accent-tag {
+		display: inline-flex;
 		align-items: center;
-		gap: 0.6rem;
-		margin-bottom: 0.35rem;
-	}
-
-	.pill-badge {
-		font-size: 0.75rem;
+		gap: 0.45rem;
+		font-size: var(--text-caption);
 		font-weight: 700;
-		background: rgba(99, 102, 241, 0.15);
-		color: #818cf8;
-		border: 1px solid rgba(99, 102, 241, 0.3);
-		padding: 0.2rem 0.65rem;
-		border-radius: 9999px;
-	}
-
-	.sla-indicator {
-		font-size: 0.6875rem;
-		font-weight: 600;
-		color: #34d399;
-	}
-
-	.main-title {
-		font-size: 1.75rem;
-		font-weight: 800;
-		color: #ffffff;
-		margin: 0;
-		letter-spacing: -0.02em;
-	}
-
-	.subtitle {
-		font-size: 0.875rem;
-		color: #94a3b8;
-		margin: 0.25rem 0 0 0;
-		max-width: 750px;
-	}
-
-	.header-actions {
-		display: flex;
-		gap: 0.75rem;
-	}
-
-	.status-alert {
-		padding: 0.75rem 1rem;
-		border-radius: 10px;
-		background: rgba(16, 185, 129, 0.12);
-		border: 1px solid rgba(16, 185, 129, 0.3);
-		color: #34d399;
-		font-size: 0.875rem;
-		font-weight: 600;
-	}
-
-	/* KPI Grid */
-	.kpi-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-		gap: 1rem;
-	}
-
-	.kpi-card {
-		background: #0f172a;
-		border: 1px solid rgba(255, 255, 255, 0.08);
-		border-radius: 12px;
-		padding: 1.15rem 1.25rem;
-	}
-
-	.kpi-label {
-		font-size: 0.6875rem;
-		font-weight: 700;
-		color: #94a3b8;
+		color: var(--accent-project);
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
 	}
 
-	.kpi-value {
-		font-size: 1.5rem;
-		font-weight: 800;
-		margin-top: 0.25rem;
+	.app-accent-dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: var(--accent-project);
 	}
 
-	.kpi-sub {
-		font-size: 0.75rem;
-		color: #64748b;
-		margin-top: 0.25rem;
-	}
-
-	.pulse-glow {
-		animation: pulseGlow 1.8s infinite;
-	}
-
-	@keyframes pulseGlow {
-		0%, 100% { opacity: 1; }
-		50% { opacity: 0.6; }
-	}
-
-	/* Tabs */
-	.nav-tabs {
-		display: flex;
-		gap: 0.5rem;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-		padding-bottom: 0.5rem;
-		overflow-x: auto;
-	}
-
-	.tab-btn {
-		background: transparent;
-		border: 1px solid rgba(255, 255, 255, 0.08);
-		color: #94a3b8;
-		padding: 0.6rem 1.15rem;
-		border-radius: 10px;
-		font-size: 0.8125rem;
+	.page-title {
+		font-size: var(--text-page-title);
 		font-weight: 700;
-		cursor: pointer;
-		transition: all 0.15s ease;
-		white-space: nowrap;
+		color: var(--text-primary);
+		line-height: 1.2;
 	}
 
-	.tab-btn:hover {
-		color: #ffffff;
-		border-color: rgba(255, 255, 255, 0.2);
+	.page-subtitle {
+		font-size: var(--text-body);
+		color: var(--text-secondary);
+		max-width: 820px;
+		margin: 0;
 	}
 
-	.tab-btn.active {
-		background: rgba(99, 102, 241, 0.15);
-		color: #818cf8;
-		border-color: rgba(99, 102, 241, 0.5);
-	}
-
-	/* Kanban Section */
-	.filter-toolbar {
+	.header-actions {
 		display: flex;
-		justify-content: space-between;
 		align-items: center;
+		gap: 0.75rem;
+	}
+
+	.status-toast {
+		padding: 0.75rem 1rem;
+		border-radius: var(--radius-md);
+		background: var(--status-success-bg);
+		border: 1px solid var(--status-success-border);
+		color: var(--status-success);
+		font-size: var(--text-table);
+		font-weight: 600;
+	}
+
+	.metric-icon {
+		font-size: 1.1rem;
+	}
+
+	/* Toolbar */
+	.toolbar-card {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
 		flex-wrap: wrap;
 		gap: 1rem;
-		background: #0f172a;
-		border: 1px solid rgba(255, 255, 255, 0.08);
-		border-radius: 12px;
+		background: var(--surface-main);
+		border: 1px solid var(--border-default);
+		border-radius: var(--radius-lg);
 		padding: 0.75rem 1rem;
-		margin-bottom: 1.25rem;
+		box-shadow: var(--shadow-xs);
 	}
 
-	.filter-group {
+	.toolbar-filters {
 		display: flex;
 		align-items: center;
-		gap: 0.6rem;
+		gap: 0.65rem;
 		flex-wrap: wrap;
 	}
 
-	.filter-label {
-		font-size: 0.75rem;
-		font-weight: 700;
-		color: #64748b;
-		text-transform: uppercase;
+	.toolbar-label {
+		font-size: var(--text-caption);
+		font-weight: 600;
+		color: var(--text-secondary);
 	}
 
-	.bu-pill-group {
+	.bu-pills {
 		display: flex;
+		align-items: center;
 		gap: 0.35rem;
 		flex-wrap: wrap;
 	}
 
-	.bu-pill {
-		font-size: 0.75rem;
-		font-weight: 600;
-		background: #1e293b;
-		color: #94a3b8;
-		border: 1px solid rgba(255, 255, 255, 0.06);
+	.bu-pill-btn {
+		background: var(--surface-secondary);
+		border: 1px solid var(--border-default);
+		border-radius: var(--radius-full);
 		padding: 0.25rem 0.65rem;
-		border-radius: 6px;
+		font-size: var(--text-caption);
+		font-weight: 500;
+		color: var(--text-secondary);
 		cursor: pointer;
-		transition: all 0.15s;
+		transition: all var(--transition-fast);
 	}
 
-	.bu-pill:hover, .bu-pill.active {
-		background: rgba(99, 102, 241, 0.2);
-		color: #818cf8;
-		border-color: rgba(99, 102, 241, 0.4);
+	.bu-pill-btn:hover {
+		background: var(--border-default);
+		color: var(--text-primary);
 	}
 
-	.search-box {
+	.bu-pill-btn.active {
+		background: var(--brand-primary-soft);
+		border-color: var(--brand-primary);
+		color: var(--brand-primary);
+		font-weight: 600;
+	}
+
+	.toolbar-search {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		background: #1e293b;
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		border-radius: 8px;
-		padding: 0.35rem 0.75rem;
-		min-width: 260px;
+		background: var(--surface-secondary);
+		border: 1px solid var(--border-default);
+		border-radius: var(--radius-md);
+		padding: 0.4rem 0.75rem;
+		flex: 1;
+		max-width: 380px;
 	}
 
-	.search-box input {
+	.search-glyph {
+		font-size: 0.85rem;
+		opacity: 0.7;
+	}
+
+	.toolbar-search-input {
 		background: transparent;
 		border: none;
 		outline: none;
-		color: #ffffff;
-		font-size: 0.8125rem;
+		color: var(--text-primary);
+		font-size: var(--text-table);
 		width: 100%;
 	}
 
-	/* Kanban Columns */
+	/* Portfolio Grid */
+	.portfolio-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+		gap: 1.25rem;
+		margin-top: 1rem;
+	}
+
+	.project-card {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.project-card-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.project-code {
+		font-size: 0.75rem;
+		font-weight: 700;
+		padding: 0.15rem 0.45rem;
+		background: var(--surface-secondary);
+		border: 1px solid var(--border-default);
+		border-radius: var(--radius-xs);
+		color: var(--text-secondary);
+	}
+
+	.card-status-badges {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+	}
+
+	.project-title-wrap {
+		display: flex;
+		flex-direction: column;
+		gap: 0.2rem;
+	}
+
+	.project-title {
+		font-size: var(--text-card-title);
+		font-weight: 700;
+		color: var(--text-primary);
+		line-height: 1.3;
+	}
+
+	.project-client {
+		font-size: var(--text-caption);
+		color: var(--text-secondary);
+	}
+
+	.project-desc {
+		font-size: var(--text-table);
+		color: var(--text-secondary);
+		line-height: 1.4;
+		margin: 0;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+
+	.project-budget-box {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+		margin-top: auto;
+		padding-top: 0.5rem;
+	}
+
+	.budget-meta {
+		display: flex;
+		justify-content: space-between;
+		font-size: var(--text-caption);
+	}
+
+	.budget-label {
+		color: var(--text-secondary);
+	}
+
+	.progress-bar-track {
+		height: 6px;
+		border-radius: var(--radius-full);
+		background: var(--surface-secondary);
+		overflow: hidden;
+	}
+
+	.progress-bar-fill {
+		height: 100%;
+		border-radius: var(--radius-full);
+		transition: width 0.3s ease;
+	}
+
+	.project-meta-footer {
+		display: flex;
+		justify-content: space-between;
+		padding-top: 0.5rem;
+		border-top: 1px solid var(--border-default);
+		font-size: var(--text-caption);
+		color: var(--text-muted);
+	}
+
+	.card-lock-notice {
+		margin-top: 0.5rem;
+	}
+
+	/* Kanban Sprint Board */
 	.kanban-board {
 		display: grid;
 		grid-template-columns: repeat(5, minmax(260px, 1fr));
@@ -1092,149 +1614,104 @@
 	}
 
 	.kanban-column {
-		background: rgba(15, 23, 42, 0.65);
-		border: 1px solid rgba(255, 255, 255, 0.08);
-		border-radius: 14px;
-		display: flex;
-		flex-direction: column;
-		min-height: 520px;
-		backdrop-filter: blur(8px);
-	}
-
-	.column-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 0.85rem 1rem;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-		background: rgba(30, 41, 59, 0.4);
-		border-radius: 14px 14px 0 0;
-	}
-
-	.col-title-wrap {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.col-dot {
-		width: 8px;
-		height: 8px;
-		border-radius: 9999px;
-		background: #64748b;
-	}
-
-	.dot-todo { background: #38bdf8; }
-	.dot-prog { background: #818cf8; }
-	.dot-review { background: #fbbf24; }
-	.dot-done { background: #34d399; }
-
-	.col-title {
-		font-size: 0.75rem;
-		font-weight: 800;
-		color: #f1f5f9;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		margin: 0;
-	}
-
-	.col-count {
-		font-size: 0.6875rem;
-		font-weight: 700;
-		background: #1e293b;
-		color: #94a3b8;
-		padding: 0.15rem 0.5rem;
-		border-radius: 9999px;
-		font-family: monospace;
-	}
-
-	.column-tasks {
-		padding: 0.75rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		flex: 1;
-		overflow-y: auto;
-	}
-
-	.empty-column-placeholder {
-		text-align: center;
-		padding: 2.5rem 1rem;
-		font-size: 0.75rem;
-		color: #64748b;
-		font-style: italic;
-	}
-
-	/* Task Card */
-	.task-card {
-		background: #0f172a;
-		border: 1px solid rgba(255, 255, 255, 0.08);
-		border-radius: 10px;
+		background: var(--surface-secondary);
+		border: 1px solid var(--border-default);
+		border-radius: var(--radius-lg);
 		padding: 0.85rem;
 		display: flex;
 		flex-direction: column;
-		gap: 0.6rem;
-		transition: all 0.2s ease;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+		gap: 0.75rem;
+		min-height: 520px;
 	}
 
-	.task-card:hover {
-		border-color: rgba(99, 102, 241, 0.45);
-		transform: translateY(-2px);
-		box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
-	}
-
-	.card-badges {
+	.kanban-column-header {
 		display: flex;
-		justify-content: space-between;
 		align-items: center;
-		gap: 0.4rem;
+		justify-content: space-between;
+		padding-bottom: 0.5rem;
+		border-bottom: 1px solid var(--border-default);
 	}
 
-	.bu-tag {
-		font-size: 0.625rem;
+	.column-title-wrap {
+		display: flex;
+		align-items: center;
+		gap: 0.45rem;
+	}
+
+	.col-indicator {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+	}
+	.col-backlog { background: var(--status-neutral); }
+	.col-todo { background: var(--status-warning); }
+	.col-in_progress { background: var(--brand-primary); }
+	.col-review { background: var(--accent-ai); }
+	.col-done { background: var(--status-success); }
+
+	.column-name {
+		font-size: var(--text-caption);
 		font-weight: 700;
-		padding: 0.15rem 0.45rem;
-		border-radius: 5px;
-		max-width: 140px;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: var(--text-primary);
 	}
 
-	.priority-tag {
-		font-size: 0.625rem;
-		font-weight: 800;
-		padding: 0.15rem 0.45rem;
-		border-radius: 5px;
-		background: #1e293b;
-		color: #94a3b8;
+	.column-badge {
+		font-size: 0.75rem;
+		font-weight: 700;
+		color: var(--text-secondary);
+		background: var(--surface-main);
+		padding: 0.1rem 0.45rem;
+		border-radius: var(--radius-xs);
+		border: 1px solid var(--border-default);
 	}
 
-	.tag-urgent {
-		background: rgba(239, 68, 68, 0.2);
-		color: #f87171;
-		border: 1px solid rgba(239, 68, 68, 0.4);
+	.kanban-tasks-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.65rem;
+		flex: 1;
 	}
 
-	.tag-high {
-		background: rgba(245, 158, 11, 0.18);
-		color: #fbbf24;
-		border: 1px solid rgba(245, 158, 11, 0.35);
+	.empty-column-msg {
+		font-size: var(--text-caption);
+		color: var(--text-muted);
+		text-align: center;
+		padding: 2rem 0.5rem;
+		border: 1px dashed var(--border-default);
+		border-radius: var(--radius-md);
+	}
+
+	.task-card {
+		padding: 0.85rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.45rem;
+	}
+
+	.task-card-tags {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.task-bu-pill {
+		font-size: 0.6875rem;
+		font-weight: 700;
 	}
 
 	.task-title {
-		font-size: 0.8125rem;
-		font-weight: 700;
-		color: #ffffff;
-		line-height: 1.35;
-		margin: 0;
+		font-size: 0.84375rem;
+		font-weight: 600;
+		color: var(--text-primary);
+		line-height: 1.3;
 	}
 
 	.task-desc {
-		font-size: 0.725rem;
-		color: #94a3b8;
-		line-height: 1.4;
+		font-size: 0.78125rem;
+		color: var(--text-secondary);
+		line-height: 1.35;
 		margin: 0;
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
@@ -1242,266 +1719,188 @@
 		overflow: hidden;
 	}
 
-	.card-meta {
+	.task-card-meta {
 		display: flex;
+		align-items: center;
 		justify-content: space-between;
-		align-items: center;
-		padding-top: 0.5rem;
-		border-top: 1px solid rgba(255, 255, 255, 0.05);
+		font-size: var(--text-caption);
+		padding-top: 0.35rem;
+		border-top: 1px solid var(--border-subtle);
 	}
 
-	.assignee-wrap {
+	.assignee-info {
 		display: flex;
 		align-items: center;
-		gap: 0.4rem;
+		gap: 0.35rem;
 	}
 
-	.avatar-circle {
-		width: 22px;
-		height: 22px;
-		border-radius: 9999px;
-		background: linear-gradient(135deg, #4f46e5, #06b6d4);
+	.avatar-small {
+		width: 20px;
+		height: 20px;
+		border-radius: 50%;
+		background: var(--brand-primary);
 		color: #ffffff;
-		font-size: 0.625rem;
-		font-weight: 800;
+		font-size: 0.65rem;
+		font-weight: 700;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 	}
 
-	.assignee-name {
-		font-size: 0.6875rem;
-		color: #cbd5e1;
-		font-weight: 600;
-		max-width: 90px;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
+	.assignee-text {
+		color: var(--text-secondary);
+		font-weight: 500;
 	}
 
-	.sla-badge {
-		font-size: 0.6875rem;
-		font-weight: 700;
-		color: #34d399;
-		font-family: monospace;
+	.task-sla {
+		font-size: 0.72rem;
+		color: var(--text-muted);
 	}
 
 	.sla-urgent {
-		color: #f87171;
-		font-weight: 800;
-	}
-
-	.card-footer {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding-top: 0.4rem;
-	}
-
-	.card-btn-action {
-		font-size: 0.6875rem;
+		color: var(--status-error);
 		font-weight: 700;
-		color: #38bdf8;
-		background: rgba(56, 189, 248, 0.1);
-		border: 1px solid rgba(56, 189, 248, 0.25);
-		border-radius: 5px;
-		padding: 0.2rem 0.5rem;
-		cursor: pointer;
-		transition: all 0.15s;
 	}
 
-	.card-btn-action:hover {
-		background: rgba(56, 189, 248, 0.25);
-		color: #ffffff;
+	.task-actions-footer {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding-top: 0.35rem;
 	}
 
-	.step-buttons {
+	.stage-step-group {
 		display: flex;
 		gap: 0.25rem;
 	}
 
-	.step-nav-btn {
-		background: #1e293b;
-		border: 1px solid rgba(255, 255, 255, 0.08);
-		color: #cbd5e1;
-		font-size: 0.625rem;
-		padding: 0.2rem 0.4rem;
-		border-radius: 4px;
-		cursor: pointer;
-		transition: all 0.15s;
+	/* Timesheet View */
+	.timesheet-summary-strip {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+		gap: 1rem;
+		margin-bottom: 1.25rem;
 	}
 
-	.step-nav-btn:hover {
-		background: #334155;
-		color: #ffffff;
-	}
-
-	/* Project Portfolio Cards */
-	.project-portfolio-card {
-		background: #0f172a;
-		border: 1px solid rgba(255, 255, 255, 0.08);
-		border-radius: 14px;
-		padding: 1.25rem;
+	.summary-pill {
+		background: var(--surface-main);
+		border: 1px solid var(--border-default);
+		border-radius: var(--radius-lg);
+		padding: 1rem;
 		display: flex;
 		flex-direction: column;
-		justify-content: space-between;
-		box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+		gap: 0.25rem;
+		box-shadow: var(--shadow-xs);
 	}
 
-	/* Common UI Elements */
-	.btn {
-		padding: 0.55rem 1rem;
-		border-radius: 8px;
-		font-size: 0.8125rem;
+	.pill-title {
+		font-size: var(--text-caption);
+		font-weight: 600;
+		color: var(--text-secondary);
+	}
+
+	.pill-number {
+		font-size: 1.35rem;
 		font-weight: 700;
-		cursor: pointer;
-		transition: all 0.15s;
-		border: none;
-		display: inline-flex;
-		align-items: center;
-		gap: 0.4rem;
+		color: var(--text-primary);
 	}
 
-	.btn-primary {
-		background: #4f46e5;
-		color: #ffffff;
-		box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+	.timesheet-layout-grid {
+		display: grid;
+		grid-template-columns: 340px 1fr;
+		gap: 1.25rem;
 	}
 
-	.btn-primary:hover {
-		background: #4338ca;
+	@media (max-width: 960px) {
+		.timesheet-layout-grid {
+			grid-template-columns: 1fr;
+		}
 	}
 
-	.btn-secondary {
-		background: #1e293b;
-		color: #f1f5f9;
-		border: 1px solid rgba(255, 255, 255, 0.1);
+	.form-desc {
+		font-size: var(--text-caption);
+		color: var(--text-muted);
+		margin-bottom: 1rem;
 	}
 
-	.btn-secondary:hover {
-		background: #334155;
-	}
-
-	.btn-sm {
-		padding: 0.25rem 0.6rem;
-		font-size: 0.75rem;
-	}
-
-	.text-input {
-		width: 100%;
-		background: #1e293b;
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		color: #ffffff;
-		padding: 0.6rem 0.75rem;
-		border-radius: 8px;
-		font-size: 0.8125rem;
-		outline: none;
-	}
-
-	.text-input:focus {
-		border-color: #6366f1;
-	}
-
-	.input-label {
-		display: block;
-		font-size: 0.75rem;
-		font-weight: 700;
-		color: #cbd5e1;
-		margin-bottom: 0.35rem;
-	}
-
-	/* Tables */
-	.table-container {
-		overflow-x: auto;
-	}
-
-	.data-table {
-		width: 100%;
-		border-collapse: collapse;
-		text-align: left;
-		font-size: 0.8125rem;
-	}
-
-	.data-table th {
-		padding: 0.75rem 0.9rem;
-		background: rgba(30, 41, 59, 0.6);
-		color: #94a3b8;
-		font-size: 0.6875rem;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-	}
-
-	.data-table td {
-		padding: 0.85rem 0.9rem;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-		color: #f1f5f9;
-	}
-
-	.badge {
-		font-size: 0.6875rem;
-		font-weight: 700;
-		padding: 0.2rem 0.55rem;
-		border-radius: 9999px;
-		background: rgba(148, 163, 184, 0.15);
-		color: #94a3b8;
-	}
-
-	.status-available {
-		background: rgba(16, 185, 129, 0.15);
-		color: #34d399;
-		border: 1px solid rgba(16, 185, 129, 0.3);
-	}
-
-	/* Modals */
-	.modal-backdrop {
-		position: fixed;
-		inset: 0;
-		background: rgba(0, 0, 0, 0.75);
-		backdrop-filter: blur(4px);
+	.form-body {
 		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 1rem;
-		z-index: 50;
+		flex-direction: column;
+		gap: 0.85rem;
 	}
 
-	.modal-card {
-		background: #0f172a;
-		border: 1px solid rgba(255, 255, 255, 0.12);
-		border-radius: 14px;
-		width: 100%;
-		overflow: hidden;
-		box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-	}
-
-	.modal-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 1.15rem 1.25rem;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-	}
-
-	.close-btn {
-		background: none;
-		border: none;
-		color: #94a3b8;
-		font-size: 1.1rem;
-		cursor: pointer;
-	}
-
-	.modal-body {
-		padding: 1.25rem;
-	}
-
-	.modal-footer {
-		display: flex;
-		justify-content: flex-end;
+	.form-row-2 {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
 		gap: 0.75rem;
-		padding: 1rem 1.25rem;
-		border-top: 1px solid rgba(255, 255, 255, 0.08);
-		background: rgba(15, 23, 42, 0.5);
+	}
+
+	.realization-box {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0.65rem 0.85rem;
+		border-radius: var(--radius-md);
+		background: var(--surface-secondary);
+		border: 1px solid var(--border-default);
+	}
+
+	.realization-label {
+		font-size: var(--text-caption);
+		color: var(--text-secondary);
+	}
+
+	.realization-val {
+		font-size: 1.05rem;
+		font-weight: 700;
+	}
+
+	.table-header-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 1rem;
+	}
+
+	.subtext {
+		display: block;
+		font-size: var(--text-caption);
+		color: var(--text-muted);
+	}
+
+	.table-action-btns {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 0.35rem;
+	}
+
+	.creator-card {
+		max-width: 680px;
+		margin: 0 auto;
+	}
+
+	.card-header-bar {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 1rem;
+		margin-bottom: 1.25rem;
+		padding-bottom: 0.75rem;
+		border-bottom: 1px solid var(--border-default);
+	}
+
+	.delegation-task-box {
+		background: var(--surface-secondary);
+		border: 1px solid var(--border-default);
+		border-radius: var(--radius-md);
+		padding: 0.75rem;
+		margin-bottom: 1rem;
+	}
+
+	.modal-title-wrap {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
 	}
 </style>

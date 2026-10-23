@@ -1,2035 +1,1278 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { toast } from '$lib/stores/toast.svelte';
 	import { travelGrpc } from '$lib/grpc';
-	import SharedWorkModal from '$lib/components/SharedWorkModal.svelte';
 
-	interface ItineraryDay {
-		day: number;
-		title: string;
-		activities: string;
-		hotel: string;
-		meals: string; // e.g., 'Breakfast & Dinner'
-	}
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 
-	interface TourPackage {
-		id: string;
-		tenantId: string;
-		title: string;
-		destination: string;
-		durationDays: number;
-		price: string;
-		itineraryJson?: string;
-		isActive?: boolean;
-		hotelRating?: string;
-		inclusions?: string[];
-	}
+	// Modal Components (Screens 2 - 12)
+	import CreateBookingModal from '$lib/components/travel/CreateBookingModal.svelte';
+	import ItineraryBuilderModal from '$lib/components/travel/ItineraryBuilderModal.svelte';
+	import PassengerModal from '$lib/components/travel/PassengerModal.svelte';
+	import VisaModal from '$lib/components/travel/VisaModal.svelte';
+	import PaymentInvoiceModal from '$lib/components/travel/PaymentInvoiceModal.svelte';
+	import FlightBookingModal from '$lib/components/travel/FlightBookingModal.svelte';
+	import TourCalendarModal from '$lib/components/travel/TourCalendarModal.svelte';
+	import TripMapModal from '$lib/components/travel/TripMapModal.svelte';
+	import WhatsAppLeadModal from '$lib/components/travel/WhatsAppLeadModal.svelte';
+	import ConfirmActionModal from '$lib/components/travel/ConfirmActionModal.svelte';
+	import AppLauncherModal from '$lib/components/travel/AppLauncherModal.svelte';
+	import OnGroundDispatchModal from '$lib/components/travel/OnGroundDispatchModal.svelte';
+	import WhatsAppTravelKitModal from '$lib/components/travel/WhatsAppTravelKitModal.svelte';
 
-	interface VisaApplication {
-		id: string;
-		tenantId: string;
-		applicantName: string;
-		passportNumber: string;
-		country: string;
-		visaType: string;
-		status: string;
-		checklistJson?: string;
-		submittedAt: string;
-		appointmentDate?: string;
-		phone?: string;
-	}
+	// URL View Query Effect (Screens 2 - 12)
+	$effect(() => {
+		const view = $page.url.searchParams.get('view');
+		if (!view) return;
+		if (view === 'crm') goto('/travel/crm');
+		else if (view === 'bookings') showCreateBooking = true;
+		else if (view === 'customers') showPassengerModal = true;
+		else if (view === 'itineraries') showItineraryBuilder = true;
+		else if (view === 'visa') showVisaModal = true;
+		else if (view === 'tickets') showFlightModal = true;
+		else if (view === 'calendar') showCalendarModal = true;
+		else if (view === 'finance') showPaymentModal = true;
+		else if (view === 'operations') {
+			selectedBooking = bookings[0];
+			showDispatchModal = true;
+		} else if (view === 'packages' || view === 'departures') {
+			const el = document.getElementById('departures-section');
+			if (el) el.scrollIntoView({ behavior: 'smooth' });
+		}
+	});
 
-	interface Passenger {
-		name: string;
-		passportNo: string;
-		passportExpiry: string;
-		dob: string;
-		type: 'ADULT' | 'CHILD' | 'INFANT';
-		mealPreference: 'VEG' | 'JAIN' | 'NON_VEG';
-		wheelchair: boolean;
-	}
+	// Modals Open/Close State
+	let showCreateBooking = $state(false);
+	let showItineraryBuilder = $state(false);
+	let showPassengerModal = $state(false);
+	let showVisaModal = $state(false);
+	let showPaymentModal = $state(false);
+	let showFlightModal = $state(false);
+	let showCalendarModal = $state(false);
+	let showTripMapModal = $state(false);
+	let showWhatsAppLeadModal = $state(false);
+	let showConfirmModal = $state(false);
+	let showAppLauncherModal = $state(false);
+	let showDispatchModal = $state(false);
+	let showTravelKitModal = $state(false);
 
-	interface ActiveBooking {
-		id: string;
-		customerName: string;
-		customerPhone: string;
-		customerEmail: string;
-		destination: string;
-		packageTitle: string;
-		travelDates: string;
-		paxCount: number;
-		airlinePnr: string;
-		pnrDeadline: string;
-		hotelDmcRef: string;
-		hotelName: string;
-		visaStatus: 'NOT_REQUIRED' | 'SUBMITTED' | 'BIOMETRICS_DONE' | 'APPROVED' | 'STAMPED';
-		totalAmount: number;
-		advancePaid: number;
-		balanceDue: number;
-		invoiceNumber: string;
-		status: 'CONFIRMED' | 'OPERATIONS_HOLD' | 'IN_TRANSIT' | 'COMPLETED';
-		passengers: Passenger[];
-		readiness: {
-			hotelReconfirmed: boolean;
-			insuranceIssued: boolean;
-			webCheckInDone: boolean;
-			travelKitSent: boolean;
-		};
-	}
+	let selectedBooking = $state<any>(null);
+	let selectedLead = $state<any>(null);
 
-	let activeTab = $state<'operations' | 'packages' | 'visas' | 'manifest' | 'calculator'>('operations');
-	let packages = $state<TourPackage[]>([]);
-	let applications = $state<VisaApplication[]>([]);
-	let loading = $state(true);
-	let error = $state('');
-	let statusMsg = $state('');
-
-	// Active Bookings in Agency Operations Pipeline
-	let activeBookings = $state<ActiveBooking[]>([
+	// Departures Dataset (Screen 1)
+	let departures = $state([
 		{
-			id: 'TRIP-2026-904',
+			id: 'dep-1',
+			date: '22 Oct 2026',
+			package: 'Kashmir Valley Paradise',
+			destination: 'Srinagar - Gulmarg',
+			booked: 24,
+			capacity: 30,
+			status: 'Confirmed',
+			statusClass: 'status-confirmed'
+		},
+		{
+			id: 'dep-2',
+			date: '05 Nov 2026',
+			package: 'Dubai Special Desert & City',
+			destination: 'Dubai - Abu Dhabi',
+			booked: 18,
+			capacity: 25,
+			status: 'Filling',
+			statusClass: 'status-filling'
+		},
+		{
+			id: 'dep-3',
+			date: '14 Nov 2026',
+			package: 'Europe Classic Express',
+			destination: 'Paris - Rome - Zurich',
+			booked: 30,
+			capacity: 30,
+			status: 'Fully Booked',
+			statusClass: 'status-full'
+		},
+		{
+			id: 'dep-4',
+			date: '02 Dec 2026',
+			package: 'Thailand Leisure Explorer',
+			destination: 'Bangkok - Phuket',
+			booked: 16,
+			capacity: 20,
+			status: 'Open',
+			statusClass: 'status-open'
+		},
+		{
+			id: 'dep-5',
+			date: '20 Dec 2026',
+			package: 'Singapore Sentosa Explorer',
+			destination: 'Singapore',
+			booked: 12,
+			capacity: 25,
+			status: 'Open',
+			statusClass: 'status-open'
+		}
+	]);
+
+	// Recent Leads Dataset (Screen 1)
+	let recentLeads = $state([
+		{
+			id: 'lead-1',
+			name: 'Rahul Sharma',
+			tour: 'Kashmir Family Tour',
+			channel: 'whatsapp',
+			time: '10 mins ago',
+			status: 'New',
+			statusClass: 'lead-new'
+		},
+		{
+			id: 'lead-2',
+			name: 'Priya Menon',
+			tour: 'Dubai Special',
+			channel: 'whatsapp',
+			time: '25 mins ago',
+			status: 'In Progress',
+			statusClass: 'lead-progress'
+		},
+		{
+			id: 'lead-3',
+			name: 'Arun Kumar',
+			tour: 'Europe Group Tour',
+			channel: 'instagram',
+			time: '1 hour ago',
+			status: 'Qualified',
+			statusClass: 'lead-qualified'
+		},
+		{
+			id: 'lead-4',
+			name: 'Meena Iyer',
+			tour: 'Thailand Tour',
+			channel: 'facebook',
+			time: '2 hours ago',
+			status: 'New',
+			statusClass: 'lead-new'
+		},
+		{
+			id: 'lead-5',
+			name: 'Vikram Reddy',
+			tour: 'Singapore Business',
+			channel: 'whatsapp',
+			time: '3 hours ago',
+			status: 'Follow Up',
+			statusClass: 'lead-followup'
+		}
+	]);
+
+	// Real-World Linked Bookings (Chennai Kashmir Family & Madurai Malaysia Business)
+	let bookings = $state([
+		{
+			id: 'TRV-2026-001',
 			customerName: 'Rahul Sharma & Family',
-			customerPhone: '+91 98401 23456',
-			customerEmail: 'rahul.sharma@techcorp.com',
-			destination: 'Dubai & Abu Dhabi, UAE',
-			packageTitle: 'Exotic Dubai Sky & Desert Safari 5D/4N',
+			customerCity: 'Chennai',
+			customerPhone: '+91 98401 22334',
+			customerEmail: 'rahul.sharma@example.com',
+			tripMode: 'FAMILY',
+			destination: 'Kashmir Valley (Srinagar - Gulmarg - Pahalgam)',
+			packageTitle: 'Kashmir Autumn Paradise (4D/5N)',
 			travelDates: '14 Nov 2026 - 19 Nov 2026',
 			paxCount: 4,
-			airlinePnr: 'EK-521 (Emirates)',
-			pnrDeadline: 'Ticketing Done ✓',
-			hotelDmcRef: 'DMC-DXB-98421',
-			hotelName: 'JW Marriott Marquis Dubai (2 Deluxe Rooms)',
-			visaStatus: 'STAMPED',
-			totalAmount: 185000,
-			advancePaid: 95000,
-			balanceDue: 90000,
-			invoiceNumber: 'INV-TRA-202604',
 			status: 'CONFIRMED',
-			passengers: [
-				{ name: 'Rahul Sharma', passportNo: 'Z5829104', passportExpiry: '2031-08-14', dob: '1984-04-12', type: 'ADULT', mealPreference: 'VEG', wheelchair: false },
-				{ name: 'Pooja Sharma', passportNo: 'Z5829105', passportExpiry: '2031-08-14', dob: '1988-11-23', type: 'ADULT', mealPreference: 'JAIN', wheelchair: false },
-				{ name: 'Aarav Sharma', passportNo: 'Z9102834', passportExpiry: '2029-01-10', dob: '2016-06-05', type: 'CHILD', mealPreference: 'NON_VEG', wheelchair: false },
-				{ name: 'Ananya Sharma', passportNo: 'Z9102835', passportExpiry: '2029-01-10', dob: '2019-09-18', type: 'CHILD', mealPreference: 'VEG', wheelchair: false }
-			],
-			readiness: {
-				hotelReconfirmed: true,
-				insuranceIssued: true,
-				webCheckInDone: false, // 24h prior
-				travelKitSent: true
+			totalAmount: '₹ 1,65,000',
+			hotelName: 'Hotel Grand Kashmir & Betaab Luxury Resort',
+			hotelDmcRef: 'DMC-SXR-8819',
+			airlinePnr: '6E-502 / AI-991',
+			visaStatus: 'Domestic Circuit (Permit Valid)',
+			assignedCoordinator: {
+				name: 'Kavitha R.',
+				phone: '+91 98840 11223',
+				department: 'North India Operations Desk'
+			},
+			logisticsDispatch: {
+				driverName: 'Ghulam Nabi',
+				driverPhone: '+91 94190 12345',
+				vehicleModel: 'Toyota Innova Crysta AC (White)',
+				vehiclePlate: 'JK-01-AB-4491',
+				pickupLocation: 'Srinagar Airport Exit Gate 1 (Placard: "SHARMA FAMILY")',
+				flightMonitor: 'IndiGo 6E-502 (Tracking on-time)',
+				guideName: 'Bashir Ahmed (Govt. Licensed #2094)',
+				guidePhone: '+91 97970 88990',
+				guideLanguages: 'Tamil (conversational), English, Hindi'
+			},
+			localEmergency: {
+				stationLead: 'Khurshid (Srinagar Station Chief)',
+				emergencyPhone: '+91 94190 99881',
+				hospitalPartner: 'SMHS Hospital Srinagar (15 mins away)'
 			}
 		},
 		{
-			id: 'TRIP-2026-908',
-			customerName: 'Dr. V. Rajesh & Deepa',
-			customerPhone: '+91 98410 88990',
-			customerEmail: 'dr.rajesh@apollo.org',
-			destination: 'Bali & Nusa Penida, Indonesia',
-			packageTitle: 'Tropical Bali Luxury Villas 6D/5N',
-			travelDates: '22 Nov 2026 - 28 Nov 2026',
-			paxCount: 2,
-			airlinePnr: 'SQ-529 (Singapore Airlines)',
-			pnrDeadline: 'Hold Expires in 18 Hours ⚠️',
-			hotelDmcRef: 'DMC-DPS-1092',
-			hotelName: 'The Kayon Jungle Resort Ubud',
-			visaStatus: 'NOT_REQUIRED',
-			totalAmount: 142000,
-			advancePaid: 50000,
-			balanceDue: 92000,
-			invoiceNumber: 'INV-TRA-202608',
-			status: 'OPERATIONS_HOLD',
-			passengers: [
-				{ name: 'Dr. V. Rajesh', passportNo: 'K4920194', passportExpiry: '2030-05-19', dob: '1979-02-14', type: 'ADULT', mealPreference: 'VEG', wheelchair: false },
-				{ name: 'Deepa Rajesh', passportNo: 'K4920195', passportExpiry: '2030-05-19', dob: '1982-08-30', type: 'ADULT', mealPreference: 'VEG', wheelchair: false }
-			],
-			readiness: {
-				hotelReconfirmed: true,
-				insuranceIssued: false,
-				webCheckInDone: false,
-				travelKitSent: false
-			}
-		},
-		{
-			id: 'TRIP-2026-912',
-			customerName: 'K. Senthil Kumar & Friends',
-			customerPhone: '+91 94440 12345',
-			customerEmail: 'senthil@builders.in',
-			destination: 'Singapore & Sentosa Island',
-			packageTitle: 'Singapore Highlights & Universal Studios 4D/3N',
-			travelDates: '05 Dec 2026 - 09 Dec 2026',
-			paxCount: 6,
-			airlinePnr: '6E-1004 (IndiGo)',
-			pnrDeadline: 'Ticketing Done ✓',
-			hotelDmcRef: 'DMC-SIN-4091',
-			hotelName: 'Hotel Boss Singapore (3 Twin Rooms)',
-			visaStatus: 'BIOMETRICS_DONE',
-			totalAmount: 265000,
-			advancePaid: 150000,
-			balanceDue: 115000,
-			invoiceNumber: 'INV-TRA-202612',
-			status: 'CONFIRMED',
-			passengers: [
-				{ name: 'K. Senthil Kumar', passportNo: 'M1029384', passportExpiry: '2032-11-01', dob: '1975-03-20', type: 'ADULT', mealPreference: 'NON_VEG', wheelchair: false },
-				{ name: 'N. Murugan', passportNo: 'M1029385', passportExpiry: '2032-11-01', dob: '1976-07-15', type: 'ADULT', mealPreference: 'NON_VEG', wheelchair: false }
-			],
-			readiness: {
-				hotelReconfirmed: false,
-				insuranceIssued: true,
-				webCheckInDone: false,
-				travelKitSent: false
+			id: 'TRV-2026-002',
+			customerName: 'Karthik Subramanian',
+			customerCity: 'Madurai',
+			customerPhone: '+91 94432 55678',
+			customerEmail: 'karthik.sub@maduraitech.in',
+			tripMode: 'BUSINESS',
+			destination: 'Kuala Lumpur & Penang (Malaysia)',
+			packageTitle: 'Malaysia Corporate Summit & Networking (3D/2N)',
+			travelDates: '28 Nov 2026 - 01 Dec 2026',
+			paxCount: 1,
+			status: 'IN_PROGRESS',
+			totalAmount: '₹ 72,000',
+			hotelName: 'Hilton Kuala Lumpur City Centre',
+			hotelDmcRef: 'DMC-KUL-4402',
+			airlinePnr: 'MH-183 (Malaysia Airlines)',
+			visaStatus: 'eVisa Approved (Ref: MY-88219)',
+			assignedCoordinator: {
+				name: 'Muthuvel S.',
+				phone: '+91 98402 33445',
+				department: 'SE Asia Corporate Desk'
+			},
+			logisticsDispatch: {
+				driverName: 'Tan Wei Meng',
+				driverPhone: '+60 12 345 6789',
+				vehicleModel: 'Mercedes-Benz E-Class Executive',
+				vehiclePlate: 'WXY 8892',
+				pickupLocation: 'KLIA Terminal 1 International Arrivals Gate 3',
+				flightMonitor: 'MH-183 Arriving 06:45 AM',
+				guideName: 'Govindasamy (Licensed Tourist Guide)',
+				guidePhone: '+60 16 987 6543',
+				guideLanguages: 'Tamil, English, Malay'
+			},
+			localEmergency: {
+				stationLead: 'KL Embassy Station Liaison',
+				emergencyPhone: '+60 3 2147 8000',
+				hospitalPartner: 'Gleneagles Hospital Kuala Lumpur'
 			}
 		}
 	]);
 
-	// Shared Work Modal State
-	let showSharedWorkModal = $state(false);
-	let workBooking = $state<ActiveBooking | null>(null);
-
-	// Travel Kit Modal State
-	let showTravelKitModal = $state(false);
-	let kitBooking = $state<ActiveBooking | null>(null);
-
-	// Selected package for itinerary preview & print
-	let selectedPackage = $state<TourPackage | null>(null);
-	let parsedItinerary = $state<ItineraryDay[]>([]);
-	let showItineraryModal = $state(false);
-
-	// Modals
-	let showNewPackageModal = $state(false);
-	let showNewVisaModal = $state(false);
-
-	// New Package Form State
-	let newPkgTitle = $state('');
-	let newPkgDestination = $state('');
-	let newPkgDuration = $state(5);
-	let newPkgPrice = $state('35000');
-	let newPkgDays = $state<ItineraryDay[]>([
-		{ day: 1, title: 'Arrival & Hotel Check-in', activities: 'Airport pickup, transfer to 4-star hotel, welcome dinner cruise.', hotel: 'Radisson Blu / Equivalent', meals: 'Dinner' },
-		{ day: 2, title: 'Guided City Tour & Landmark Sightseeing', activities: 'Half-day city tour with English-speaking guide, entry tickets to main museum.', hotel: 'Radisson Blu / Equivalent', meals: 'Breakfast' },
-		{ day: 3, title: 'Leisure & Adventure Excursions', activities: 'Desert safari / Island hopping / Theme park access with transfers.', hotel: 'Radisson Blu / Equivalent', meals: 'Breakfast & Dinner' },
-		{ day: 4, title: 'Local Markets & Shopping Tour', activities: 'Free day for gold souk, artisan market, local cuisine walk.', hotel: 'Radisson Blu / Equivalent', meals: 'Breakfast' },
-		{ day: 5, title: 'Departure & Airport Transfer', activities: 'Breakfast, check-out, souvenir shopping, private transfer to airport.', hotel: 'Checkout', meals: 'Breakfast' }
-	]);
-
-	// New Visa Form State
-	let newVisaApplicant = $state('');
-	let newVisaPassport = $state('');
-	let newVisaPhone = $state('');
-	let newVisaCountry = $state('United Arab Emirates');
-	let newVisaType = $state('30 Days Tourist');
-	let newVisaChecklist = $state({
-		passportSixMonthsValid: true,
-		photographWhiteBg: true,
-		bankStatementSixMonths: false,
-		itrThreeYears: false,
-		airTicketConfirmed: false,
-		hotelVoucherConfirmed: false,
-		travelInsurance: false
-	});
-
-	// Secret Margin & Indian TCS Calculator State
-	let calcVendorFlight = $state(28000);
-	let calcVendorHotel = $state(22000);
-	let calcVendorLandTransport = $state(12000);
-	let calcVendorSightseeing = $state(8000);
-	let calcAgentMarkupPercent = $state(15);
-	let calcTcsTier = $state<'NONE' | 'DOMESTIC' | 'OVERSEAS_5' | 'OVERSEAS_20'>('OVERSEAS_5');
-
-	// Computed Margin Calculator values
-	let totalVendorNet = $derived(calcVendorFlight + calcVendorHotel + calcVendorLandTransport + calcVendorSightseeing);
-	let agentProfitMargin = $derived(Math.round(totalVendorNet * (calcAgentMarkupPercent / 100)));
-	let baseSellingPrice = $derived(totalVendorNet + agentProfitMargin);
-	let tcsRatePercent = $derived(calcTcsTier === 'OVERSEAS_5' ? 5 : calcTcsTier === 'OVERSEAS_20' ? 20 : 0);
-	let tcsAmount = $derived(Math.round(baseSellingPrice * (tcsRatePercent / 100)));
-	let finalCustomerQuotation = $derived(baseSellingPrice + tcsAmount);
-
-	async function loadData() {
-		loading = true;
-		error = '';
+	onMount(async () => {
 		try {
-			const [pkgRes, appRes]: [any, any] = await Promise.all([
-				travelGrpc.listTourPackages(),
-				travelGrpc.listVisaApplications()
-			]);
-			packages = pkgRes?.packages || [];
-			applications = appRes?.applications || [];
-			if (packages.length > 0 && !selectedPackage) {
-				selectedPackage = packages[0];
-				if (packages[0].itineraryJson) {
-					try {
-						parsedItinerary = JSON.parse(packages[0].itineraryJson);
-					} catch {
-						// ignore parse error
-					}
-				}
+			const res = await travelGrpc.listTourPackages();
+			if (res && res.packages && res.packages.length > 0) {
+				console.log('Loaded backend tour packages:', res.packages.length);
 			}
-		} catch (err: any) {
-			error = err.message || 'Failed to connect to Travel & Visa gRPC backend';
-		} finally {
-			loading = false;
+		} catch (e) {
+			console.log('ConnectRPC connected to local state fallback');
 		}
-	}
-
-	onMount(() => {
-		loadData();
 	});
 
-	function openSharedWorkHub(booking: ActiveBooking) {
-		workBooking = booking;
-		showSharedWorkModal = true;
-	}
-
-	function openTravelKit(booking: ActiveBooking) {
-		kitBooking = booking;
+	function openWhatsAppKit(b: any) {
+		selectedBooking = b;
 		showTravelKitModal = true;
 	}
 
-	function toggleReadiness(bookingId: string, key: keyof ActiveBooking['readiness']) {
-		activeBookings = activeBookings.map(b => {
-			if (b.id === bookingId) {
-				const updated = { ...b.readiness, [key]: !b.readiness[key] };
-				return { ...b, readiness: updated };
-			}
-			return b;
-		});
-		statusMsg = `Pre-departure readiness updated.`;
-		setTimeout(() => statusMsg = '', 2000);
+	function openDispatchEditor(b: any) {
+		selectedBooking = b;
+		showDispatchModal = true;
 	}
 
-	function openItineraryPreview(pkg: TourPackage) {
-		selectedPackage = pkg;
-		if (pkg.itineraryJson) {
-			try {
-				parsedItinerary = JSON.parse(pkg.itineraryJson);
-			} catch {
-				parsedItinerary = [
-					{ day: 1, title: 'Arrival & Welcome', activities: 'Airport pickup and hotel check-in', hotel: 'City Hotel', meals: 'Dinner' },
-					{ day: 2, title: 'Full Day Sightseeing', activities: 'Major landmarks and cultural tour', hotel: 'City Hotel', meals: 'Breakfast' },
-					{ day: 3, title: 'Return Transfer', activities: 'Hotel check-out and drop to airport', hotel: 'N/A', meals: 'Breakfast' }
-				];
-			}
-		} else {
-			parsedItinerary = [
-				{ day: 1, title: 'Arrival & Transfer', activities: 'Welcome reception and hotel check-in', hotel: 'Standard 4-Star', meals: 'Dinner' },
-				{ day: 2, title: 'Local Attractions', activities: 'Guided city landmarks tour', hotel: 'Standard 4-Star', meals: 'Breakfast' }
-			];
-		}
-		showItineraryModal = true;
+	function openLeadChat(lead: any) {
+		selectedLead = lead;
+		showWhatsAppLeadModal = true;
 	}
 
-	async function handleCreatePackage() {
-		if (!newPkgTitle || !newPkgDestination) {
-			alert('Please enter package title and destination');
-			return;
-		}
-		try {
-			const res: any = await travelGrpc.createTourPackage({
-				title: newPkgTitle,
-				destination: newPkgDestination,
-				durationDays: Number(newPkgDuration),
-				price: String(newPkgPrice),
-				itineraryJson: JSON.stringify(newPkgDays)
-			});
-			if (res?.package) {
-				packages = [res.package, ...packages];
-				showNewPackageModal = false;
-				statusMsg = `✅ Tour package "${res.package.title}" published!`;
-				setTimeout(() => statusMsg = '', 4000);
-			}
-		} catch (err: any) {
-			alert('Failed to create package: ' + err.message);
-		}
-	}
-
-	async function handleSubmitVisa() {
-		if (!newVisaApplicant || !newVisaPassport) {
-			alert('Please provide applicant name and passport number');
-			return;
-		}
-		try {
-			const res: any = await travelGrpc.submitVisaApplication({
-				applicantName: newVisaApplicant,
-				passportNumber: newVisaPassport,
-				country: newVisaCountry,
-				visaType: newVisaType,
-				checklistJson: JSON.stringify(newVisaChecklist)
-			});
-			if (res?.application) {
-				applications = [res.application, ...applications];
-				showNewVisaModal = false;
-				newVisaApplicant = '';
-				newVisaPassport = '';
-				statusMsg = `✅ Visa file submitted for ${res.application.applicantName} (${res.application.country})`;
-				setTimeout(() => statusMsg = '', 4000);
-			}
-		} catch (err: any) {
-			alert('Failed to submit visa: ' + err.message);
-		}
-	}
-
-	async function updateVisaStatus(id: string, newStatus: string) {
-		try {
-			await travelGrpc.updateVisaStatus({ id, status: newStatus });
-			applications = applications.map(a => a.id === id ? { ...a, status: newStatus } : a);
-			statusMsg = `Status updated to ${newStatus}`;
-			setTimeout(() => statusMsg = '', 3000);
-		} catch (err: any) {
-			alert('Failed to update status: ' + err.message);
-		}
-	}
-
-	function printItinerary() {
-		window.print();
-	}
 </script>
 
 <svelte:head>
-	<title>Travel, Tours &amp; Visa Management OS | MrBiz-OS</title>
+	<title>Travel &amp; Tours OS | MRBiz OS — Integrated Travel Operator System</title>
 </svelte:head>
 
-<div class="travel-app">
-	<!-- Top Bar -->
-	<header class="app-header">
-		<div>
-			<div class="badge-row">
-				<span class="pill-badge">✈️ Global Travel &amp; Visa OS</span>
-				<span class="status-indicator">● ConnectRPC v1 Connected</span>
-			</div>
-			<h1 class="main-title">Tour Operator &amp; Immigration Operations Hub</h1>
-			<p class="subtitle">Multi-role shared works deck, airline PNR holds, DMC hotel voucher registry, pre-departure readiness, and Section 206C(1G) Indian TCS engine.</p>
-		</div>
-
-		<div class="header-actions">
-			<button class="btn btn-secondary" onclick={() => showNewVisaModal = true}>
-				🛂 + New Visa File
-			</button>
-			<button class="btn btn-primary" onclick={() => showNewPackageModal = true}>
-				✈️ + New Tour Package
-			</button>
-		</div>
-	</header>
-
-	{#if statusMsg}
-		<div class="status-alert">{statusMsg}</div>
-	{/if}
-
-	{#if error}
-		<div class="error-alert">⚠️ {error}</div>
-	{/if}
-
-	<!-- Quick KPI Metric Cards -->
-	<div class="kpi-grid">
-		<div class="kpi-card kpi-card-emerald">
-			<div class="kpi-label">Active Trip Bookings</div>
-			<div class="kpi-value kpi-val-emerald">{activeBookings.length} Bookings</div>
-			<div class="kpi-sub">Total ₹{(activeBookings.reduce((sum, b) => sum + b.totalAmount, 0)).toLocaleString('en-IN')} Turn</div>
-		</div>
-		<div class="kpi-card kpi-card-amber">
-			<div class="kpi-label">Accounts Balance Due</div>
-			<div class="kpi-value kpi-val-amber">₹{(activeBookings.reduce((sum, b) => sum + b.balanceDue, 0)).toLocaleString('en-IN')}</div>
-			<div class="kpi-sub">GST &amp; TCS Invoices Synced</div>
-		</div>
-		<div class="kpi-card kpi-card-sky">
-			<div class="kpi-label">PNR / Voucher Holds</div>
-			<div class="kpi-value kpi-val-sky">1 Expiring &lt;24h</div>
-			<div class="kpi-sub">GDS Ticketing Deadlines</div>
-		</div>
-		<div class="kpi-card kpi-card-purple">
-			<div class="kpi-label">Visa Cases Pipeline</div>
-			<div class="kpi-value kpi-val-purple">{applications.length} Applicants</div>
-			<div class="kpi-sub">VFS &amp; Consulate Biometrics</div>
-		</div>
-	</div>
-
-	<!-- Navigation Tabs -->
-	<div class="nav-tabs">
-		<button 
-			class="tab-btn" 
-			class:active={activeTab === 'operations'} 
-			onclick={() => activeTab = 'operations'}>
-			⚡ Live Operations Deck &amp; Active Bookings ({activeBookings.length})
-		</button>
-		<button 
-			class="tab-btn" 
-			class:active={activeTab === 'packages'} 
-			onclick={() => activeTab = 'packages'}>
-			✈️ Holiday Packages &amp; Itineraries ({packages.length})
-		</button>
-		<button 
-			class="tab-btn" 
-			class:active={activeTab === 'visas'} 
-			onclick={() => activeTab = 'visas'}>
-			🛂 Visa &amp; Immigration Pipeline ({applications.length})
-		</button>
-		<button 
-			class="tab-btn" 
-			class:active={activeTab === 'manifest'} 
-			onclick={() => activeTab = 'manifest'}>
-			👥 Passenger Manifest &amp; Rooming Lists
-		</button>
-		<button 
-			class="tab-btn" 
-			class:active={activeTab === 'calculator'} 
-			onclick={() => activeTab = 'calculator'}>
-			🧮 B2B Secret Margin &amp; TCS 206C Calculator
-		</button>
-	</div>
-
-	<!-- TAB 0: LIVE OPERATIONS DECK & ACTIVE BOOKINGS (NEW HEARTBEAT) -->
-	{#if activeTab === 'operations'}
-		<div class="section-container">
-			<div class="section-header">
-				<div>
-					<h2 class="section-title">Active Travel Bookings &amp; Shared Team Cockpit</h2>
-					<p class="section-desc">Unified cross-team visibility connecting Sales, Ticketing, DMC Operations, Visa, and Accounts.</p>
-				</div>
-			</div>
-
-			<div class="bookings-grid">
-				{#each activeBookings as b}
-					<div class="booking-card">
-						<!-- Top Ribbon -->
-						<div class="booking-ribbon">
-							<div class="flex items-center gap-2">
-								<span class="booking-ref">{b.id}</span>
-								<span class="status-pill status-{b.status.toLowerCase()}">{b.status}</span>
-							</div>
-							<div class="booking-dates">📅 {b.travelDates}</div>
-						</div>
-
-						<!-- Core Info -->
-						<div class="booking-main">
-							<div class="customer-block">
-								<h3 class="cust-name">{b.customerName}</h3>
-								<div class="cust-meta">
-									<span>📱 {b.customerPhone}</span>
-									<span>👥 {b.paxCount} Travelers</span>
-								</div>
-								<div class="trip-title">🌴 {b.packageTitle}</div>
-							</div>
-
-							<div class="finance-block">
-								<div class="finance-total">₹{b.totalAmount.toLocaleString('en-IN')}</div>
-								<div class="finance-meta">
-									<span class="text-emerald-400">Paid: ₹{b.advancePaid.toLocaleString('en-IN')}</span> · 
-									<span class="text-rose-400 font-bold">Due: ₹{b.balanceDue.toLocaleString('en-IN')}</span>
-								</div>
-								<div class="invoice-ref">Invoice: #{b.invoiceNumber}</div>
-							</div>
-						</div>
-
-						<!-- Supplier PNR & Voucher Tracking -->
-						<div class="suppliers-grid">
-							<div class="supplier-cell">
-								<span class="sup-label">✈️ Airline PNR:</span>
-								<strong class="font-mono text-white">{b.airlinePnr}</strong>
-								<span class="sup-status" class:warn={b.pnrDeadline.includes('Expires')}>
-									{b.pnrDeadline}
-								</span>
-							</div>
-
-							<div class="supplier-cell">
-								<span class="sup-label">🏨 DMC Hotel Voucher:</span>
-								<strong class="font-mono text-sky-400">{b.hotelDmcRef}</strong>
-								<span class="sup-sub">{b.hotelName}</span>
-							</div>
-
-							<div class="supplier-cell">
-								<span class="sup-label">🛂 Visa Status:</span>
-								<strong class="font-semibold text-purple-400">{b.visaStatus}</strong>
-								<span class="sup-sub">Biometrics &amp; Passport Clear</span>
-							</div>
-						</div>
-
-						<!-- 48h/24h Pre-Departure Readiness Checklist -->
-						<div class="readiness-bar">
-							<div class="readiness-label">Pre-Departure Readiness Checklist:</div>
-							<div class="readiness-items">
-								<button 
-									type="button"
-									class="check-pill-interactive" 
-									class:done={b.readiness.hotelReconfirmed}
-									onclick={() => toggleReadiness(b.id, 'hotelReconfirmed')}>
-									{b.readiness.hotelReconfirmed ? '✓' : '○'} Hotel Reconfirmed (48h)
-								</button>
-
-								<button 
-									type="button"
-									class="check-pill-interactive" 
-									class:done={b.readiness.insuranceIssued}
-									onclick={() => toggleReadiness(b.id, 'insuranceIssued')}>
-									{b.readiness.insuranceIssued ? '✓' : '○'} Travel Insurance Issued
-								</button>
-
-								<button 
-									type="button"
-									class="check-pill-interactive" 
-									class:done={b.readiness.webCheckInDone}
-									onclick={() => toggleReadiness(b.id, 'webCheckInDone')}>
-									{b.readiness.webCheckInDone ? '✓' : '○'} Web Check-in (24h)
-								</button>
-
-								<button 
-									type="button"
-									class="check-pill-interactive" 
-									class:done={b.readiness.travelKitSent}
-									onclick={() => toggleReadiness(b.id, 'travelKitSent')}>
-									{b.readiness.travelKitSent ? '✓' : '○'} WhatsApp Kit Sent
-								</button>
-							</div>
-						</div>
-
-						<!-- Action Footer -->
-						<div class="booking-footer">
-							<div class="btn-group-footer">
-								<button class="btn btn-primary btn-sm" onclick={() => openSharedWorkHub(b)}>
-									⚡ Shared Works Hub (Billing &amp; Tasks)
-								</button>
-								<button class="btn btn-outline btn-sm" onclick={() => openTravelKit(b)}>
-									📜 Travel Kit &amp; Vouchers PDF
-								</button>
-								<a class="btn btn-whatsapp btn-sm" href="https://wa.me/{b.customerPhone.replace(/[^0-9]/g, '')}?text=Dear%20{encodeURIComponent(b.customerName)},%20update%20regarding%20your%20booking%20{b.id}" target="_blank">
-									💬 WhatsApp
-								</a>
-							</div>
+<div class="travel-full-canvas">
+	<!-- Top Masthead Banner -->
+	<header class="travel-top-masthead">
+		<div class="masthead-left">
+			<div class="icon-title-wrap">
+					<div class="airplane-badge">✈️</div>
+					<div>
+						<h1 class="screen-title">Travel &amp; Tours OS</h1>
+						<div class="sub-nav-links">
+							<a href="/travel/book" class="sub-link-btn" style="color: #16a34a; font-weight: 800;">⚡ Book a Trip (1-Page)</a> • 
+							<a href="/travel/crm" class="sub-link-btn" style="color: #7c3aed; font-weight: 700;">👥 Odoo CRM &amp; UTMs</a> • 
+							<button type="button" class="sub-link-btn" onclick={() => (showCreateBooking = true)}>Bookings</button> • 
+							<button type="button" class="sub-link-btn" onclick={() => (showVisaModal = true)}>Visa</button> • 
+							<button type="button" class="sub-link-btn" onclick={() => (showCalendarModal = true)}>Tours</button> • 
+							<button type="button" class="sub-link-btn" onclick={() => (showItineraryBuilder = true)}>Itineraries</button> • 
+							<button type="button" class="sub-link-btn" onclick={() => openDispatchEditor(bookings[0])}>Operations</button> • 
+							<button type="button" class="sub-link-btn" onclick={() => (showPaymentModal = true)}>Finance</button>
 						</div>
 					</div>
-				{/each}
-			</div>
-		</div>
-	{/if}
-
-	<!-- TAB 1: TOUR PACKAGES -->
-	{#if activeTab === 'packages'}
-		<div class="section-container">
-			<div class="section-header">
-				<div>
-					<h2 class="section-title">Featured Itineraries &amp; Tour Packages</h2>
-					<p class="section-desc">Client proposals ready for 1-click WhatsApp share and PDF voucher printing.</p>
 				</div>
-				<button class="btn btn-outline" onclick={loadData}>🔄 Refresh</button>
 			</div>
 
-			{#if loading}
-				<div class="loading-state">Fetching packages from TravelConnect service...</div>
-			{:else}
-				<div class="packages-grid">
-					{#each packages as pkg}
-						<div class="pkg-card">
-							<div class="pkg-header">
-								<span class="destination-pill">📍 {pkg.destination}</span>
-								<span class="duration-badge">⏱️ {pkg.durationDays} Days / {pkg.durationDays - 1} Nights</span>
-							</div>
-							<h3 class="pkg-title">{pkg.title}</h3>
-							<div class="pkg-highlights">
-								<span>🏨 4★ Accommodation</span>
-								<span>🚗 Airport Transfers</span>
-								<span>🍽️ Daily Breakfast</span>
-								<span>🎟️ Entry Sightseeing</span>
-							</div>
-							<div class="pkg-footer">
-								<div>
-									<div class="price-label">Starting from</div>
-									<div class="price-val">₹{Number(pkg.price).toLocaleString('en-IN')} <span class="per-person">/ pax</span></div>
-								</div>
-								<div class="btn-group">
-									<button class="btn-view" onclick={() => openItineraryPreview(pkg)}>
-										📜 View Itinerary
-									</button>
-									<button class="btn btn-primary btn-sm ml-2" onclick={() => {
-										workBooking = {
-											id: `TRIP-${Date.now().toString().slice(-4)}`,
-											customerName: 'Direct Walk-in / Inquirer',
-											customerPhone: '+91 98401 23456',
-											customerEmail: '',
-											destination: pkg.destination,
-											packageTitle: pkg.title,
-											travelDates: 'Upcoming Month',
-											paxCount: 2,
-											airlinePnr: 'PENDING_HOLD',
-											pnrDeadline: 'Hold 24h',
-											hotelDmcRef: 'PENDING_VOUCHER',
-											hotelName: 'Standard 4★ Hotel',
-											visaStatus: 'SUBMITTED',
-											totalAmount: Number(pkg.price) * 2,
-											advancePaid: Number(pkg.price),
-											balanceDue: Number(pkg.price),
-											invoiceNumber: `INV-${Date.now().toString().slice(-4)}`,
-											status: 'OPERATIONS_HOLD',
-											passengers: [],
-											readiness: { hotelReconfirmed: false, insuranceIssued: false, webCheckInDone: false, travelKitSent: false }
-										};
-										showSharedWorkModal = true;
-									}}>
-										⚡ Convert to Booking
-									</button>
-								</div>
-							</div>
-						</div>
-					{/each}
+			<div class="masthead-right">
+				<div class="explore-banner">
+					<span class="explore-text">Explore the World ✈️</span>
 				</div>
-			{/if}
-		</div>
-	{/if}
+				<div class="date-dropdown-box" onclick={() => (showCalendarModal = true)} role="button" tabindex="0" onkeydown={(e) => { if (e.key === 'Enter') showCalendarModal = true; }}>
+					<span class="date-icon">📅</span>
+					<span class="date-text">Today • 22 Oct 2026</span>
+					<span class="arrow-down">▾</span>
+				</div>
+				<button type="button" class="btn btn-sm btn-outline launcher-btn" onclick={() => (showAppLauncherModal = true)} title="Open App Launcher">
+					Apps ⊞
+				</button>
+			</div>
+		</header>
 
-	<!-- TAB 2: VISA APPLICATIONS -->
-	{#if activeTab === 'visas'}
-		<div class="section-container">
-			<div class="section-header">
-				<div>
-					<h2 class="section-title">Visa &amp; Immigration Case Pipeline</h2>
-					<p class="section-desc">Real-time status tracking, document completeness check, and biometrics scheduling.</p>
+		<!-- 6 Actionable KPI Cards -->
+		<section class="kpi-banner-grid">
+			<!-- 1. Total Bookings -->
+			<div class="kpi-tile kpi-blue">
+				<div class="kpi-icon-circle blue">✈️</div>
+				<div class="kpi-details">
+					<span class="kpi-tag">Total Bookings</span>
+					<div class="kpi-num-row">
+						<span class="kpi-num">186</span>
+						<span class="kpi-growth up">▲ 12%</span>
+					</div>
+					<span class="kpi-sub">This Month</span>
 				</div>
-				<button class="btn btn-primary" onclick={() => showNewVisaModal = true}>+ Log New Visa File</button>
 			</div>
 
-			<div class="table-card">
-				<table class="data-table">
-					<thead>
-						<tr>
-							<th>Applicant Name</th>
-							<th>Passport Number</th>
-							<th>Destination Country</th>
-							<th>Visa Category</th>
-							<th>Checklist Verification</th>
-							<th>Current Embassy Status</th>
-							<th>Actions</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each applications as app}
+			<!-- 2. Revenue -->
+			<div class="kpi-tile kpi-green">
+				<div class="kpi-icon-circle green">₹</div>
+				<div class="kpi-details">
+					<span class="kpi-tag">Revenue</span>
+					<div class="kpi-num-row">
+						<span class="kpi-num">₹ 24,60,000</span>
+						<span class="kpi-growth up">▲ 18%</span>
+					</div>
+					<span class="kpi-sub">This Month</span>
+				</div>
+			</div>
+
+			<!-- 3. Active Customers -->
+			<div class="kpi-tile kpi-purple">
+				<div class="kpi-icon-circle purple">👥</div>
+				<div class="kpi-details">
+					<span class="kpi-tag">Active Customers</span>
+					<div class="kpi-num-row">
+						<span class="kpi-num">324</span>
+						<span class="kpi-growth up">▲ 9%</span>
+					</div>
+					<span class="kpi-sub">Across Circuits</span>
+				</div>
+			</div>
+
+			<!-- 4. Pending Visa -->
+			<div class="kpi-tile kpi-red">
+				<div class="kpi-icon-circle red">🛂</div>
+				<div class="kpi-details">
+					<span class="kpi-tag">Pending Visa</span>
+					<div class="kpi-num-row">
+						<span class="kpi-num">48</span>
+						<span class="kpi-growth down">▼ 6%</span>
+					</div>
+					<span class="kpi-sub">In Process</span>
+				</div>
+			</div>
+
+			<!-- 5. Upcoming Tours -->
+			<div class="kpi-tile kpi-amber">
+				<div class="kpi-icon-circle amber">🧳</div>
+				<div class="kpi-details">
+					<span class="kpi-tag">Upcoming Tours</span>
+					<div class="kpi-num-row">
+						<span class="kpi-num">12</span>
+						<span class="kpi-growth up">▲ 5%</span>
+					</div>
+					<span class="kpi-sub">Next 30 Days</span>
+				</div>
+			</div>
+
+			<!-- 6. Payments Due -->
+			<div class="kpi-tile kpi-sky">
+				<div class="kpi-icon-circle sky">💳</div>
+				<div class="kpi-details">
+					<span class="kpi-tag">Payments Due</span>
+					<div class="kpi-num-row">
+						<span class="kpi-num">₹ 7,85,000</span>
+					</div>
+					<span class="kpi-sub">14 Invoices</span>
+				</div>
+			</div>
+		</section>
+
+		<!-- Middle Operational Tri-Panel Section -->
+		<section class="middle-tri-grid">
+			<!-- Panel 1: Departures This Month (Table) -->
+			<div class="cockpit-card departures-panel">
+				<div class="panel-header">
+					<div>
+						<h3 class="panel-title">Departures This Month</h3>
+						<span class="panel-sub">Capacity &amp; Scheduled departures</span>
+					</div>
+					<button type="button" class="link-btn" onclick={() => (showCalendarModal = true)}>View All ›</button>
+				</div>
+
+				<div class="table-wrapper">
+					<table class="departures-table">
+						<thead>
 							<tr>
-								<td>
-									<div class="font-semibold text-white">{app.applicantName}</div>
-									<div class="text-xs text-slate-400">Ref: {app.id}</div>
-								</td>
-								<td>
-									<span class="mono-badge">{app.passportNumber}</span>
-								</td>
-								<td>
-									<span class="country-cell">🌍 {app.country}</span>
-								</td>
-								<td>{app.visaType}</td>
-								<td>
-									<div class="checklist-pills">
-										<span class="check-pill done">✓ Passport Valid</span>
-										<span class="check-pill done">✓ Photo 35x45</span>
-										<span class="check-pill" class:done={app.status !== 'SUBMITTED'}>6M Bank Stmt</span>
-									</div>
-								</td>
-								<td>
-									<span class="status-badge status-{app.status.toLowerCase()}">
-										{app.status.replace('_', ' ')}
-									</span>
-								</td>
-								<td>
-									<select 
-										class="status-select" 
-										value={app.status} 
-										onchange={(e) => updateVisaStatus(app.id, (e.target as HTMLSelectElement).value)}>
-										<option value="SUBMITTED">SUBMITTED</option>
-										<option value="UNDER_REVIEW">UNDER REVIEW</option>
-										<option value="BIOMETRICS_DONE">BIOMETRICS DONE</option>
-										<option value="VISA_APPROVED">VISA APPROVED</option>
-										<option value="REJECTED">REJECTED</option>
-									</select>
-								</td>
+								<th>Date</th>
+								<th>Tour Package</th>
+								<th>Destination</th>
+								<th class="text-center">Booked/Capacity</th>
+								<th>Status</th>
+								<th class="text-center">Action</th>
 							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-		</div>
-	{/if}
-
-	<!-- TAB 3: PASSENGER MANIFEST & ROOMING LISTS -->
-	{#if activeTab === 'manifest'}
-		<div class="section-container">
-			<div class="section-header">
-				<div>
-					<h2 class="section-title">Passenger Manifest &amp; Rooming Allocation Lists</h2>
-					<p class="section-desc">Critical passport bio details, birth dates, dietary requirements, and wheelchair assistance for airlines &amp; DMCs.</p>
+						</thead>
+						<tbody>
+							{#each departures as dep}
+								<tr>
+									<td class="font-mono font-semibold">{dep.date}</td>
+									<td class="font-bold text-slate-900">{dep.package}</td>
+									<td class="text-slate-600">{dep.destination}</td>
+									<td class="font-mono text-center">
+										<strong>{dep.booked}</strong>/{dep.capacity}
+									</td>
+									<td>
+										<span class="status-pill {dep.statusClass}">{dep.status}</span>
+									</td>
+									<td class="text-center">
+										<button 
+											type="button" 
+											class="icon-menu-btn" 
+											onclick={() => { toast.success(`Viewing departure manifest for ${dep.package}`); showPassengerModal = true; }}
+											title="View Passenger Manifest"
+										>
+											•••
+										</button>
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
 				</div>
 			</div>
 
-			<div class="space-y-6">
-				{#each activeBookings as b}
-					<div class="manifest-card">
-						<div class="manifest-header">
-							<div>
-								<div class="text-xs text-sky-400 font-bold uppercase">{b.id} · {b.packageTitle}</div>
-								<h3 class="text-lg font-bold text-white">Lead Pax: {b.customerName} ({b.paxCount} Travelers)</h3>
+			<!-- Panel 2: Booking Status (Donut Chart) -->
+			<div class="cockpit-card status-donut-panel">
+				<div class="panel-header">
+					<h3 class="panel-title">Booking Status</h3>
+					<span class="period-pill">This Month ▾</span>
+				</div>
+
+				<div class="donut-chart-container">
+					<!-- Interactive SVG Donut Chart -->
+					<div class="donut-graphic">
+						<svg viewBox="0 0 160 160" class="donut-svg">
+							<!-- Confirmed 52% (Green) -->
+							<circle cx="80" cy="80" r="60" fill="transparent" stroke="#10b981" stroke-width="20" stroke-dasharray="196 377" stroke-dashoffset="0" />
+							<!-- Pending 17% (Sky) -->
+							<circle cx="80" cy="80" r="60" fill="transparent" stroke="#0ea5e9" stroke-width="20" stroke-dasharray="64 377" stroke-dashoffset="-196" />
+							<!-- Quotation 15% (Amber) -->
+							<circle cx="80" cy="80" r="60" fill="transparent" stroke="#f59e0b" stroke-width="20" stroke-dasharray="56 377" stroke-dashoffset="-260" />
+							<!-- Cancelled 6% (Rose) -->
+							<circle cx="80" cy="80" r="60" fill="transparent" stroke="#f43f5e" stroke-width="20" stroke-dasharray="23 377" stroke-dashoffset="-316" />
+							<!-- On Hold 9% (Purple) -->
+							<circle cx="80" cy="80" r="60" fill="transparent" stroke="#8b5cf6" stroke-width="20" stroke-dasharray="34 377" stroke-dashoffset="-339" />
+						</svg>
+						<div class="donut-center-label">
+							<span class="donut-total font-mono">186</span>
+							<span class="donut-sub">Total</span>
+						</div>
+					</div>
+
+					<div class="donut-legend">
+						<div class="legend-row"><span class="legend-dot" style="background: #10b981;"></span><span class="leg-name">Confirmed</span><span class="leg-val">96 (52%)</span></div>
+						<div class="legend-row"><span class="legend-dot" style="background: #0ea5e9;"></span><span class="leg-name">Pending</span><span class="leg-val">32 (17%)</span></div>
+						<div class="legend-row"><span class="legend-dot" style="background: #f59e0b;"></span><span class="leg-name">Quotation</span><span class="leg-val">28 (15%)</span></div>
+						<div class="legend-row"><span class="legend-dot" style="background: #f43f5e;"></span><span class="leg-name">Cancelled</span><span class="leg-val">12 (6%)</span></div>
+						<div class="legend-row"><span class="legend-dot" style="background: #8b5cf6;"></span><span class="leg-name">On Hold</span><span class="leg-val">16 (9%)</span></div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Panel 3: Recent Leads (Omnichannel Feed) -->
+			<div class="cockpit-card leads-panel">
+				<div class="panel-header">
+					<div>
+						<h3 class="panel-title">Recent Leads</h3>
+						<span class="panel-sub">Social &amp; Inbound Enquiries</span>
+					</div>
+					<a href="/travel/crm" class="link-btn">Odoo Pipeline ›</a>
+				</div>
+
+				<div class="leads-list">
+					{#each recentLeads as lead}
+						<button type="button" class="lead-item" onclick={() => openLeadChat(lead)}>
+							<div class="lead-channel-icon {lead.channel}">
+								{#if lead.channel === 'whatsapp'}📱{:else if lead.channel === 'instagram'}📸{:else}👥{/if}
 							</div>
-							<div class="rooming-pill">
-								🏨 Hotel: {b.hotelName}
+							<div class="lead-info">
+								<div class="lead-title-row">
+									<span class="lead-name">{lead.name}</span>
+									<span class="lead-time font-mono">{lead.time}</span>
+								</div>
+								<div class="lead-tour">{lead.tour}</div>
+							</div>
+							<span class="lead-status-pill {lead.statusClass}">{lead.status}</span>
+						</button>
+					{/each}
+				</div>
+			</div>
+		</section>
+
+		<!-- Quick Actions Bar (Bottom Ribbon with 10 Action Launchers) -->
+		<section class="quick-actions-ribbon">
+			<button type="button" class="action-tile" onclick={() => (showCreateBooking = true)}>
+				<span class="act-icon">✈️</span>
+				<span class="act-text">Create Booking</span>
+			</button>
+
+			<button type="button" class="action-tile" onclick={() => (showWhatsAppLeadModal = true)}>
+				<span class="act-icon">👤</span>
+				<span class="act-text">Add Lead</span>
+			</button>
+
+			<button type="button" class="action-tile" onclick={() => (showItineraryBuilder = true)}>
+				<span class="act-icon">🗺️</span>
+				<span class="act-text">Plan Itinerary</span>
+			</button>
+
+			<button type="button" class="action-tile" onclick={() => (showCalendarModal = true)}>
+				<span class="act-icon">🔍</span>
+				<span class="act-text">Search Tours</span>
+			</button>
+
+			<button type="button" class="action-tile" onclick={() => (showVisaModal = true)}>
+				<span class="act-icon">🛂</span>
+				<span class="act-text">Process Visa</span>
+			</button>
+
+			<button type="button" class="action-tile" onclick={() => (showFlightModal = true)}>
+				<span class="act-icon">🛫</span>
+				<span class="act-text">Book Flight</span>
+			</button>
+
+			<button type="button" class="action-tile" onclick={() => openDispatchEditor(bookings[0])}>
+				<span class="act-icon">🚗</span>
+				<span class="act-text">Ground Dispatch</span>
+			</button>
+
+			<button type="button" class="action-tile" onclick={() => openWhatsAppKit(bookings[0])}>
+				<span class="act-icon">📱</span>
+				<span class="act-text">Send Travel Kit</span>
+			</button>
+
+			<button type="button" class="action-tile" onclick={() => (showPaymentModal = true)}>
+				<span class="act-icon">💳</span>
+				<span class="act-text">Create Invoice</span>
+			</button>
+
+			<button type="button" class="action-tile action-more" onclick={() => (showTripMapModal = true)}>
+				<span class="act-icon">📍</span>
+				<span class="act-text">Trip Map</span>
+			</button>
+		</section>
+
+		<!-- Operations Booking List Section (Single Linked Booking Execution) -->
+		<section class="booking-ops-deck">
+			<div class="deck-header">
+				<div>
+					<h3 class="deck-title">Active Booking Operations</h3>
+					<span class="deck-sub">Chennai Kashmir Family, Madurai Malaysia Corporate &amp; Kanyakumari Kerala Tours</span>
+				</div>
+				<div class="deck-actions">
+					<button type="button" class="btn btn-sm btn-outline" onclick={() => (showPassengerModal = true)}>
+						+ Add Passenger
+					</button>
+					<button type="button" class="btn btn-sm btn-primary" onclick={() => (showCreateBooking = true)}>
+						+ New Booking
+					</button>
+				</div>
+			</div>
+
+			<div class="booking-cards-list">
+				{#each bookings as b}
+					<div class="ops-booking-card">
+						<div class="card-head-strip">
+							<div class="cust-meta">
+								<div class="cust-avatar">{b.customerName.slice(0, 2).toUpperCase()}</div>
+								<div>
+									<span class="b-cust-name">{b.customerName}</span>
+									<span class="b-ref font-mono">{b.id} • {b.customerCity}</span>
+								</div>
+							</div>
+							<div class="mode-badges">
+								<span class="mode-tag mode-{b.tripMode.toLowerCase()}">{b.tripMode}</span>
+								<span class="status-badge status-confirmed">{b.status}</span>
 							</div>
 						</div>
 
-						<table class="data-table mt-3">
-							<thead>
-								<tr>
-									<th>Traveler Name</th>
-									<th>Passenger Type</th>
-									<th>Passport No</th>
-									<th>Expiry Date</th>
-									<th>Date of Birth</th>
-									<th>Meal Preference</th>
-									<th>Special Requests</th>
-								</tr>
-							</thead>
-							<tbody>
-								{#each b.passengers as p}
-									<tr>
-										<td class="font-bold text-white">{p.name}</td>
-										<td>
-											<span class="badge status-submitted">{p.type}</span>
-										</td>
-										<td><span class="mono-badge">{p.passportNo}</span></td>
-										<td>{p.passportExpiry}</td>
-										<td>{p.dob}</td>
-										<td>
-											<span class="meal-tag meal-{p.mealPreference.toLowerCase()}">{p.mealPreference}</span>
-										</td>
-										<td>
-											{#if p.wheelchair}
-												<span class="text-amber-400 text-xs font-bold">♿ Wheelchair Requested</span>
-											{:else}
-												<span class="text-slate-500 text-xs">Standard</span>
-											{/if}
-										</td>
-									</tr>
-								{/each}
-							</tbody>
-						</table>
+						<!-- 4 Dispatch Pillars -->
+						<div class="pillars-deck">
+							<div class="pillar-box">
+								<span class="p-title">🚗 CHAUFFEUR &amp; CAB</span>
+								<span class="p-main">{b.logisticsDispatch.driverName}</span>
+								<span class="p-sub font-mono">{b.logisticsDispatch.vehicleModel} ({b.logisticsDispatch.vehiclePlate})</span>
+								<span class="p-spec">{b.logisticsDispatch.pickupLocation}</span>
+							</div>
+							<div class="pillar-box">
+								<span class="p-title">🏨 RESORT &amp; STAY</span>
+								<span class="p-main">{b.hotelName}</span>
+								<span class="p-sub">Ref: <strong class="font-mono text-primary">{b.hotelDmcRef}</strong></span>
+								<span class="p-spec">Guaranteed Check-in</span>
+							</div>
+							<div class="pillar-box">
+								<span class="p-title">👨‍💼 LOCAL GUIDE</span>
+								<span class="p-main">{b.logisticsDispatch.guideName}</span>
+								<span class="p-sub">Languages: {b.logisticsDispatch.guideLanguages}</span>
+								<span class="p-spec font-mono">📞 {b.logisticsDispatch.guidePhone}</span>
+							</div>
+							<div class="pillar-box">
+								<span class="p-title">🆘 24/7 COORDINATOR</span>
+								<span class="p-main">{b.assignedCoordinator.name}</span>
+								<span class="p-sub">{b.assignedCoordinator.department}</span>
+								<span class="p-spec font-mono">📞 {b.assignedCoordinator.phone}</span>
+							</div>
+						</div>
+
+						<!-- Card Actions -->
+						<div class="card-footer-bar">
+							<div class="price-chip">
+								<span class="pr-label">Total Booking Value:</span>
+								<span class="pr-val font-mono">{b.totalAmount}</span>
+							</div>
+							<div class="btns-group">
+								<button type="button" class="btn btn-sm btn-outline" onclick={() => openDispatchEditor(b)}>
+									🚗 Edit Ground Dispatch
+								</button>
+								<button type="button" class="btn btn-sm btn-whatsapp" onclick={() => openWhatsAppKit(b)}>
+									📱 WhatsApp Travel Kit
+								</button>
+								<button type="button" class="btn btn-sm btn-secondary" onclick={() => (showConfirmModal = true)}>
+									Cancel
+								</button>
+							</div>
+						</div>
 					</div>
 				{/each}
 			</div>
-		</div>
-	{/if}
-
-	<!-- TAB 4: SECRET MARGIN & INDIAN TCS CALCULATOR -->
-	{#if activeTab === 'calculator'}
-		<div class="section-container">
-			<div class="section-header">
-				<div>
-					<h2 class="section-title">Secret B2B Margin &amp; Section 206C(1G) TCS Engine</h2>
-					<p class="section-desc">Strictly keep your vendor net procurement rates confidential while quoting full customer invoices with mandatory Indian TCS.</p>
-				</div>
-			</div>
-
-			<div class="calc-grid">
-				<!-- Left: Net B2B Vendor Costs (Secret) -->
-				<div class="calc-card">
-					<div class="card-head-secret">
-						🔒 Confidential B2B Procurement Costs (Never Disclosed to Client)
-					</div>
-
-					<div class="form-row">
-						<label for="vendor-flight">Vendor Airfare Net Cost (Flight PNR):</label>
-						<div class="input-prefix">
-							<span>₹</span>
-							<input id="vendor-flight" type="number" bind:value={calcVendorFlight} />
-						</div>
-					</div>
-
-					<div class="form-row">
-						<label for="vendor-hotel">DMC Hotel Contract Rate (Nights × Rooms):</label>
-						<div class="input-prefix">
-							<span>₹</span>
-							<input id="vendor-hotel" type="number" bind:value={calcVendorHotel} />
-						</div>
-					</div>
-
-					<div class="form-row">
-						<label for="vendor-transport">Local Cab / Coach Transfers:</label>
-						<div class="input-prefix">
-							<span>₹</span>
-							<input id="vendor-transport" type="number" bind:value={calcVendorLandTransport} />
-						</div>
-					</div>
-
-					<div class="form-row">
-						<label for="vendor-sightseeing">Sightseeing Entrances &amp; Visa Fee:</label>
-						<div class="input-prefix">
-							<span>₹</span>
-							<input id="vendor-sightseeing" type="number" bind:value={calcVendorSightseeing} />
-						</div>
-					</div>
-
-					<div class="vendor-total-bar">
-						<span>Net Vendor Procurement Cost:</span>
-						<span class="mono-num">₹{totalVendorNet.toLocaleString('en-IN')}</span>
-					</div>
-
-					<div class="form-row mt-4">
-						<label for="agent-markup">Agency Profit Margin Markup (%):</label>
-						<input id="agent-markup" type="range" min="5" max="40" bind:value={calcAgentMarkupPercent} />
-						<div class="flex justify-between text-xs text-slate-400">
-							<span>5% (Competitive B2B)</span>
-							<span class="text-sky-400 font-bold">{calcAgentMarkupPercent}% (+₹{agentProfitMargin.toLocaleString('en-IN')})</span>
-							<span>40% (Luxury Private)</span>
-						</div>
-					</div>
-				</div>
-
-				<!-- Right: Indian TCS & Client Quotation -->
-				<div class="calc-card quotation-card">
-					<div class="card-head-quote">
-						📄 Formal Client Quotation Breakdown
-					</div>
-
-					<div class="quotation-body">
-						<div class="quote-line">
-							<span>Base Tour Package Selling Price:</span>
-							<span class="font-bold text-white">₹{baseSellingPrice.toLocaleString('en-IN')}</span>
-						</div>
-
-						<div class="tcs-selector">
-							<div class="label-bold">Overseas Tour Program (OTP) TCS Slab:</div>
-							<div class="radio-group">
-								<label class="radio-label">
-									<input type="radio" bind:group={calcTcsTier} value="DOMESTIC" />
-									<span>Domestic Tour (0% TCS)</span>
-								</label>
-								<label class="radio-label">
-									<input type="radio" bind:group={calcTcsTier} value="OVERSEAS_5" />
-									<span>Overseas Package ≤ ₹7 Lakhs (5% TCS)</span>
-								</label>
-								<label class="radio-label">
-									<input type="radio" bind:group={calcTcsTier} value="OVERSEAS_20" />
-									<span>Overseas Package &gt; ₹7 Lakhs (20% TCS)</span>
-								</label>
-							</div>
-						</div>
-
-						{#if tcsRatePercent > 0}
-							<div class="tcs-breakdown-box">
-								<div class="flex justify-between">
-									<span>TCS Collected (Sec 206C(1G) @ {tcsRatePercent}%):</span>
-									<span class="text-amber-400 font-bold">+ ₹{tcsAmount.toLocaleString('en-IN')}</span>
-								</div>
-								<p class="text-xs text-slate-400 mt-1">
-									* Client will claim this TCS back as credit on Form 26AS / AIS during Income Tax filing with PAN.
-								</p>
-							</div>
-						{/if}
-
-						<div class="grand-quote-total">
-							<div>
-								<div class="text-xs uppercase tracking-wider text-slate-300">Total Client Quoted Invoice</div>
-								<div class="text-3xl font-extrabold text-emerald-400">
-									₹{finalCustomerQuotation.toLocaleString('en-IN')}
-								</div>
-							</div>
-							<button class="btn btn-success" onclick={() => {
-								newPkgTitle = `Custom Itinerary (${calcTcsTier})`;
-								newPkgPrice = String(finalCustomerQuotation);
-								showNewPackageModal = true;
-							}}>
-								Convert to Package
-							</button>
-						</div>
-
-						<div class="mt-4 p-3 bg-slate-900/60 rounded border border-slate-700/50 text-xs text-slate-300 space-y-1">
-							<div>💰 <strong>Your Net Profit:</strong> ₹{agentProfitMargin.toLocaleString('en-IN')}</div>
-							<div>🛡️ <strong>TCS Liability:</strong> ₹{tcsAmount.toLocaleString('en-IN')} (to remit to Govt)</div>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	{/if}
-
-	<!-- MODAL: ITINERARY PREVIEW & PRINTABLE VOUCHER -->
-	{#if showItineraryModal && selectedPackage}
-		<div class="modal-backdrop">
-			<div class="modal-container printable-voucher">
-				<div class="modal-header">
-					<div>
-						<div class="text-xs text-sky-400 font-bold uppercase">Official Travel Voucher &amp; Itinerary</div>
-						<h2 class="text-xl font-bold text-white">{selectedPackage.title}</h2>
-						<div class="text-xs text-slate-400">Destination: {selectedPackage.destination} · {selectedPackage.durationDays} Days</div>
-					</div>
-					<div class="no-print flex gap-2">
-						<button class="btn btn-outline" onclick={printItinerary}>🖨️ Print Voucher</button>
-						<button class="btn btn-secondary" onclick={() => showItineraryModal = false}>✕ Close</button>
-					</div>
-				</div>
-
-				<div class="itinerary-timeline">
-					{#each parsedItinerary as day}
-						<div class="timeline-day">
-							<div class="day-badge">Day {day.day}</div>
-							<div class="day-content">
-								<h4 class="day-title">{day.title}</h4>
-								<p class="day-activities">{day.activities}</p>
-								<div class="day-meta">
-									<span>🏨 Hotel: {day.hotel}</span>
-									<span>🍽️ Meal: {day.meals}</span>
-								</div>
-							</div>
-						</div>
-					{/each}
-				</div>
-
-				<div class="voucher-footer">
-					<div class="voucher-notes">
-						<div>✓ Valid for bookings through MrBiz-OS Travel Partners.</div>
-						<div>✓ Standard cancellation and baggage terms apply.</div>
-						<div>✓ 24/7 Emergency Local Concierge: +91 98200 12345</div>
-					</div>
-					<div class="voucher-price">
-						<div class="text-xs text-slate-400">Total Payable</div>
-						<div class="text-2xl font-bold text-sky-400">₹{Number(selectedPackage.price).toLocaleString('en-IN')}</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	{/if}
-
-	<!-- MODAL: TRAVEL KIT & VOUCHER VIEWER -->
-	{#if showTravelKitModal && kitBooking}
-		<div class="modal-backdrop">
-			<div class="modal-container max-w-2xl">
-				<div class="modal-header">
-					<div>
-						<div class="text-xs text-emerald-400 font-bold uppercase">Final Pre-Departure Travel Kit</div>
-						<h3 class="text-xl font-bold text-white">{kitBooking.packageTitle}</h3>
-						<div class="text-xs text-slate-400">Booking Ref: {kitBooking.id} · Lead: {kitBooking.customerName}</div>
-					</div>
-					<div class="flex gap-2">
-						<button class="btn btn-outline btn-sm" onclick={() => window.print()}>🖨️ Print Kit</button>
-						<button class="btn btn-secondary btn-sm" onclick={() => showTravelKitModal = false}>✕</button>
-					</div>
-				</div>
-
-				<div class="modal-body space-y-4">
-					<!-- Flight Ticket Card -->
-					<div class="p-4 bg-slate-900/80 rounded-lg border border-slate-700/80">
-						<div class="flex justify-between items-center mb-2">
-							<div class="font-bold text-white">✈️ E-Ticket &amp; Flight Confirmation</div>
-							<span class="font-mono text-emerald-400 font-bold">{kitBooking.airlinePnr}</span>
-						</div>
-						<div class="text-xs text-slate-300">Routing: Chennai (MAA) ➔ Dubai (DXB) · Emirates EK-521</div>
-						<div class="text-2xs text-slate-400 mt-1">Baggage: 30kg Check-in + 7kg Cabin. Terminal 3.</div>
-					</div>
-
-					<!-- Hotel Voucher Card -->
-					<div class="p-4 bg-slate-900/80 rounded-lg border border-slate-700/80">
-						<div class="flex justify-between items-center mb-2">
-							<div class="font-bold text-white">🏨 DMC Hotel Check-in Voucher</div>
-							<span class="font-mono text-sky-400 font-bold">{kitBooking.hotelDmcRef}</span>
-						</div>
-						<div class="text-xs text-slate-300">{kitBooking.hotelName}</div>
-						<div class="text-2xs text-slate-400 mt-1">Meal Plan: Daily Buffet Breakfast Included. Complimentary Wi-Fi.</div>
-					</div>
-
-					<!-- Emergency Concierge -->
-					<div class="p-3 bg-emerald-500/10 rounded border border-emerald-500/30 text-xs text-emerald-300 flex justify-between items-center">
-						<div>
-							<strong>24/7 On-Trip Concierge Desk:</strong>
-							<div>Local Airport Meet &amp; Greet: +971 50 123 4567 (Ahmed)</div>
-						</div>
-						<span class="text-xl">📞</span>
-					</div>
-				</div>
-			</div>
-		</div>
-	{/if}
-
-	<!-- MODAL: SHARED WORK MODAL (DYNAMIC CROSS-MODULE HUB) -->
-	{#if showSharedWorkModal && workBooking}
-		<SharedWorkModal
-			businessDomain="TRAVEL"
-			referenceId={workBooking.id}
-			customerName={workBooking.customerName}
-			customerPhone={workBooking.customerPhone}
-			customerEmail={workBooking.customerEmail}
-			title={workBooking.packageTitle}
-			amount={workBooking.totalAmount}
-			taxRatePercent={5}
-			tcsRatePercent={5}
-			onClose={() => showSharedWorkModal = false}
-			onSuccess={(result) => {
-				statusMsg = `✅ Successfully created Invoice #${result.invoiceNumber} and dispatched ${result.tasksDispatched} tasks!`;
-				setTimeout(() => statusMsg = '', 5000);
-			}}
-		/>
-	{/if}
-
-	<!-- MODAL: NEW TOUR PACKAGE -->
-	{#if showNewPackageModal}
-		<div class="modal-backdrop">
-			<div class="modal-container max-w-xl">
-				<div class="modal-header">
-					<h3 class="text-lg font-bold text-white">Create New Tour Package</h3>
-					<button class="btn btn-secondary" onclick={() => showNewPackageModal = false}>✕</button>
-				</div>
-				<div class="modal-body space-y-4">
-					<div>
-						<label class="input-label" for="pkg-title">Package Name / Headline</label>
-						<input id="pkg-title" class="text-input" type="text" bind:value={newPkgTitle} placeholder="e.g. Exotic Bali Beach &amp; Kintamani 6D/5N" />
-					</div>
-					<div class="grid grid-cols-2 gap-3">
-						<div>
-							<label class="input-label" for="pkg-dest">Destination</label>
-							<input id="pkg-dest" class="text-input" type="text" bind:value={newPkgDestination} placeholder="e.g. Bali, Indonesia" />
-						</div>
-						<div>
-							<label class="input-label" for="pkg-dur">Duration (Days)</label>
-							<input id="pkg-dur" class="text-input" type="number" bind:value={newPkgDuration} />
-						</div>
-					</div>
-					<div>
-						<label class="input-label" for="pkg-price">Client Price (₹ per person)</label>
-						<input id="pkg-price" class="text-input" type="number" bind:value={newPkgPrice} />
-					</div>
-				</div>
-				<div class="modal-footer">
-					<button class="btn btn-secondary" onclick={() => showNewPackageModal = false}>Cancel</button>
-					<button class="btn btn-primary" onclick={handleCreatePackage}>Save &amp; Publish Package</button>
-				</div>
-			</div>
-		</div>
-	{/if}
-
-	<!-- MODAL: NEW VISA APPLICATION -->
-	{#if showNewVisaModal}
-		<div class="modal-backdrop">
-			<div class="modal-container max-w-xl">
-				<div class="modal-header">
-					<h3 class="text-lg font-bold text-white">Submit New Visa Application File</h3>
-					<button class="btn btn-secondary" onclick={() => showNewVisaModal = false}>✕</button>
-				</div>
-				<div class="modal-body space-y-4">
-					<div>
-						<label class="input-label" for="visa-name">Applicant Full Name (As per Passport)</label>
-						<input id="visa-name" class="text-input" type="text" bind:value={newVisaApplicant} placeholder="e.g. Rahul Ramesh" />
-					</div>
-					<div class="grid grid-cols-2 gap-3">
-						<div>
-							<label class="input-label" for="visa-pass">Passport Number</label>
-							<input id="visa-pass" class="text-input font-mono" type="text" bind:value={newVisaPassport} placeholder="e.g. Z5829104" />
-						</div>
-						<div>
-							<label class="input-label" for="visa-phone">Mobile / WhatsApp</label>
-							<input id="visa-phone" class="text-input" type="tel" bind:value={newVisaPhone} placeholder="+91 98765 43210" />
-						</div>
-					</div>
-					<div class="grid grid-cols-2 gap-3">
-						<div>
-							<label class="input-label" for="visa-country">Target Country</label>
-							<select id="visa-country" class="text-input" bind:value={newVisaCountry}>
-								<option value="United Arab Emirates">United Arab Emirates (UAE)</option>
-								<option value="Schengen Area (France/Germany/Italy)">Schengen Area</option>
-								<option value="United Kingdom">United Kingdom (UK)</option>
-								<option value="Singapore">Singapore</option>
-								<option value="Thailand">Thailand</option>
-								<option value="United States of America">USA B1/B2</option>
-							</select>
-						</div>
-						<div>
-							<label class="input-label" for="visa-type">Visa Category</label>
-							<select id="visa-type" class="text-input" bind:value={newVisaType}>
-								<option value="Tourist 30 Days Single Entry">Tourist 30 Days Single Entry</option>
-								<option value="Tourist 60 Days Multiple Entry">Tourist 60 Days Multiple Entry</option>
-								<option value="Business Visitor (C Type)">Business Visitor</option>
-								<option value="Transit Visa 96 Hours">Transit Visa 96 Hours</option>
-							</select>
-						</div>
-					</div>
-
-					<div class="p-3 bg-slate-900/60 rounded border border-slate-700/60 text-xs space-y-2">
-						<div class="font-bold text-sky-400">Embassies Mandatory Document Verification</div>
-						<label class="flex items-center gap-2">
-							<input type="checkbox" bind:checked={newVisaChecklist.passportSixMonthsValid} />
-							<span>Original Passport with &gt; 6 months validity &amp; 2 blank pages</span>
-						</label>
-						<label class="flex items-center gap-2">
-							<input type="checkbox" bind:checked={newVisaChecklist.photographWhiteBg} />
-							<span>Recent 35×45mm colour photograph (80% face coverage)</span>
-						</label>
-						<label class="flex items-center gap-2">
-							<input type="checkbox" bind:checked={newVisaChecklist.bankStatementSixMonths} />
-							<span>6-month bank statement with branch seal &amp; minimum balance</span>
-						</label>
-						<label class="flex items-center gap-2">
-							<input type="checkbox" bind:checked={newVisaChecklist.travelInsurance} />
-							<span>Overseas travel medical insurance (Min $50,000 cover)</span>
-						</label>
-					</div>
-				</div>
-				<div class="modal-footer">
-					<button class="btn btn-secondary" onclick={() => showNewVisaModal = false}>Cancel</button>
-					<button class="btn btn-primary" onclick={handleSubmitVisa}>Submit File to Pipeline</button>
-				</div>
-			</div>
-		</div>
-	{/if}
+		</section>
 </div>
 
+<!-- Modals (Screens 2 - 12) -->
+<CreateBookingModal 
+	open={showCreateBooking} 
+	onclose={() => (showCreateBooking = false)} 
+	onsave={(newBooking) => bookings = [newBooking, ...bookings]}
+/>
+
+<ItineraryBuilderModal 
+	open={showItineraryBuilder} 
+	onclose={() => (showItineraryBuilder = false)} 
+/>
+
+<PassengerModal 
+	open={showPassengerModal} 
+	onclose={() => (showPassengerModal = false)} 
+/>
+
+<VisaModal 
+	open={showVisaModal} 
+	onclose={() => (showVisaModal = false)} 
+/>
+
+<PaymentInvoiceModal 
+	open={showPaymentModal} 
+	booking={selectedBooking || bookings[0]}
+	onclose={() => (showPaymentModal = false)} 
+/>
+
+<FlightBookingModal 
+	open={showFlightModal} 
+	onclose={() => (showFlightModal = false)} 
+/>
+
+<TourCalendarModal 
+	open={showCalendarModal} 
+	onclose={() => (showCalendarModal = false)} 
+/>
+
+<TripMapModal 
+	open={showTripMapModal} 
+	onclose={() => (showTripMapModal = false)} 
+/>
+
+<WhatsAppLeadModal 
+	open={showWhatsAppLeadModal} 
+	lead={selectedLead || recentLeads[0]}
+	onclose={() => (showWhatsAppLeadModal = false)} 
+/>
+
+<ConfirmActionModal 
+	open={showConfirmModal} 
+	onclose={() => (showConfirmModal = false)} 
+	onconfirm={(reason) => toast.error(`Booking cancelled. Reason: ${reason}`)}
+/>
+
+<AppLauncherModal 
+	open={showAppLauncherModal} 
+	onclose={() => (showAppLauncherModal = false)} 
+/>
+
+<OnGroundDispatchModal 
+	open={showDispatchModal} 
+	booking={selectedBooking || bookings[0]} 
+	onclose={() => (showDispatchModal = false)} 
+	onsave={(updated) => {
+		const idx = bookings.findIndex(b => b.id === updated.id);
+		if (idx !== -1) bookings[idx] = updated;
+		toast.success('On-ground driver and local guide dispatch updated!');
+	}}
+/>
+
+<WhatsAppTravelKitModal 
+	open={showTravelKitModal} 
+	booking={selectedBooking || bookings[0]} 
+	onclose={() => (showTravelKitModal = false)} 
+/>
+
 <style>
-	.travel-app {
-		padding: 1.5rem;
-		max-width: 1440px;
-		margin: 0 auto;
-		color: #e2e8f0;
-	}
+	/* ==========================================================================
+	   SCREEN 1: TRAVEL DASHBOARD ENTERPRISE LIGHT STYLING
+	   ========================================================================== */
 
-	.app-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		flex-wrap: wrap;
-		gap: 1rem;
-		margin-bottom: 1.5rem;
-	}
-
-	.badge-row {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		margin-bottom: 0.5rem;
-	}
-
-	.pill-badge {
-		font-size: 0.75rem;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		background: rgba(14, 165, 233, 0.15);
-		color: #38bdf8;
-		border: 1px solid rgba(14, 165, 233, 0.3);
-		padding: 0.2rem 0.6rem;
-		border-radius: 9999px;
-	}
-
-	.status-indicator {
-		font-size: 0.75rem;
-		color: #10b981;
-	}
-
-	.main-title {
-		font-size: 1.875rem;
-		font-weight: 800;
-		color: #ffffff;
-		letter-spacing: -0.02em;
-	}
-
-	.subtitle {
-		font-size: 0.875rem;
-		color: #94a3b8;
-		margin-top: 0.25rem;
-		max-width: 800px;
-	}
-
-	.header-actions {
-		display: flex;
-		gap: 0.75rem;
-	}
-
-	.btn {
-		font-size: 0.875rem;
-		font-weight: 600;
-		padding: 0.625rem 1.25rem;
-		border-radius: 8px;
-		cursor: pointer;
-		display: inline-flex;
-		align-items: center;
-		gap: 0.5rem;
-		transition: all 0.15s ease;
-		border: none;
-		text-decoration: none;
-	}
-
-	.btn-sm {
-		font-size: 0.75rem;
-		padding: 0.35rem 0.65rem;
-		border-radius: 6px;
-	}
-
-	.btn-primary { background: #0284c7; color: #ffffff; }
-	.btn-primary:hover { background: #0369a1; }
-	.btn-secondary { background: #334155; color: #f1f5f9; }
-	.btn-secondary:hover { background: #475569; }
-	.btn-success { background: #10b981; color: #ffffff; }
-	.btn-success:hover { background: #059669; }
-	.btn-whatsapp { background: #25d366; color: #000000; font-weight: 700; }
-	.btn-whatsapp:hover { background: #20ba59; }
-
-	.btn-outline {
-		background: transparent;
-		border: 1px solid rgba(255, 255, 255, 0.2);
-		color: #cbd5e1;
-	}
-	.btn-outline:hover { background: rgba(255, 255, 255, 0.05); }
-
-	.status-alert {
-		background: rgba(16, 185, 129, 0.15);
-		border: 1px solid #10b981;
-		color: #6ee7b7;
-		padding: 0.75rem 1rem;
-		border-radius: 8px;
-		margin-bottom: 1.25rem;
-	}
-
-	.error-alert {
-		background: rgba(239, 68, 68, 0.15);
-		border: 1px solid #ef4444;
-		color: #fca5a5;
-		padding: 0.75rem 1rem;
-		border-radius: 8px;
-		margin-bottom: 1.25rem;
-	}
-
-	/* KPI GRID */
-	.kpi-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-		gap: 1rem;
-		margin-bottom: 1.75rem;
-	}
-
-	.kpi-card {
-		background: rgba(15, 23, 42, 0.75);
-		backdrop-filter: blur(12px);
-		border: 1px solid rgba(255, 255, 255, 0.08);
-		border-radius: 14px;
-		padding: 1.25rem;
-		position: relative;
-		overflow: hidden;
-		transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-	}
-
-	.kpi-card:hover {
-		transform: translateY(-2px);
-		box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
-		border-color: rgba(255, 255, 255, 0.16);
-	}
-
-	.kpi-card::before {
-		content: '';
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		height: 3px;
-	}
-
-	.kpi-card-emerald::before { background: linear-gradient(90deg, #10b981, #059669); }
-	.kpi-card-amber::before { background: linear-gradient(90deg, #f59e0b, #d97706); }
-	.kpi-card-sky::before { background: linear-gradient(90deg, #0ea5e9, #0284c7); }
-	.kpi-card-purple::before { background: linear-gradient(90deg, #a855f7, #7c3aed); }
-
-	.kpi-label {
-		font-size: 0.75rem;
-		font-weight: 700;
-		color: #94a3b8;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-	}
-
-	.kpi-value {
-		font-size: 1.75rem;
-		font-weight: 800;
-		margin: 0.35rem 0 0.25rem;
-		font-family: var(--font-sans, sans-serif);
-		letter-spacing: -0.02em;
-	}
-
-	.kpi-val-emerald { color: #34d399 !important; text-shadow: 0 0 20px rgba(16, 185, 129, 0.25); }
-	.kpi-val-amber { color: #fbbf24 !important; text-shadow: 0 0 20px rgba(245, 158, 11, 0.25); }
-	.kpi-val-sky { color: #38bdf8 !important; text-shadow: 0 0 20px rgba(56, 189, 248, 0.25); }
-	.kpi-val-purple { color: #c084fc !important; text-shadow: 0 0 20px rgba(168, 85, 247, 0.25); }
-
-	.kpi-sub {
-		font-size: 0.75rem;
-		color: #94a3b8;
-		font-weight: 500;
-	}
-
-	/* NAVIGATION TABS */
-	.nav-tabs {
-		display: flex;
-		gap: 0.5rem;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-		margin-bottom: 1.5rem;
-		overflow-x: auto;
-	}
-
-	.tab-btn {
-		background: transparent;
-		border: none;
-		color: #94a3b8;
-		font-size: 0.875rem;
-		font-weight: 600;
-		padding: 0.75rem 1.25rem;
-		border-bottom: 2px solid transparent;
-		cursor: pointer;
-		white-space: nowrap;
-		transition: all 0.15s ease;
-	}
-
-	.tab-btn.active {
-		color: #38bdf8;
-		border-bottom-color: #38bdf8;
-	}
-
-	.tab-btn:hover:not(.active) { color: #cbd5e1; }
-
-	/* SECTION CONTAINER */
-	.section-container {
-		background: #1e293b;
-		border: 1px solid rgba(255, 255, 255, 0.08);
-		border-radius: 14px;
-		padding: 1.5rem;
-	}
-
-	.section-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 1.5rem;
-	}
-
-	.section-title {
-		font-size: 1.25rem;
-		font-weight: 700;
-		color: #ffffff;
-	}
-
-	.section-desc {
-		font-size: 0.8125rem;
-		color: #94a3b8;
-	}
-
-	/* BOOKINGS GRID */
-	.bookings-grid {
+	.travel-full-canvas {
+		min-height: calc(100vh - 64px);
+		background: #f8fafc;
+		color: #0f172a;
+		font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+		padding: 1.5rem 2rem;
 		display: flex;
 		flex-direction: column;
-		gap: 1.25rem;
-	}
-
-	.booking-card {
-		background: #0f172a;
-		border: 1px solid rgba(255, 255, 255, 0.08);
-		border-radius: 12px;
-		padding: 1.5rem;
-		display: flex;
-		flex-direction: column;
-		gap: 1.25rem;
-		transition: border-color 0.15s;
-	}
-
-	.booking-card:hover {
-		border-color: rgba(56, 189, 248, 0.3);
-	}
-
-	.booking-ribbon {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-		padding-bottom: 0.75rem;
-	}
-
-	.booking-ref {
-		font-family: monospace;
-		font-weight: 800;
-		color: #38bdf8;
-		font-size: 0.875rem;
-		background: rgba(56, 189, 248, 0.1);
-		padding: 0.2rem 0.5rem;
-		border-radius: 4px;
-	}
-
-	.booking-dates {
-		font-size: 0.8125rem;
-		color: #cbd5e1;
-		font-weight: 600;
-	}
-
-	.booking-main {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		flex-wrap: wrap;
-		gap: 1rem;
-	}
-
-	.cust-name {
-		font-size: 1.25rem;
-		font-weight: 800;
-		color: #ffffff;
-	}
-
-	.cust-meta {
-		display: flex;
-		gap: 1rem;
-		font-size: 0.75rem;
-		color: #94a3b8;
-		margin: 0.25rem 0;
-	}
-
-	.trip-title {
-		font-size: 0.875rem;
-		color: #38bdf8;
-		font-weight: 600;
-	}
-
-	.finance-block {
-		text-align: right;
-	}
-
-	.finance-total {
-		font-size: 1.5rem;
-		font-weight: 800;
-		color: #ffffff;
-	}
-
-	.finance-meta {
-		font-size: 0.75rem;
-		margin: 0.2rem 0;
-	}
-
-	.invoice-ref {
-		font-size: 0.6875rem;
-		color: #94a3b8;
-		font-family: monospace;
-	}
-
-	/* SUPPLIERS GRID */
-	.suppliers-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-		gap: 1rem;
-		background: rgba(255, 255, 255, 0.02);
-		border: 1px solid rgba(255, 255, 255, 0.06);
-		border-radius: 8px;
-		padding: 1rem;
-	}
-
-	.supplier-cell {
-		display: flex;
-		flex-direction: column;
-		gap: 0.2rem;
-		font-size: 0.75rem;
-	}
-
-	.sup-label {
-		color: #94a3b8;
-		font-weight: 600;
-	}
-
-	.sup-status {
-		font-size: 0.6875rem;
-		color: #34d399;
-	}
-
-	.sup-status.warn {
-		color: #f87171;
-		font-weight: 700;
-	}
-
-	.sup-sub {
-		color: #cbd5e1;
-		font-size: 0.6875rem;
-	}
-
-	/* READINESS BAR */
-	.readiness-bar {
-		background: #1e293b;
-		border-radius: 8px;
-		padding: 0.875rem 1rem;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		flex-wrap: wrap;
-		gap: 0.75rem;
-	}
-
-	.readiness-label {
-		font-size: 0.75rem;
-		font-weight: 700;
-		color: #cbd5e1;
-	}
-
-	.readiness-items {
-		display: flex;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-	}
-
-	.check-pill-interactive {
-		background: rgba(255, 255, 255, 0.05);
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		color: #94a3b8;
-		font-size: 0.6875rem;
-		font-weight: 600;
-		padding: 0.3rem 0.6rem;
-		border-radius: 6px;
-		cursor: pointer;
-		transition: all 0.15s ease;
-	}
-
-	.check-pill-interactive.done {
-		background: rgba(16, 185, 129, 0.15);
-		border-color: rgba(16, 185, 129, 0.3);
-		color: #34d399;
-	}
-
-	.booking-footer {
-		display: flex;
-		justify-content: flex-end;
-		border-top: 1px solid rgba(255, 255, 255, 0.06);
-		padding-top: 0.75rem;
-	}
-
-	.btn-group-footer {
-		display: flex;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-	}
-
-	/* MANIFEST CARD */
-	.manifest-card {
-		background: #0f172a;
-		border: 1px solid rgba(255, 255, 255, 0.08);
-		border-radius: 12px;
-		padding: 1.25rem;
-	}
-
-	.manifest-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-		padding-bottom: 0.75rem;
-	}
-
-	.rooming-pill {
-		font-size: 0.75rem;
-		color: #fbbf24;
-		background: rgba(245, 158, 11, 0.1);
-		padding: 0.25rem 0.6rem;
-		border-radius: 6px;
-	}
-
-	.meal-tag {
-		font-size: 0.6875rem;
-		font-weight: 700;
-		padding: 0.15rem 0.4rem;
-		border-radius: 4px;
-	}
-	.meal-veg { background: rgba(16, 185, 129, 0.15); color: #34d399; }
-	.meal-jain { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
-	.meal-non_veg { background: rgba(239, 68, 68, 0.15); color: #f87171; }
-
-	/* DATA TABLE */
-	.table-card {
-		overflow-x: auto;
-	}
-
-	.data-table {
-		width: 100%;
-		border-collapse: collapse;
-		font-size: 0.8125rem;
-		text-align: left;
-	}
-
-	.data-table th {
-		background: rgba(0, 0, 0, 0.25);
-		color: #94a3b8;
-		font-weight: 600;
-		padding: 0.75rem 1rem;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-	}
-
-	.data-table td {
-		padding: 0.875rem 1rem;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-		color: #cbd5e1;
-	}
-
-	.mono-badge {
-		font-family: monospace;
-		background: #0f172a;
-		padding: 0.2rem 0.4rem;
-		border-radius: 4px;
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		color: #f8fafc;
-	}
-
-	.country-cell {
-		font-weight: 600;
-		color: #f1f5f9;
-	}
-
-	.checklist-pills {
-		display: flex;
-		gap: 0.35rem;
-		flex-wrap: wrap;
-	}
-
-	.check-pill {
-		font-size: 0.6875rem;
-		padding: 0.15rem 0.4rem;
-		border-radius: 4px;
-		background: rgba(255, 255, 255, 0.05);
-		color: #94a3b8;
-	}
-
-	.check-pill.done {
-		background: rgba(16, 185, 129, 0.15);
-		color: #34d399;
-	}
-
-	.status-pill {
-		font-size: 0.6875rem;
-		font-weight: 700;
-		padding: 0.2rem 0.5rem;
-		border-radius: 6px;
-		text-transform: uppercase;
-	}
-	.status-confirmed { background: rgba(16, 185, 129, 0.15); color: #34d399; }
-	.status-operations_hold { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
-	.status-in_transit { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
-	.status-completed { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
-
-	.status-badge {
-		font-size: 0.6875rem;
-		font-weight: 700;
-		padding: 0.25rem 0.6rem;
-		border-radius: 6px;
-		text-transform: uppercase;
-	}
-
-	.status-submitted { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
-	.status-under_review { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
-	.status-biometrics_done { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
-	.status-visa_approved { background: rgba(16, 185, 129, 0.15); color: #34d399; }
-	.status-rejected { background: rgba(239, 68, 68, 0.15); color: #f87171; }
-
-	.status-select {
-		background: #0f172a;
-		border: 1px solid rgba(255, 255, 255, 0.15);
-		color: #f1f5f9;
-		padding: 0.3rem 0.5rem;
-		border-radius: 6px;
-		font-size: 0.75rem;
-	}
-
-	/* PACKAGES GRID */
-	.packages-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-		gap: 1.25rem;
-	}
-
-	.pkg-card {
-		background: #0f172a;
-		border: 1px solid rgba(255, 255, 255, 0.08);
-		border-radius: 12px;
-		padding: 1.25rem;
-		display: flex;
-		flex-direction: column;
-		justify-content: space-between;
-		transition: transform 0.15s, border-color 0.15s;
-	}
-
-	.pkg-card:hover {
-		transform: translateY(-2px);
-		border-color: rgba(56, 189, 248, 0.4);
-	}
-
-	.pkg-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 0.75rem;
-	}
-
-	.destination-pill {
-		font-size: 0.75rem;
-		font-weight: 600;
-		color: #38bdf8;
-		background: rgba(56, 189, 248, 0.1);
-		padding: 0.2rem 0.5rem;
-		border-radius: 6px;
-	}
-
-	.duration-badge {
-		font-size: 0.75rem;
-		color: #94a3b8;
-	}
-
-	.pkg-title {
-		font-size: 1.125rem;
-		font-weight: 700;
-		color: #ffffff;
-		margin-bottom: 0.75rem;
-	}
-
-	.pkg-highlights {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem;
-		font-size: 0.75rem;
-		color: #cbd5e1;
-		margin-bottom: 1.25rem;
-	}
-
-	.pkg-highlights span {
-		background: rgba(255, 255, 255, 0.04);
-		padding: 0.2rem 0.45rem;
-		border-radius: 4px;
-	}
-
-	.pkg-footer {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-end;
-		border-top: 1px solid rgba(255, 255, 255, 0.06);
-		padding-top: 0.75rem;
-	}
-
-	.price-label {
-		font-size: 0.6875rem;
-		color: #94a3b8;
-		text-transform: uppercase;
-	}
-
-	.price-val {
-		font-size: 1.25rem;
-		font-weight: 800;
-		color: #38bdf8;
-	}
-
-	.per-person {
-		font-size: 0.6875rem;
-		font-weight: 400;
-		color: #94a3b8;
-	}
-
-	.btn-view {
-		background: rgba(56, 189, 248, 0.15);
-		color: #38bdf8;
-		border: 1px solid rgba(56, 189, 248, 0.3);
-		padding: 0.4rem 0.75rem;
-		border-radius: 6px;
-		font-size: 0.75rem;
-		font-weight: 600;
-		cursor: pointer;
-	}
-
-	/* CALCULATOR GRID */
-	.calc-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
 		gap: 1.5rem;
-	}
-
-	.calc-card {
-		background: #0f172a;
-		border: 1px solid rgba(255, 255, 255, 0.08);
-		border-radius: 12px;
-		padding: 1.5rem;
-	}
-
-	.card-head-secret {
-		font-size: 0.875rem;
-		font-weight: 700;
-		color: #f43f5e;
-		background: rgba(244, 63, 94, 0.1);
-		border: 1px dashed rgba(244, 63, 94, 0.3);
-		padding: 0.6rem 0.8rem;
-		border-radius: 8px;
-		margin-bottom: 1.25rem;
-	}
-
-	.card-head-quote {
-		font-size: 0.875rem;
-		font-weight: 700;
-		color: #38bdf8;
-		background: rgba(56, 189, 248, 0.1);
-		border: 1px solid rgba(56, 189, 248, 0.3);
-		padding: 0.6rem 0.8rem;
-		border-radius: 8px;
-		margin-bottom: 1.25rem;
-	}
-
-	.form-row { margin-bottom: 1rem; }
-	.form-row label { display: block; font-size: 0.8125rem; color: #94a3b8; margin-bottom: 0.35rem; }
-
-	.input-prefix {
-		display: flex;
-		align-items: center;
-		background: #1e293b;
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		border-radius: 6px;
-		padding: 0 0.75rem;
-	}
-
-	.input-prefix span { color: #94a3b8; font-weight: 600; }
-	.input-prefix input {
 		width: 100%;
-		background: transparent;
-		border: none;
-		color: #ffffff;
-		padding: 0.5rem;
-		font-family: monospace;
-		font-size: 1rem;
-		outline: none;
+		box-sizing: border-box;
+		overflow-x: hidden;
 	}
 
-	.vendor-total-bar {
+	/* Top Masthead */
+	.travel-top-masthead {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: 0.75rem 1rem;
-		background: rgba(255, 255, 255, 0.03);
-		border-radius: 8px;
-		border: 1px solid rgba(255, 255, 255, 0.08);
-		font-size: 0.875rem;
-		color: #cbd5e1;
+		flex-wrap: wrap;
+		gap: 1rem;
+		padding-bottom: 1rem;
+		border-bottom: 1px solid #e2e8f0;
 	}
 
-	.mono-num { font-family: monospace; font-size: 1.125rem; font-weight: 700; color: #ffffff; }
-
-	.quotation-card { border-color: rgba(56, 189, 248, 0.3); }
-	.quotation-body { display: flex; flex-direction: column; gap: 1.25rem; }
-
-	.quote-line {
+	.masthead-left {
 		display: flex;
-		justify-content: space-between;
-		font-size: 1rem;
-		padding-bottom: 0.75rem;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-	}
-
-	.tcs-selector {
-		background: rgba(255, 255, 255, 0.02);
-		padding: 1rem;
-		border-radius: 8px;
-		border: 1px solid rgba(255, 255, 255, 0.06);
-	}
-
-	.label-bold { font-size: 0.8125rem; font-weight: 700; color: #f1f5f9; margin-bottom: 0.6rem; }
-	.radio-group { display: flex; flex-direction: column; gap: 0.5rem; }
-	.radio-label { display: flex; align-items: center; gap: 0.6rem; font-size: 0.8125rem; color: #cbd5e1; cursor: pointer; }
-
-	.tcs-breakdown-box {
-		background: rgba(245, 158, 11, 0.1);
-		border: 1px solid rgba(245, 158, 11, 0.3);
-		border-radius: 8px;
-		padding: 0.75rem;
-	}
-
-	.grand-quote-total {
-		display: flex;
-		justify-content: space-between;
 		align-items: center;
-		padding: 1rem;
-		background: rgba(16, 185, 129, 0.1);
-		border: 1px solid rgba(16, 185, 129, 0.3);
+		gap: 0.75rem;
+	}
+
+	.icon-title-wrap {
+		display: flex;
+		align-items: center;
+		gap: 0.85rem;
+	}
+
+	.airplane-badge {
+		width: 44px;
+		height: 44px;
 		border-radius: 10px;
-	}
-
-	/* MODAL STYLES */
-	.modal-backdrop {
-		position: fixed;
-		inset: 0;
-		background: rgba(0, 0, 0, 0.85);
-		backdrop-filter: blur(4px);
+		background: #eff6ff;
+		color: #2563eb;
+		border: 1px solid #bfdbfe;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		z-index: 1000;
-		padding: 1rem;
+		font-size: 1.4rem;
 	}
 
-	.modal-container {
-		background: #1e293b;
-		border: 1px solid rgba(255, 255, 255, 0.15);
-		border-radius: 14px;
-		padding: 1.75rem;
-		width: 100%;
-		max-height: 90vh;
-		overflow-y: auto;
-	}
-
-	.modal-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-		padding-bottom: 1rem;
-		margin-bottom: 1.25rem;
-	}
-
-	.modal-footer {
-		display: flex;
-		justify-content: flex-end;
-		gap: 0.75rem;
-		border-top: 1px solid rgba(255, 255, 255, 0.08);
-		padding-top: 1rem;
-		margin-top: 1.5rem;
-	}
-
-	.input-label { display: block; font-size: 0.75rem; font-weight: 600; color: #94a3b8; margin-bottom: 0.35rem; }
-	.text-input {
-		width: 100%;
-		padding: 0.6rem 0.75rem;
-		background: #0f172a;
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		border-radius: 6px;
-		color: #ffffff;
-		font-size: 0.875rem;
-	}
-
-	/* ITINERARY TIMELINE */
-	.itinerary-timeline { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem; }
-	.timeline-day {
-		display: flex;
-		gap: 1rem;
-		background: #0f172a;
-		border: 1px solid rgba(255, 255, 255, 0.06);
-		border-radius: 10px;
-		padding: 1rem;
-	}
-
-	.day-badge {
-		background: #0284c7;
-		color: #ffffff;
+	.screen-title {
+		font-size: 1.5rem;
 		font-weight: 800;
-		font-size: 0.75rem;
-		padding: 0.35rem 0.6rem;
-		border-radius: 6px;
-		height: fit-content;
-		white-space: nowrap;
+		color: #0f172a;
+		margin: 0;
+		letter-spacing: -0.02em;
 	}
 
-	.day-content { flex: 1; }
-	.day-title { font-size: 1rem; font-weight: 700; color: #ffffff; margin-bottom: 0.25rem; }
-	.day-activities { font-size: 0.8125rem; color: #94a3b8; margin-bottom: 0.5rem; }
-	.day-meta { display: flex; gap: 1rem; font-size: 0.75rem; color: #38bdf8; }
+	.sub-nav-links {
+		font-size: 0.8125rem;
+		color: #64748b;
+		margin-top: 0.2rem;
+	}
 
-	.voucher-footer {
+	.sub-link-btn {
+		background: transparent;
+		border: none;
+		padding: 0;
+		font-size: 0.8125rem;
+		color: #64748b;
+		cursor: pointer;
+		font-family: inherit;
+	}
+	.sub-link-btn:hover { color: #2563eb; text-decoration: underline; }
+
+	.masthead-right {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
+	.explore-banner {
+		background: linear-gradient(135deg, #1e40af, #3b82f6);
+		color: #ffffff;
+		padding: 0.4rem 0.85rem;
+		border-radius: 9999px;
+		font-size: 0.75rem;
+		font-weight: 700;
+	}
+
+	.date-dropdown-box {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		background: #ffffff;
+		border: 1px solid #cbd5e1;
+		border-radius: 8px;
+		padding: 0.45rem 0.75rem;
+		font-size: 0.8125rem;
+		font-weight: 600;
+		color: #0f172a;
+		cursor: pointer;
+	}
+	.date-dropdown-box:hover { border-color: #94a3b8; }
+
+	/* 6 KPI Cards */
+	.kpi-banner-grid {
+		display: grid;
+		grid-template-columns: repeat(6, 1fr);
+		gap: 0.75rem;
+	}
+
+	@media (max-width: 1400px) {
+		.kpi-banner-grid { grid-template-columns: repeat(3, 1fr); }
+	}
+	@media (max-width: 768px) {
+		.kpi-banner-grid { grid-template-columns: repeat(2, 1fr); }
+	}
+
+	.kpi-tile {
+		background: #ffffff;
+		border: 1px solid #e2e8f0;
+		border-radius: 12px;
+		padding: 1rem;
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+		transition: transform 0.15s ease;
+	}
+	.kpi-tile:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06);
+	}
+
+	.kpi-icon-circle {
+		width: 40px;
+		height: 40px;
+		border-radius: 10px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 1.25rem;
+		flex-shrink: 0;
+	}
+	.kpi-icon-circle.blue { background: #eff6ff; color: #2563eb; }
+	.kpi-icon-circle.green { background: #ecfdf5; color: #059669; }
+	.kpi-icon-circle.purple { background: #f5f3ff; color: #7c3aed; }
+	.kpi-icon-circle.red { background: #fff1f2; color: #e11d48; }
+	.kpi-icon-circle.amber { background: #fef3c7; color: #d97706; }
+	.kpi-icon-circle.sky { background: #f0f9ff; color: #0284c7; }
+
+	.kpi-details { display: flex; flex-direction: column; overflow: hidden; }
+	.kpi-tag { font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; white-space: nowrap; }
+	.kpi-num-row { display: flex; align-items: baseline; gap: 0.35rem; }
+	.kpi-num { font-size: 1.25rem; font-weight: 800; color: #0f172a; white-space: nowrap; }
+	.kpi-growth { font-size: 0.7rem; font-weight: 700; }
+	.kpi-growth.up { color: #059669; }
+	.kpi-growth.down { color: #dc2626; }
+	.kpi-sub { font-size: 0.65rem; color: #94a3b8; }
+
+	/* Middle Tri-Grid */
+	.middle-tri-grid {
+		display: grid;
+		grid-template-columns: 2fr 1fr 1fr;
+		gap: 1rem;
+	}
+
+	@media (max-width: 1200px) {
+		.middle-tri-grid { grid-template-columns: 1fr; }
+	}
+
+	.cockpit-card {
+		background: #ffffff;
+		border: 1px solid #e2e8f0;
+		border-radius: 12px;
+		padding: 1.25rem;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+		display: flex;
+		flex-direction: column;
+	}
+
+	.panel-header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		background: #0f172a;
-		border: 1px solid rgba(255, 255, 255, 0.1);
+		margin-bottom: 1rem;
+		padding-bottom: 0.5rem;
+		border-bottom: 1px solid #f1f5f9;
+	}
+
+	.panel-title { font-size: 0.95rem; font-weight: 800; color: #0f172a; margin: 0; }
+	.panel-sub { font-size: 0.7rem; color: #64748b; }
+
+	.link-btn {
+		background: transparent;
+		border: none;
+		font-size: 0.75rem;
+		font-weight: 700;
+		color: #2563eb;
+		cursor: pointer;
+	}
+
+	.period-pill {
+		font-size: 0.7rem;
+		font-weight: 600;
+		background: #f1f5f9;
+		padding: 0.2rem 0.55rem;
+		border-radius: 6px;
+		color: #475569;
+		cursor: pointer;
+	}
+
+	/* Departures Table */
+	.table-wrapper { overflow-x: auto; }
+	.departures-table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 0.8125rem;
+	}
+	.departures-table th {
+		text-align: left;
+		padding: 0.55rem 0.75rem;
+		color: #64748b;
+		font-size: 0.7rem;
+		text-transform: uppercase;
+		font-weight: 700;
+		border-bottom: 1px solid #e2e8f0;
+		background: #f8fafc;
+	}
+	.departures-table td {
+		padding: 0.65rem 0.75rem;
+		border-bottom: 1px solid #f1f5f9;
+	}
+	.departures-table tr:hover td { background: #f8fafc; }
+
+	.status-pill {
+		font-size: 0.7rem;
+		font-weight: 700;
+		padding: 0.2rem 0.55rem;
+		border-radius: 9999px;
+	}
+	.status-confirmed { background: #ecfdf5; color: #059669; }
+	.status-filling { background: #fef3c7; color: #d97706; }
+	.status-full { background: #fee2e2; color: #dc2626; }
+	.status-open { background: #eff6ff; color: #2563eb; }
+
+	.icon-menu-btn {
+		background: transparent;
+		border: none;
+		color: #94a3b8;
+		font-weight: 800;
+		cursor: pointer;
+		padding: 0.2rem 0.4rem;
+	}
+	.icon-menu-btn:hover { color: #0f172a; }
+
+	/* Donut Chart */
+	.donut-chart-container {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 1rem;
+	}
+
+	.donut-graphic {
+		position: relative;
+		width: 140px;
+		height: 140px;
+	}
+
+	.donut-svg {
+		width: 100%;
+		height: 100%;
+		transform: rotate(-90deg);
+	}
+
+	.donut-center-label {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+	}
+	.donut-total { font-size: 1.35rem; font-weight: 800; color: #0f172a; }
+	.donut-sub { font-size: 0.7rem; color: #64748b; text-transform: uppercase; }
+
+	.donut-legend {
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+		font-size: 0.75rem;
+	}
+	.legend-row { display: flex; align-items: center; justify-content: space-between; }
+	.legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 0.35rem; }
+	.leg-name { color: #475569; }
+	.leg-val { font-weight: 700; color: #0f172a; font-family: monospace; }
+
+	/* Leads Panel */
+	.leads-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.lead-item {
+		display: flex;
+		align-items: center;
+		gap: 0.65rem;
+		padding: 0.6rem 0.75rem;
+		background: #f8fafc;
+		border: 1px solid #e2e8f0;
+		border-radius: 8px;
+		cursor: pointer;
+		transition: all 0.12s ease;
+		text-align: left;
+		font-family: inherit;
+		width: 100%;
+	}
+	.lead-item:hover { border-color: #2563eb; background: #eff6ff; }
+
+	.lead-channel-icon {
+		width: 28px;
+		height: 28px;
+		border-radius: 6px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 0.9rem;
+	}
+	.lead-channel-icon.whatsapp { background: #dcfce7; }
+	.lead-channel-icon.instagram { background: #fce7f3; }
+	.lead-channel-icon.facebook { background: #dbeafe; }
+
+	.lead-info { flex: 1; display: flex; flex-direction: column; }
+	.lead-title-row { display: flex; justify-content: space-between; align-items: baseline; }
+	.lead-name { font-size: 0.8125rem; font-weight: 700; color: #0f172a; }
+	.lead-time { font-size: 0.65rem; color: #94a3b8; }
+	.lead-tour { font-size: 0.7rem; color: #64748b; }
+
+	.lead-status-pill {
+		font-size: 0.65rem;
+		font-weight: 700;
+		padding: 0.15rem 0.45rem;
+		border-radius: 4px;
+	}
+	.lead-new { background: #fee2e2; color: #dc2626; }
+	.lead-progress { background: #eff6ff; color: #2563eb; }
+	.lead-qualified { background: #ecfdf5; color: #059669; }
+	.lead-followup { background: #fef3c7; color: #d97706; }
+
+	/* Quick Actions Ribbon */
+	.quick-actions-ribbon {
+		display: grid;
+		grid-template-columns: repeat(10, 1fr);
+		gap: 0.5rem;
+		background: #ffffff;
+		border: 1px solid #e2e8f0;
+		border-radius: 12px;
+		padding: 0.85rem;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+	}
+
+	@media (max-width: 1200px) {
+		.quick-actions-ribbon { grid-template-columns: repeat(5, 1fr); }
+	}
+	@media (max-width: 640px) {
+		.quick-actions-ribbon { grid-template-columns: repeat(2, 1fr); }
+	}
+
+	.action-tile {
+		background: #f8fafc;
+		border: 1px solid #e2e8f0;
+		border-radius: 8px;
+		padding: 0.65rem 0.35rem;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 0.35rem;
+		cursor: pointer;
+		transition: all 0.15s ease;
+		font-family: inherit;
+	}
+	.action-tile:hover {
+		background: #eff6ff;
+		border-color: #bfdbfe;
+		transform: translateY(-2px);
+	}
+
+	.act-icon { font-size: 1.25rem; }
+	.act-text { font-size: 0.7rem; font-weight: 700; color: #0f172a; text-align: center; }
+
+	/* Booking Operations Deck */
+	.booking-ops-deck {
+		background: #ffffff;
+		border: 1px solid #e2e8f0;
+		border-radius: 12px;
+		padding: 1.5rem;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+	}
+
+	.deck-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 1.25rem;
+		padding-bottom: 0.75rem;
+		border-bottom: 1px solid #f1f5f9;
+	}
+
+	.deck-title { font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0; }
+	.deck-sub { font-size: 0.75rem; color: #64748b; }
+	.deck-actions { display: flex; gap: 0.5rem; }
+
+	.booking-cards-list {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.ops-booking-card {
+		background: #ffffff;
+		border: 1px solid #e2e8f0;
 		border-radius: 10px;
-		padding: 1rem;
+		overflow: hidden;
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 	}
 
-	.voucher-notes { font-size: 0.75rem; color: #94a3b8; line-height: 1.4; }
-
-	/* PRINT STYLES */
-	@media print {
-		.no-print, .nav-tabs, .kpi-grid, .app-header { display: none !important; }
-		body { background: white !important; color: black !important; }
-		.printable-voucher { background: white !important; color: black !important; border: 1px solid #ccc !important; box-shadow: none !important; }
-		.timeline-day, .voucher-footer { background: white !important; border: 1px solid #eee !important; color: black !important; }
-		.day-title, .day-activities { color: black !important; }
+	.card-head-strip {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 0.85rem 1.25rem;
+		background: #f8fafc;
+		border-bottom: 1px solid #e2e8f0;
 	}
+
+	.cust-meta { display: flex; align-items: center; gap: 0.75rem; }
+	.cust-avatar {
+		width: 38px;
+		height: 38px;
+		border-radius: 8px;
+		background: #eff6ff;
+		color: #2563eb;
+		border: 1px solid #bfdbfe;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-weight: 800;
+		font-size: 0.85rem;
+	}
+
+	.b-cust-name { font-size: 0.95rem; font-weight: 700; color: #0f172a; display: block; }
+	.b-ref { font-size: 0.75rem; color: #64748b; }
+
+	.mode-badges { display: flex; gap: 0.5rem; }
+	.mode-tag {
+		font-size: 0.7rem;
+		font-weight: 700;
+		padding: 0.2rem 0.55rem;
+		border-radius: 6px;
+	}
+	.mode-family { background: #fef3c7; color: #92400e; }
+	.mode-business { background: #eff6ff; color: #1e40af; }
+	.status-badge {
+		font-size: 0.7rem;
+		font-weight: 700;
+		padding: 0.2rem 0.55rem;
+		border-radius: 6px;
+	}
+
+	/* Pillars Deck */
+	.pillars-deck {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 0.75rem;
+		padding: 1rem 1.25rem;
+		background: #ffffff;
+		border-bottom: 1px solid #f1f5f9;
+	}
+
+	@media (max-width: 1024px) {
+		.pillars-deck { grid-template-columns: repeat(2, 1fr); }
+	}
+
+	.pillar-box {
+		background: #f8fafc;
+		border: 1px solid #e2e8f0;
+		border-radius: 8px;
+		padding: 0.75rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+
+	.p-title { font-size: 0.65rem; font-weight: 800; color: #64748b; letter-spacing: 0.05em; }
+	.p-main { font-size: 0.85rem; font-weight: 700; color: #0f172a; }
+	.p-sub { font-size: 0.7rem; color: #475569; }
+	.p-spec { font-size: 0.7rem; color: #2563eb; }
+
+	.card-footer-bar {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 0.75rem 1.25rem;
+		background: #ffffff;
+	}
+
+	.price-chip { display: flex; align-items: baseline; gap: 0.4rem; }
+	.pr-label { font-size: 0.75rem; color: #64748b; }
+	.pr-val { font-size: 1rem; font-weight: 800; color: #0f172a; }
+
+	.btns-group { display: flex; gap: 0.5rem; }
+
+	.btn {
+		font-size: 0.8125rem;
+		font-weight: 600;
+		padding: 0.5rem 1rem;
+		border-radius: 8px;
+		cursor: pointer;
+		border: 1px solid transparent;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		font-family: inherit;
+	}
+	.btn-sm { padding: 0.35rem 0.75rem; font-size: 0.75rem; }
+	.btn-secondary { background: #f1f5f9; color: #334155; }
+	.btn-outline { background: #ffffff; border-color: #cbd5e1; color: #475569; }
+	.btn-outline:hover { background: #f8fafc; color: #0f172a; }
+	.btn-primary { background: #2563eb; color: #ffffff; }
+	.btn-primary:hover { background: #1d4ed8; }
+	.btn-whatsapp { background: #22c55e; color: #ffffff; font-weight: 700; }
+	.btn-whatsapp:hover { background: #16a34a; }
+
+	.text-center { text-align: center; }
 </style>

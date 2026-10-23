@@ -7,7 +7,10 @@
 	import { iamGrpc } from '$lib/grpc';
 	import { realtimeBilling } from '$lib/stores/realtime.svelte';
 	import WorkspaceManagerModal, { type CustomWorkspaceConfig } from '$lib/components/WorkspaceManagerModal.svelte';
+	import ModuleActivationModal from '$lib/components/ModuleActivationModal.svelte';
 	import ToastContainer from '$lib/components/ToastContainer.svelte';
+	import ThemeToggle from '$lib/components/ui/ThemeToggle.svelte';
+	import { moduleStore, type ModuleDescriptor } from '$lib/stores/modules.svelte';
 	import {
 		workspaces,
 		workspaceList,
@@ -26,7 +29,15 @@
 	let currentPath = $derived($page.url.pathname);
 	// Pages shown without the app shell (signed-out flows)
 	// ?print=1 is the server-side PDF renderer: just the page, no app shell, no banners or dialogs
-	let isBarePage = $derived(['/login', '/forgot-password', '/reset-password', '/verify-email', '/terms', '/privacy', '/signup', '/services'].includes(currentPath) || currentPath.startsWith('/i/') || $page.url.searchParams.get('print') === '1');
+	let isBarePage = $derived(
+		['/login', '/forgot-password', '/reset-password', '/verify-email', '/terms', '/privacy', '/signup', '/services', '/partners'].includes(currentPath) ||
+		currentPath.startsWith('/login/') ||
+		currentPath.startsWith('/customer') ||
+		currentPath.startsWith('/travel/partners') ||
+		currentPath.startsWith('/travel/booking') ||
+		currentPath.startsWith('/i/') ||
+		$page.url.searchParams.get('print') === '1'
+	);
 
 	let dynamicTenantTheme = $derived(
 		currentTenant?.template_options?.primary_color
@@ -34,8 +45,10 @@
 			: ''
 	);
 
-	// Upgrade Modal
+	// Upgrade & Module Activation Modals
 	let showUpgradeModal = $state(false);
+	let showModuleActivationModal = $state(false);
+	let activationTargetModuleId = $state<string | undefined>(undefined);
 	let billingStatus = $state('');
 	let trialDaysLeft = $state<number | null>(null);
 	let legalRequired = $state(false);
@@ -44,6 +57,19 @@
 	let legalError = $state('');
 	let upgradeFeatureTitle = $state('');
 	let upgradeFeatureDesc = $state('');
+
+	function openModuleActivation(moduleId?: string) {
+		activationTargetModuleId = moduleId;
+		showModuleActivationModal = true;
+	}
+
+	let currentRouteModule = $derived(moduleStore.getModuleForRoute(currentPath));
+	let isCurrentRouteGated = $derived(
+		!currentUser?.is_super_admin &&
+		currentRouteModule &&
+		!currentRouteModule.isCore &&
+		!moduleStore.isModuleActive(currentRouteModule.id)
+	);
 
 	// Workspace (business-unit) state. The id + unit vocabulary is unchanged; the
 	// nav content now comes from the data-driven config in $lib/navigation.
@@ -168,7 +194,14 @@
 
 	const commandItems: CommandItem[] = [
 		// Quick Actions
+		{ id: 'act-modules', title: 'Modular Add-Ons & Store...', subtitle: 'Activate specific business modules (Pay only for what you use)', icon: '🧩', category: 'Actions', action: () => { showCommandPalette = false; openModuleActivation(); } },
 		{ id: 'act-services', title: 'Services & Verticals Hub', subtitle: 'Explore all 16 business modules, POS, and templates', icon: '🌐', category: 'Actions', href: '/services' },
+		{ id: 'act-websites', title: 'Multi-Business Website Builder & CMS', subtitle: 'Manage custom domains, landing page visual blocks & previews', icon: '🖥️', category: 'Actions', href: '/websites' },
+		{ id: 'act-marketing', title: 'Omnichannel Marketing Hub', subtitle: 'Manage WhatsApp Cloud, Instagram DM bots, LinkedIn B2B & Email blasts', icon: '📣', category: 'Actions', href: '/marketing' },
+		{ id: 'act-travel-book', title: 'Consumer Tour Booking Wizard', subtitle: '4-step package customizer, live price quote & instant PNR voucher', icon: '🎫', category: 'Actions', href: '/travel/booking' },
+		{ id: 'act-cust-portal', title: 'Customer Concierge & PNR Lookup', subtitle: 'Self-serve ticket support, booking status & voucher downloads', icon: '🛎️', category: 'Actions', href: '/customer/services' },
+		{ id: 'act-b2b-portal', title: 'B2B Travel Partner Hub & Tiers', subtitle: 'Agent commissions, credit khata simulator & partner onboarding', icon: '🤝', category: 'Actions', href: '/travel/partners' },
+		{ id: 'act-crew-login', title: 'Chauffeur & Guide Mobile Login', subtitle: 'Duty slip PIN authentication & fullscreen airport placard screen', icon: '🚗', category: 'Actions', href: '/login/crew' },
 		{ id: 'act-bill', title: 'New Express Bill', subtitle: 'Open 3-second quick billing counter with UPI QR', icon: '⚡', category: 'Actions', href: '/billing' },
 		{ id: 'act-pos', title: 'Retail POS Terminal', subtitle: 'Barcode scanner checkout screen', icon: '🛒', category: 'Actions', href: '/pos' },
 		{ id: 'act-inv', title: 'Create Tax Invoice', subtitle: 'Full GST sales invoice with logistics', icon: '📄', category: 'Actions', href: '/invoices/new' },
@@ -389,29 +422,53 @@
 			showUpgradeModal = true;
 		}
 	}
+
+	function handleNavItemClick(e: MouseEvent, item: NavItem) {
+		if (currentUser?.is_super_admin) return;
+		const mod = moduleStore.getModuleForRoute(item.href);
+		if (mod && !mod.isCore && !moduleStore.isModuleActive(mod.id)) {
+			e.preventDefault();
+			openModuleActivation(mod.id);
+			return;
+		}
+		if (item.gated && !isNextPlan) {
+			e.preventDefault();
+			if (mod) {
+				openModuleActivation(mod.id);
+			} else {
+				handleLockedFeature(e, item.lockTitle ?? item.label, item.lockDesc ?? '');
+			}
+		}
+	}
+
+	$effect(() => {
+		if (currentPath.startsWith('/travel') && activeWorkspacePreset !== 'TRAVEL') {
+			setWorkspacePreset('TRAVEL');
+		}
+	});
 </script>
 
 <svelte:window onkeydown={handleGlobalKeydown} />
 
 {#if loading}
-	<div style="display: flex; height: 100vh; align-items: center; justify-content: center; background: #0b0f19;">
+	<div style="display: flex; height: 100vh; align-items: center; justify-content: center; background: var(--bg-app);">
 		<div style="display: flex; flex-direction: column; align-items: center; gap: 1rem;">
-			<div style="width: 40px; height: 40px; border: 3px solid rgba(99, 102, 241, 0.2); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
-			<span style="font-size: 0.875rem; color: #94a3b8; font-weight: 500;">Loading secure workspace...</span>
+			<div style="width: 40px; height: 40px; border: 3px solid rgba(79, 70, 229, 0.2); border-top-color: var(--brand-primary); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+			<span style="font-size: var(--text-caption); color: var(--text-secondary); font-weight: 500;">Loading secure workspace...</span>
 		</div>
 	</div>
 {:else if isBarePage}
 	{@render children?.()}
 {:else}
 	{#if legalRequired}
-		<div style="position: fixed; inset: 0; z-index: 10000; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; padding: 1rem;">
+		<div style="position: fixed; inset: 0; z-index: 10000; background: var(--surface-overlay); display: flex; align-items: center; justify-content: center; padding: 1rem;">
 			<div class="card" style="max-width: 460px; padding: 1.75rem;">
 				<h2 style="margin-bottom: 0.5rem;">Terms and Privacy Policy</h2>
 				<p style="color: var(--text-secondary); font-size: 0.875rem; line-height: 1.5;">
 					To continue, please review and accept our <a href="/terms" target="_blank" rel="noopener">Terms of Service</a>
 					and <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.
 				</p>
-				{#if legalError}<p style="color: #fb7185; font-size: 0.8125rem;">{legalError}</p>{/if}
+				{#if legalError}<p style="color: var(--status-error); font-size: 0.8125rem;">{legalError}</p>{/if}
 				<div style="display: flex; gap: 0.75rem; margin-top: 1.25rem;">
 					<button class="btn btn-primary" onclick={acceptLegal} disabled={legalBusy}>I accept</button>
 					<button class="btn btn-secondary" onclick={handleLogout}>Sign out</button>
@@ -423,25 +480,25 @@
 		<!-- Sidebar Navigation -->
 		<aside class="sidebar">
 			<!-- Workspace Branding & Plan Status -->
-			<div style="padding: 1.25rem; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; gap: 0.75rem;">
+			<div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-default); display: flex; align-items: center; gap: 0.75rem;">
 				{#if currentTenant?.logo_url}
 					<img
 						src={currentTenant.logo_url}
 						alt={currentTenant.name}
-						style="width: 40px; height: 40px; border-radius: 10px; object-fit: contain; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 2px;"
+						style="width: 40px; height: 40px; border-radius: 10px; object-fit: contain; background: var(--surface-secondary); border: 1px solid var(--border-default); padding: 2px;"
 					/>
 				{:else}
-					<div style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%); display: flex; align-items: center; justify-content: center; font-family: var(--font-heading); font-weight: 800; color: white; font-size: 1.15rem; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.45); flex-shrink: 0;">
+					<div style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, var(--brand-primary) 0%, #06b6d4 100%); display: flex; align-items: center; justify-content: center; font-family: var(--font-heading); font-weight: 800; color: white; font-size: 1.15rem; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35); flex-shrink: 0;">
 						{getInitials(currentTenant?.name || (currentUser?.is_super_admin ? 'SaaS' : 'Workspace'))}
 					</div>
 				{/if}
 				<div style="display: flex; flex-direction: column; min-width: 0; flex: 1;">
-					<span style="font-family: var(--font-heading); font-weight: 800; font-size: 0.9375rem; color: #fff; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+					<span style="font-family: var(--font-heading); font-weight: 700; font-size: 0.9375rem; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
 						{currentTenant?.name || (currentUser?.is_super_admin ? 'SaaS Platform Admin' : 'Private Workspace')}
 					</span>
 					
 					{#if currentUser?.is_super_admin}
-						<span style="font-size: 0.7rem; color: #f59e0b; font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
+						<span style="font-size: 0.7rem; color: var(--status-warning); font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
 							🛡️ Super Admin Scope
 						</span>
 					{:else if currentTenant?.legal_name}
@@ -449,11 +506,11 @@
 							{currentTenant.legal_name}
 						</span>
 					{:else if isNextPlan}
-						<span style="font-size: 0.7rem; color: #818cf8; font-weight: 700; display: flex; align-items: center; gap: 0.25rem;">
+						<span style="font-size: 0.7rem; color: var(--brand-primary); font-weight: 700; display: flex; align-items: center; gap: 0.25rem;">
 							💎 Next Plan (Business)
 						</span>
 					{:else}
-						<span style="font-size: 0.7rem; color: #34d399; font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
+						<span style="font-size: 0.7rem; color: var(--status-success); font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
 							🌱 Basic Plan (Active)
 						</span>
 					{/if}
@@ -461,11 +518,11 @@
 			</div>
 
 			<!-- Active business unit context (display only; the switcher lives in the topbar) -->
-			<div style="margin: 0.6rem 0.75rem 0.4rem 0.75rem; background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 0.6rem 0.7rem; display: flex; align-items: center; gap: 0.5rem;">
+			<div style="margin: 0.6rem 0.75rem 0.4rem 0.75rem; background: var(--surface-secondary); border: 1px solid var(--border-default); border-radius: 10px; padding: 0.6rem 0.7rem; display: flex; align-items: center; gap: 0.5rem;">
 				<span style="font-size: 1.15rem;">{currentWorkspaceLabel.icon}</span>
 				<div style="display: flex; flex-direction: column; min-width: 0;">
-					<span style="font-size: 0.55rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em;">Active Business Unit</span>
-					<span style="font-size: 0.8rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{currentWorkspaceLabel.name}</span>
+					<span style="font-size: 0.6rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em;">Active Business Unit</span>
+					<span style="font-size: 0.8125rem; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{currentWorkspaceLabel.name}</span>
 				</div>
 			</div>
 
@@ -492,17 +549,20 @@
 					{/if}
 					{#if !group.label || !collapsedGroups[group.label]}
 						{#each group.items as item (item.href)}
+							{@const mod = moduleStore.getModuleForRoute(item.href)}
+							{@const isLocked = !currentUser?.is_super_admin && ((mod && !mod.isCore && !moduleStore.isModuleActive(mod.id)) || (item.gated && !isNextPlan))}
 							<a
 								href={item.href}
 								class="nav-item"
-								class:active={isNavItemActive(item, currentPath)}
+								class:active={isNavItemActive(item, currentPath, $page.url.search)}
 								class:primary={item.primary}
-								onclick={item.gated ? (e) => handleLockedFeature(e, item.lockTitle ?? item.label, item.lockDesc ?? '') : undefined}
+								class:locked-nav-item={isLocked}
+								onclick={(e) => handleNavItemClick(e, item)}
 							>
 								<span class="nav-icon">{item.icon}</span>
 								<span class="nav-label">{item.label}</span>
-								{#if item.gated && !isNextPlan}
-									<span class="nav-lock">🔒</span>
+								{#if isLocked}
+									<span class="nav-lock" title="Module locked. Click to pay & activate {mod?.name || item.label} exclusively">🔒</span>
 								{/if}
 							</a>
 						{/each}
@@ -537,7 +597,7 @@
 			</nav>
 
 			<!-- Bottom User Card -->
-			<div style="padding: 1rem; border-top: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.2);">
+			<div style="padding: 0.875rem 1rem; border-top: 1px solid var(--border-default); display: flex; align-items: center; justify-content: space-between; background: var(--surface-secondary);">
 				<div style="display: flex; flex-direction: column; min-width: 0;">
 					<span style="font-size: 0.8125rem; font-weight: 600; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
 						{currentUser?.full_name || currentUser?.email}
@@ -661,12 +721,26 @@
 					</div>
 				</div>
 
-				<!-- Right: Live Telemetry, Quick Create, Profile Dropdown -->
+				<!-- Right: Live Telemetry, Theme Toggle, Modules Store, Quick Create, Profile Dropdown -->
 				<div class="topbar-right">
 					<div class="telemetry-chip" title="Live Server-Sent Events Connected">
 						<span class="pulse-dot"></span>
 						<span class="telemetry-label">Live</span>
 					</div>
+
+					<ThemeToggle />
+
+					<!-- Discrete Module Store Launcher -->
+					<button
+						type="button"
+						class="topbar-module-btn"
+						onclick={() => openModuleActivation()}
+						title="Modular Licensing: Pay only for the modules you use"
+					>
+						<span class="mod-icon">🧩</span>
+						<span class="mod-label">Modules</span>
+						<span class="mod-badge">{moduleStore.activeCount}/16 Active</span>
+					</button>
 
 					<a href="/invoices/new" class="btn btn-primary btn-sm glow-btn action-create-btn">
 						<svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -714,6 +788,9 @@
 									</a>
 								</div>
 								<div class="profile-links">
+									<button type="button" class="profile-link" onclick={() => { showProfileMenu = false; openModuleActivation(); }}>
+										🧩 Module Store & Licensing ({moduleStore.activeCount} Active)
+									</button>
 									<a href="/settings" class="profile-link" onclick={() => (showProfileMenu = false)}>
 										⚙️ Organization Settings
 									</a>
@@ -747,7 +824,70 @@
 						<a href="/settings/billing" style="margin-left: 0.5rem; text-decoration: underline;">Plan & Billing</a>
 					</div>
 				{/if}
-				{@render children?.()}
+
+				{#if isCurrentRouteGated && currentRouteModule}
+					<div class="locked-module-gate card animate-fade-in" style="max-width: 680px; margin: 2.5rem auto; padding: 2.5rem 2rem; text-align: center; border: 1px solid var(--border-default); background: var(--surface-main); box-shadow: var(--shadow-lg); border-radius: var(--radius-lg);">
+						<div style="width: 72px; height: 72px; margin: 0 auto 1.25rem; border-radius: 20px; background: rgba(79, 70, 229, 0.08); display: flex; align-items: center; justify-content: center; font-size: 2.5rem; border: 1px solid var(--border-default);">
+							{currentRouteModule.icon}
+						</div>
+						
+						<div style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.25rem 0.75rem; border-radius: 999px; background: rgba(245, 158, 11, 0.12); color: #d97706; font-size: 0.75rem; font-weight: 700; margin-bottom: 0.75rem; border: 1px solid rgba(245, 158, 11, 0.25);">
+							<span>🔒</span>
+							<span>MODULE NOT ACTIVATED</span>
+						</div>
+
+						<h2 style="font-size: 1.5rem; font-weight: 800; margin: 0 0 0.5rem; color: var(--text-primary); font-family: var(--font-heading);">
+							{currentRouteModule.name}
+						</h2>
+
+						<p style="color: var(--text-secondary); font-size: 0.9375rem; max-width: 540px; margin: 0 auto 1.5rem; line-height: 1.55;">
+							{currentRouteModule.description}
+						</p>
+
+						<div style="background: var(--surface-secondary); border-radius: var(--radius-md); padding: 1.25rem; max-width: 520px; margin: 0 auto 1.75rem; text-align: left; border: 1px solid var(--border-default);">
+							<div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.65rem; letter-spacing: 0.05em;">
+								⭐ Included Capabilities & Tools
+							</div>
+							<div style="display: flex; flex-direction: column; gap: 0.45rem;">
+								{#each currentRouteModule.features as feat}
+									<div style="font-size: 0.8125rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+										<span style="color: var(--status-success); font-weight: 700; font-size: 0.9rem;">✓</span>
+										<span>{feat}</span>
+									</div>
+								{/each}
+							</div>
+						</div>
+
+						<div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; flex-wrap: wrap;">
+							<button
+								type="button"
+								class="btn btn-primary"
+								onclick={() => openModuleActivation(currentRouteModule.id)}
+								style="padding: 0.65rem 1.4rem; font-weight: 700; font-size: 0.9375rem; display: flex; align-items: center; gap: 0.45rem;"
+							>
+								<span>⚡ Pay ₹{currentRouteModule.priceMonthly.toLocaleString('en-IN')}/mo & Activate Now</span>
+							</button>
+							<button
+								type="button"
+								class="btn btn-secondary"
+								onclick={() => { moduleStore.startTrial(currentRouteModule.id); }}
+								style="padding: 0.65rem 1.15rem; font-weight: 600;"
+							>
+								🎁 14-Day Free Trial
+							</button>
+							<a href="/" class="btn btn-secondary" style="padding: 0.65rem 1.15rem;">
+								← Back to Home
+							</a>
+						</div>
+
+						<div style="margin-top: 1.5rem; font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
+							<span>🛡️</span>
+							<span><strong>Zero Bundling Guarantee:</strong> You only pay for <em>{currentRouteModule.name}</em>. Other modules remain locked and are not mixed or billed.</span>
+						</div>
+					</div>
+				{:else}
+					{@render children?.()}
+				{/if}
 			</main>
 		</div>
 	</div>
@@ -901,6 +1041,16 @@
 	}}
 />
 
+<!-- Discrete Module Activation & Modular Licensing Modal -->
+<ModuleActivationModal
+	open={showModuleActivationModal}
+	targetModuleId={activationTargetModuleId}
+	onclose={() => (showModuleActivationModal = false)}
+	onactivated={(modId) => {
+		// Module activated exclusively
+	}}
+/>
+
 <!-- Global Floating Toast Feedback Viewport -->
 <ToastContainer />
 
@@ -913,25 +1063,32 @@
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
-		padding: 0.625rem 0.875rem;
+		padding: 0.55rem 0.8rem;
 		border-radius: var(--radius-md);
 		color: var(--text-secondary);
-		font-size: 0.875rem;
+		font-size: var(--text-table);
 		font-weight: 500;
 		text-decoration: none;
-		transition: all 0.15s ease;
+		transition: all var(--transition-fast);
 	}
 
 	.nav-item:hover {
-		background: var(--bg-card-hover);
+		background: var(--surface-secondary);
 		color: var(--text-primary);
 	}
 
 	.nav-item.active {
-		background: var(--primary-light);
-		color: #a5b4fc;
-		border: 1px solid rgba(99, 102, 241, 0.25);
+		background: var(--brand-primary-soft);
+		color: var(--brand-primary);
+		border: 1px solid rgba(79, 70, 229, 0.25);
 		font-weight: 600;
+	}
+
+	:root[data-theme="dark"] .nav-item.active,
+	body.theme-dark .nav-item.active {
+		background: rgba(79, 70, 229, 0.2);
+		color: #a5b4fc;
+		border-color: rgba(99, 102, 241, 0.35);
 	}
 
 	.nav-icon {
@@ -956,16 +1113,73 @@
 		flex-shrink: 0;
 	}
 
-	/* Primary (workspace landing) item — one consistent accent across all units */
-	.nav-item.primary {
-		background: var(--primary-light);
-		color: #a5b4fc;
-		border-left: 3px solid #6366f1;
+	.nav-item.locked-nav-item {
+		opacity: 0.85;
+	}
+
+	.nav-item.locked-nav-item:hover {
+		background: rgba(245, 158, 11, 0.08);
+	}
+
+	.topbar-module-btn {
+		display: flex;
+		align-items: center;
+		gap: 0.45rem;
+		background: var(--surface-secondary);
+		border: 1px solid var(--border-default);
+		border-radius: var(--radius-md);
+		padding: 0.35rem 0.65rem;
+		color: var(--text-primary);
+		cursor: pointer;
+		font-size: var(--text-table);
+		font-weight: 600;
+		transition: all var(--transition-fast);
+	}
+
+	.topbar-module-btn:hover {
+		background: var(--brand-primary-soft);
+		border-color: var(--brand-primary);
+		color: var(--brand-primary);
+	}
+
+	:root[data-theme="dark"] .topbar-module-btn:hover,
+	body.theme-dark .topbar-module-btn:hover {
+		color: #ffffff;
+	}
+
+	.topbar-module-btn .mod-badge {
+		font-size: 0.6875rem;
 		font-weight: 700;
+		background: var(--brand-primary-soft);
+		color: var(--brand-primary);
+		padding: 0.1rem 0.45rem;
+		border-radius: var(--radius-full);
+		border: 1px solid rgba(79, 70, 229, 0.2);
+	}
+
+	:root[data-theme="dark"] .topbar-module-btn .mod-badge,
+	body.theme-dark .topbar-module-btn .mod-badge {
+		background: rgba(79, 70, 229, 0.25);
+		color: #c7d2fe;
+		border-color: rgba(99, 102, 241, 0.35);
+	}
+
+	/* Primary (workspace landing) item */
+	.nav-item.primary {
+		background: var(--brand-primary-soft);
+		color: var(--brand-primary);
+		border-left: 3px solid var(--brand-primary);
+		font-weight: 600;
+	}
+
+	:root[data-theme="dark"] .nav-item.primary,
+	body.theme-dark .nav-item.primary {
+		background: rgba(79, 70, 229, 0.2);
+		color: #a5b4fc;
 	}
 
 	.nav-item.primary.active {
-		background: rgba(99, 102, 241, 0.22);
+		background: rgba(79, 70, 229, 0.15);
 	}
 
 	/* Collapsible nav group headers */
@@ -990,7 +1204,7 @@
 		padding: 0;
 		cursor: pointer;
 		color: var(--text-muted);
-		font-size: 0.6875rem;
+		font-size: var(--text-caption);
 		font-weight: 700;
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
@@ -1012,34 +1226,41 @@
 	.nav-group-badge {
 		font-size: 0.625rem;
 		font-weight: 700;
-		background: rgba(56, 189, 248, 0.15);
-		color: #38bdf8;
+		background: rgba(2, 132, 199, 0.12);
+		color: var(--accent-travel);
 		padding: 0.1rem 0.4rem;
 		border-radius: 4px;
 		white-space: nowrap;
 	}
 
 	.nav-group-badge.next {
-		background: rgba(129, 140, 248, 0.15);
+		background: var(--brand-primary-soft);
+		color: var(--brand-primary);
+	}
+
+	:root[data-theme="dark"] .nav-group-badge.next,
+	body.theme-dark .nav-group-badge.next {
+		background: rgba(79, 70, 229, 0.2);
 		color: #a5b4fc;
 	}
 
 	/* ========================================================
-	   CLEAN ORGANIZED TOPBAR DESIGN SYSTEM
+	   TOPBAR SHELL SYSTEM
 	   ======================================================== */
 	.topbar {
-		height: 60px;
+		height: var(--header-height);
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: 0 1.5rem;
-		background: rgba(15, 23, 42, 0.85);
-		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+		padding: 0 var(--content-gutter);
+		background: var(--surface-header);
+		border-bottom: 1px solid var(--border-default);
 		backdrop-filter: blur(12px);
 		position: sticky;
 		top: 0;
 		z-index: 50;
 		gap: 1rem;
+		transition: background-color var(--transition-fast), border-color var(--transition-fast);
 	}
 
 	.topbar-left {
@@ -1054,13 +1275,13 @@
 		display: flex;
 		align-items: center;
 		gap: 0.45rem;
-		background: rgba(255, 255, 255, 0.04);
-		border: 1px solid rgba(255, 255, 255, 0.08);
-		border-radius: 8px;
+		background: var(--surface-secondary);
+		border: 1px solid var(--border-default);
+		border-radius: var(--radius-md);
 		padding: 0.35rem 0.65rem;
-		font-size: 0.85rem;
+		font-size: var(--text-table);
 		font-weight: 600;
-		color: #f1f5f9;
+		color: var(--text-primary);
 	}
 
 	.company-icon {
@@ -1074,8 +1295,8 @@
 	.company-scope-select {
 		background: transparent;
 		border: none;
-		color: #f1f5f9;
-		font-size: 0.85rem;
+		color: var(--text-primary);
+		font-size: var(--text-table);
 		font-weight: 600;
 		cursor: pointer;
 		outline: none;
@@ -1083,29 +1304,33 @@
 	}
 
 	.company-scope-select option {
-		background: #0f172a;
-		color: #f1f5f9;
+		background: var(--surface-main);
+		color: var(--text-primary);
 	}
 
 	.plan-pill {
 		font-size: 0.7rem;
 		font-weight: 700;
 		padding: 0.2rem 0.55rem;
-		border-radius: 9999px;
+		border-radius: var(--radius-full);
 		letter-spacing: 0.03em;
 		white-space: nowrap;
 	}
 
 	.plan-next {
-		background: rgba(99, 102, 241, 0.15);
+		background: var(--brand-primary-soft);
+		color: var(--brand-primary);
+		border: 1px solid rgba(79, 70, 229, 0.3);
+	}
+	:root[data-theme="dark"] .plan-next,
+	body.theme-dark .plan-next {
 		color: #a5b4fc;
-		border: 1px solid rgba(99, 102, 241, 0.3);
 	}
 
 	.plan-basic {
-		background: rgba(16, 185, 129, 0.15);
-		color: #34d399;
-		border: 1px solid rgba(16, 185, 129, 0.3);
+		background: var(--status-success-bg);
+		color: var(--status-success);
+		border: 1px solid var(--status-success-border);
 	}
 
 	/* Center: Search & Unified Workspace Switcher */
@@ -1122,27 +1347,27 @@
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		background: rgba(15, 23, 42, 0.6);
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		border-radius: 8px;
+		background: var(--surface-secondary);
+		border: 1px solid var(--border-default);
+		border-radius: var(--radius-md);
 		padding: 0.4rem 0.75rem;
-		color: #94a3b8;
-		font-size: 0.82rem;
+		color: var(--text-secondary);
+		font-size: var(--text-table);
 		cursor: pointer;
-		transition: all 0.15s ease;
+		transition: all var(--transition-fast);
 		flex: 1;
 		max-width: 280px;
 	}
 
 	.cmd-search-trigger:hover {
-		background: rgba(30, 41, 59, 0.8);
-		border-color: rgba(99, 102, 241, 0.4);
-		color: #f1f5f9;
+		background: var(--surface-main);
+		border-color: var(--brand-primary);
+		color: var(--text-primary);
 	}
 
 	.search-lens {
 		font-size: 0.85rem;
-		opacity: 0.7;
+		opacity: 0.8;
 	}
 
 	.cmd-search-text {
@@ -1154,13 +1379,13 @@
 	}
 
 	.cmd-kbd {
-		background: rgba(0, 0, 0, 0.4);
-		border: 1px solid rgba(255, 255, 255, 0.15);
-		border-radius: 4px;
+		background: var(--surface-main);
+		border: 1px solid var(--border-default);
+		border-radius: var(--radius-xs);
 		padding: 0.1rem 0.35rem;
 		font-size: 0.65rem;
 		font-family: var(--font-mono);
-		color: #cbd5e1;
+		color: var(--text-secondary);
 	}
 
 	/* Unified Workspace Dropdown Button */
@@ -1172,21 +1397,27 @@
 		display: flex;
 		align-items: center;
 		gap: 0.45rem;
-		background: rgba(255, 255, 255, 0.04);
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		border-radius: 8px;
+		background: var(--surface-secondary);
+		border: 1px solid var(--border-default);
+		border-radius: var(--radius-md);
 		padding: 0.4rem 0.75rem;
-		color: #f1f5f9;
+		color: var(--text-primary);
 		cursor: pointer;
-		transition: all 0.15s ease;
-		font-size: 0.82rem;
+		transition: all var(--transition-fast);
+		font-size: var(--text-table);
 		font-weight: 600;
 	}
 
 	.workspace-trigger-btn:hover,
 	.workspace-trigger-btn.active {
-		background: rgba(99, 102, 241, 0.15);
-		border-color: rgba(99, 102, 241, 0.4);
+		background: var(--brand-primary-soft);
+		border-color: var(--brand-primary);
+		color: var(--brand-primary);
+	}
+	:root[data-theme="dark"] .workspace-trigger-btn:hover,
+	:root[data-theme="dark"] .workspace-trigger-btn.active,
+	body.theme-dark .workspace-trigger-btn:hover,
+	body.theme-dark .workspace-trigger-btn.active {
 		color: #ffffff;
 	}
 
@@ -1204,17 +1435,17 @@
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
 		padding: 0.1rem 0.4rem;
-		border-radius: 4px;
-		background: rgba(99, 102, 241, 0.2);
-		color: #a5b4fc;
-		border: 1px solid rgba(99, 102, 241, 0.3);
+		border-radius: var(--radius-xs);
+		background: var(--brand-primary-soft);
+		color: var(--brand-primary);
+		border: 1px solid rgba(79, 70, 229, 0.25);
 		white-space: nowrap;
 	}
 
 	.ws-chevron {
 		width: 14px;
 		height: 14px;
-		color: #94a3b8;
+		color: var(--text-muted);
 		transition: transform 0.2s ease;
 	}
 
@@ -1241,10 +1472,10 @@
 		left: 50%;
 		transform: translateX(-50%);
 		width: 380px;
-		background: #0f172a;
-		border: 1px solid rgba(255, 255, 255, 0.12);
-		border-radius: 12px;
-		box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(99, 102, 241, 0.15);
+		background: var(--surface-main);
+		border: 1px solid var(--border-default);
+		border-radius: var(--radius-lg);
+		box-shadow: var(--shadow-lg);
 		z-index: 100;
 		overflow: hidden;
 		animation: popoverFadeIn 0.15s ease-out;
@@ -1260,19 +1491,19 @@
 		justify-content: space-between;
 		align-items: center;
 		padding: 0.75rem 1rem 0.5rem;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+		border-bottom: 1px solid var(--border-default);
 	}
 
 	.popover-title {
 		font-size: 0.68rem;
 		font-weight: 700;
-		color: #94a3b8;
+		color: var(--text-muted);
 		letter-spacing: 0.05em;
 	}
 
 	.popover-count {
 		font-size: 0.68rem;
-		color: #64748b;
+		color: var(--text-secondary);
 	}
 
 	.popover-list {
@@ -1291,8 +1522,8 @@
 		padding: 0.55rem 0.75rem;
 		background: transparent;
 		border: 1px solid transparent;
-		border-radius: 8px;
-		color: #cbd5e1;
+		border-radius: var(--radius-md);
+		color: var(--text-secondary);
 		cursor: pointer;
 		text-align: left;
 		transition: all 0.12s ease;
@@ -1300,13 +1531,17 @@
 	}
 
 	.workspace-item:hover {
-		background: rgba(255, 255, 255, 0.05);
-		color: #ffffff;
+		background: var(--surface-secondary);
+		color: var(--text-primary);
 	}
 
 	.workspace-item.selected {
-		background: rgba(99, 102, 241, 0.15);
-		border-color: rgba(99, 102, 241, 0.35);
+		background: var(--brand-primary-soft);
+		border-color: rgba(79, 70, 229, 0.35);
+		color: var(--brand-primary);
+	}
+	:root[data-theme="dark"] .workspace-item.selected,
+	body.theme-dark .workspace-item.selected {
 		color: #ffffff;
 	}
 
@@ -1317,8 +1552,8 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: rgba(255, 255, 255, 0.05);
-		border-radius: 6px;
+		background: var(--surface-secondary);
+		border-radius: var(--radius-sm);
 		flex-shrink: 0;
 	}
 
@@ -1337,7 +1572,7 @@
 	.item-name {
 		font-size: 0.82rem;
 		font-weight: 600;
-		color: #f1f5f9;
+		color: var(--text-primary);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -1346,14 +1581,14 @@
 	.item-badge {
 		font-size: 0.65rem;
 		padding: 0.1rem 0.35rem;
-		border-radius: 4px;
-		background: rgba(255, 255, 255, 0.08);
-		color: #94a3b8;
+		border-radius: var(--radius-xs);
+		background: var(--surface-secondary);
+		color: var(--text-secondary);
 	}
 
 	.item-desc {
 		font-size: 0.7rem;
-		color: #64748b;
+		color: var(--text-muted);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -1361,33 +1596,32 @@
 
 	.active-check {
 		font-weight: 700;
-		color: #818cf8;
+		color: var(--brand-primary);
 		font-size: 0.95rem;
 	}
 
 	.popover-footer {
 		padding: 0.5rem;
-		border-top: 1px solid rgba(255, 255, 255, 0.06);
-		background: rgba(0, 0, 0, 0.2);
+		border-top: 1px solid var(--border-default);
+		background: var(--surface-secondary);
 	}
 
 	.studio-launch-btn {
 		width: 100%;
 		padding: 0.45rem 0.75rem;
 		background: transparent;
-		border: 1px dashed rgba(99, 102, 241, 0.4);
-		border-radius: 6px;
-		color: #a5b4fc;
-		font-size: 0.75rem;
+		border: 1px dashed var(--brand-primary);
+		border-radius: var(--radius-sm);
+		color: var(--brand-primary);
+		font-size: var(--text-caption);
 		font-weight: 600;
 		cursor: pointer;
-		transition: all 0.15s ease;
+		transition: all var(--transition-fast);
 		text-align: center;
 	}
 
 	.studio-launch-btn:hover {
-		background: rgba(99, 102, 241, 0.15);
-		color: #ffffff;
+		background: var(--brand-primary-soft);
 	}
 
 	/* Right Utility Strip */
@@ -1404,18 +1638,18 @@
 		gap: 0.35rem;
 		font-size: 0.72rem;
 		font-weight: 600;
-		color: #34d399;
-		background: rgba(16, 185, 129, 0.1);
-		border: 1px solid rgba(16, 185, 129, 0.2);
+		color: var(--status-success);
+		background: var(--status-success-bg);
+		border: 1px solid var(--status-success-border);
 		padding: 0.25rem 0.55rem;
-		border-radius: 9999px;
+		border-radius: var(--radius-full);
 	}
 
 	.pulse-dot {
 		width: 6px;
 		height: 6px;
 		border-radius: 50%;
-		background: #34d399;
+		background: var(--status-success);
 		animation: pulse-dot 1.8s infinite;
 	}
 
@@ -1425,7 +1659,7 @@
 	}
 
 	.action-create-btn {
-		font-size: 0.8rem;
+		font-size: var(--text-caption);
 		padding: 0.4rem 0.85rem;
 		white-space: nowrap;
 	}
@@ -1439,25 +1673,25 @@
 		display: flex;
 		align-items: center;
 		gap: 0.45rem;
-		background: rgba(255, 255, 255, 0.04);
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		border-radius: 9999px;
+		background: var(--surface-secondary);
+		border: 1px solid var(--border-default);
+		border-radius: var(--radius-full);
 		padding: 0.2rem 0.55rem 0.2rem 0.2rem;
 		cursor: pointer;
-		transition: all 0.15s ease;
+		transition: all var(--transition-fast);
 	}
 
 	.profile-chip-btn:hover,
 	.profile-chip-btn.active {
-		background: rgba(255, 255, 255, 0.08);
-		border-color: rgba(99, 102, 241, 0.4);
+		background: var(--border-default);
+		border-color: var(--brand-primary);
 	}
 
 	.avatar-badge {
 		width: 26px;
 		height: 26px;
 		border-radius: 50%;
-		background: linear-gradient(135deg, #6366f1, #8b5cf6);
+		background: linear-gradient(135deg, var(--brand-primary), #6366f1);
 		color: #ffffff;
 		font-size: 0.72rem;
 		font-weight: 700;
@@ -1467,16 +1701,16 @@
 	}
 
 	.user-role-text {
-		font-size: 0.75rem;
+		font-size: var(--text-caption);
 		font-weight: 600;
-		color: #cbd5e1;
+		color: var(--text-secondary);
 		text-transform: capitalize;
 	}
 
 	.chevron-mini {
 		width: 12px;
 		height: 12px;
-		color: #94a3b8;
+		color: var(--text-muted);
 		transition: transform 0.2s ease;
 	}
 
@@ -1490,10 +1724,10 @@
 		top: calc(100% + 8px);
 		right: 0;
 		width: 260px;
-		background: #0f172a;
-		border: 1px solid rgba(255, 255, 255, 0.12);
-		border-radius: 12px;
-		box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+		background: var(--surface-main);
+		border: 1px solid var(--border-default);
+		border-radius: var(--radius-lg);
+		box-shadow: var(--shadow-lg);
 		z-index: 100;
 		overflow: hidden;
 		animation: popoverFadeInRight 0.15s ease-out;
@@ -1506,25 +1740,25 @@
 
 	.profile-meta-card {
 		padding: 0.85rem 1rem;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-		background: rgba(255, 255, 255, 0.02);
+		border-bottom: 1px solid var(--border-default);
+		background: var(--surface-secondary);
 	}
 
 	.meta-fullname {
 		font-size: 0.85rem;
 		font-weight: 700;
-		color: #f1f5f9;
+		color: var(--text-primary);
 	}
 
 	.meta-email {
 		font-size: 0.72rem;
-		color: #94a3b8;
+		color: var(--text-muted);
 		margin: 0.1rem 0 0.35rem;
 	}
 
 	.meta-tenant {
 		font-size: 0.7rem;
-		color: #818cf8;
+		color: var(--brand-primary);
 	}
 
 	.meta-plan-row {
@@ -1539,11 +1773,11 @@
 	.meta-plan-manage {
 		font-size: 0.7rem;
 		font-weight: 600;
-		color: #94a3b8;
+		color: var(--text-secondary);
 	}
 
 	.meta-plan-row:hover .meta-plan-manage {
-		color: #cbd5e1;
+		color: var(--text-primary);
 	}
 
 	.profile-links {
@@ -1560,35 +1794,35 @@
 		padding: 0.5rem 0.75rem;
 		background: transparent;
 		border: none;
-		border-radius: 6px;
-		color: #cbd5e1;
+		border-radius: var(--radius-sm);
+		color: var(--text-secondary);
 		font-size: 0.8rem;
 		font-weight: 500;
 		text-align: left;
 		text-decoration: none;
 		cursor: pointer;
 		width: 100%;
-		transition: all 0.12s ease;
+		transition: all var(--transition-fast);
 	}
 
 	.profile-link:hover {
-		background: rgba(255, 255, 255, 0.06);
-		color: #ffffff;
+		background: var(--surface-secondary);
+		color: var(--text-primary);
 	}
 
 	.menu-divider {
 		height: 1px;
-		background: rgba(255, 255, 255, 0.06);
+		background: var(--border-default);
 		margin: 0.25rem 0;
 	}
 
 	.text-danger {
-		color: #fb7185;
+		color: var(--status-error);
 	}
 
 	.text-danger:hover {
-		background: rgba(239, 68, 68, 0.15);
-		color: #fca5a5;
+		background: var(--status-error-bg);
+		color: var(--status-error);
 	}
 
 	/* Command Palette Modal */
@@ -1596,7 +1830,7 @@
 		position: fixed;
 		inset: 0;
 		z-index: 10000;
-		background: rgba(11, 15, 25, 0.8);
+		background: var(--surface-overlay);
 		backdrop-filter: blur(8px);
 		display: flex;
 		align-items: flex-start;
@@ -1607,12 +1841,12 @@
 	}
 
 	.cmd-palette-card {
-		background: #111827;
-		border: 1px solid rgba(255, 255, 255, 0.15);
-		border-radius: 12px;
+		background: var(--surface-main);
+		border: 1px solid var(--border-default);
+		border-radius: var(--radius-lg);
 		width: 100%;
 		max-width: 640px;
-		box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75), 0 0 20px rgba(99, 102, 241, 0.2);
+		box-shadow: var(--shadow-lg);
 		overflow: hidden;
 		display: flex;
 		flex-direction: column;
@@ -1623,8 +1857,8 @@
 		align-items: center;
 		gap: 0.75rem;
 		padding: 0.875rem 1.25rem;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-		background: rgba(255, 255, 255, 0.02);
+		border-bottom: 1px solid var(--border-default);
+		background: var(--surface-secondary);
 	}
 
 	.cmd-palette-icon {
@@ -1637,20 +1871,20 @@
 		background: transparent;
 		border: none;
 		outline: none;
-		color: #f8fafc;
+		color: var(--text-primary);
 		font-size: 1rem;
 		font-family: inherit;
 	}
 
 	.cmd-palette-input::placeholder {
-		color: #64748b;
+		color: var(--text-muted);
 	}
 
 	.cmd-palette-close-btn {
-		background: rgba(255, 255, 255, 0.06);
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		color: #94a3b8;
-		border-radius: 4px;
+		background: var(--surface-main);
+		border: 1px solid var(--border-default);
+		color: var(--text-secondary);
+		border-radius: var(--radius-xs);
 		padding: 0.2rem 0.45rem;
 		font-size: 0.6875rem;
 		font-family: var(--font-mono);
@@ -1658,8 +1892,8 @@
 	}
 
 	.cmd-palette-close-btn:hover {
-		background: rgba(255, 255, 255, 0.1);
-		color: #fff;
+		background: var(--border-default);
+		color: var(--text-primary);
 	}
 
 	.cmd-palette-list {
@@ -1676,10 +1910,10 @@
 		align-items: center;
 		gap: 0.75rem;
 		padding: 0.65rem 0.875rem;
-		border-radius: 8px;
+		border-radius: var(--radius-md);
 		background: transparent;
 		border: 1px solid transparent;
-		color: #cbd5e1;
+		color: var(--text-secondary);
 		text-align: left;
 		cursor: pointer;
 		transition: all 0.12s ease;
@@ -1688,9 +1922,15 @@
 
 	.cmd-palette-row:hover,
 	.cmd-palette-row.active {
-		background: rgba(99, 102, 241, 0.15);
-		border-color: rgba(99, 102, 241, 0.35);
-		color: #fff;
+		background: var(--brand-primary-soft);
+		border-color: rgba(79, 70, 229, 0.35);
+		color: var(--brand-primary);
+	}
+	:root[data-theme="dark"] .cmd-palette-row:hover,
+	:root[data-theme="dark"] .cmd-palette-row.active,
+	body.theme-dark .cmd-palette-row:hover,
+	body.theme-dark .cmd-palette-row.active {
+		color: #ffffff;
 	}
 
 	.cmd-row-icon {
@@ -1700,8 +1940,8 @@
 		justify-content: center;
 		width: 2rem;
 		height: 2rem;
-		border-radius: 6px;
-		background: rgba(255, 255, 255, 0.05);
+		border-radius: var(--radius-sm);
+		background: var(--surface-secondary);
 		flex-shrink: 0;
 	}
 
@@ -1713,7 +1953,7 @@
 	.cmd-row-title {
 		font-size: 0.875rem;
 		font-weight: 600;
-		color: #f1f5f9;
+		color: var(--text-primary);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -1721,7 +1961,7 @@
 
 	.cmd-row-subtitle {
 		font-size: 0.75rem;
-		color: #94a3b8;
+		color: var(--text-muted);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -1733,16 +1973,16 @@
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
 		padding: 0.15rem 0.45rem;
-		border-radius: 4px;
-		background: rgba(255, 255, 255, 0.06);
-		color: #94a3b8;
+		border-radius: var(--radius-xs);
+		background: var(--surface-secondary);
+		color: var(--text-muted);
 		white-space: nowrap;
 	}
 
 	.cmd-row-enter {
 		font-family: var(--font-mono);
 		font-size: 0.75rem;
-		color: #6366f1;
+		color: var(--brand-primary);
 		opacity: 0;
 		transition: opacity 0.12s ease;
 	}
@@ -1766,8 +2006,8 @@
 		align-items: center;
 		gap: 1.25rem;
 		padding: 0.6rem 1.25rem;
-		border-top: 1px solid rgba(255, 255, 255, 0.08);
-		background: rgba(0, 0, 0, 0.2);
+		border-top: 1px solid var(--border-default);
+		background: var(--surface-secondary);
 	}
 
 	.cmd-footer-keys {
@@ -1777,17 +2017,17 @@
 	}
 
 	.cmd-key {
-		background: rgba(255, 255, 255, 0.08);
-		border: 1px solid rgba(255, 255, 255, 0.12);
-		border-radius: 4px;
+		background: var(--surface-main);
+		border: 1px solid var(--border-default);
+		border-radius: var(--radius-xs);
 		padding: 0.1rem 0.35rem;
 		font-size: 0.65rem;
 		font-family: var(--font-mono);
-		color: #cbd5e1;
+		color: var(--text-secondary);
 	}
 
 	.cmd-hint {
 		font-size: 0.7rem;
-		color: #64748b;
+		color: var(--text-muted);
 	}
 </style>

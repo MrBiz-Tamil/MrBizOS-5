@@ -148,7 +148,22 @@
 
 <div class="auth-wrapper">
 	<div class="auth-card animate-fade-in">
-		
+		<!-- Role Portal Navigation Tabs -->
+		<div class="portal-role-tabs">
+			<a href="/login" class="role-tab active" title="MrBiz OS ERP Staff Login">
+				<span>💼 Staff ERP</span>
+			</a>
+			<a href="/login/customer" class="role-tab" title="Customer & Traveler Portal">
+				<span>🧳 Customer</span>
+			</a>
+			<a href="/login/partner" class="role-tab" title="Tour & Travel Partner Portal">
+				<span>🤝 Partner</span>
+			</a>
+			<a href="/login/crew" class="role-tab" title="Driver & Guide Crew Portal">
+				<span>🚗 Crew</span>
+			</a>
+		</div>
+
 		<!-- Brand & Organization Header -->
 		<div style="text-align: center; margin-bottom: 1.75rem;">
 			{#if savedTenantLogo}
@@ -529,6 +544,40 @@
 
 	.link-btn:hover {
 		color: #94a3b8;
+	}
+
+	.portal-role-tabs {
+		display: flex;
+		gap: 0.35rem;
+		background: rgba(15, 23, 42, 0.85);
+		padding: 0.35rem;
+		border-radius: 12px;
+		margin-bottom: 1.5rem;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+	}
+
+	.role-tab {
+		flex: 1;
+		text-align: center;
+		padding: 0.5rem 0.25rem;
+		border-radius: 8px;
+		font-size: 0.74rem;
+		font-weight: 700;
+		color: #94a3b8;
+		text-decoration: none;
+		transition: all 0.15s ease;
+		white-space: nowrap;
+	}
+
+	.role-tab:hover {
+		color: #ffffff;
+		background: rgba(255, 255, 255, 0.08);
+	}
+
+	.role-tab.active {
+		background: var(--brand-primary, #4f46e5);
+		color: #ffffff;
+		box-shadow: 0 2px 8px rgba(79, 70, 229, 0.4);
 	}
 
 	@keyframes spin {
