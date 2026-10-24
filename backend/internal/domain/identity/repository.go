@@ -50,6 +50,7 @@ type Repository interface {
 
 	// Transaction support
 	ExecuteTransaction(fn func(txRepo Repository) error) error
+	DB() *gorm.DB
 }
 
 type repository struct {
@@ -58,6 +59,10 @@ type repository struct {
 
 func NewRepository(db *gorm.DB) Repository {
 	return &repository{db: db}
+}
+
+func (r *repository) DB() *gorm.DB {
+	return r.db
 }
 
 func (r *repository) CreateUser(user *User) error {

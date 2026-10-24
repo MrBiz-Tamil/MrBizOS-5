@@ -9,13 +9,13 @@ import (
 )
 
 func setupTestDB(t *testing.T) *gorm.DB {
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	dsn := "file:" + t.Name() + "?mode=memory&cache=shared"
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("failed to connect database: %v", err)
 	}
 	
-	// Migrate all needed models
-	err = db.AutoMigrate(&User{}, &ExternalProvider{}, &Consent{}, &PatientProfile{}, &DoctorProfile{}, &ActivityLog{}, &FamilyMember{})
+	err = AutoMigrate(db)
 	assert.NoError(t, err)
 	return db
 }

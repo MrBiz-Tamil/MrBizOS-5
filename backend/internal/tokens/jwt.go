@@ -18,22 +18,30 @@ func getSecretKey() []byte {
 }
 
 type Claims struct {
-	UserID     string `json:"sub"`
-	Role       string `json:"role"`
-	Type       string `json:"type"`
-	HospitalID *uint  `json:"hospital_id,omitempty"`
-	PharmacyID *uint  `json:"pharmacy_id,omitempty"`
+	UserID              string   `json:"sub"`
+	Role                string   `json:"role"`
+	Type                string   `json:"type"`
+	TenantID            string   `json:"tenant_id,omitempty"`
+	CurrentBusinessUnit string   `json:"current_bu,omitempty"`
+	AllowedBusinessUnits []string `json:"allowed_bus,omitempty"`
+	HospitalID          *uint    `json:"hospital_id,omitempty"`
+	PharmacyID          *uint    `json:"pharmacy_id,omitempty"`
 	jwt.RegisteredClaims
 }
 
 func CreateAccessToken(userID string, role string, hospitalID *uint, pharmacyID *uint) (string, error) {
+	return CreateTenantAccessToken(userID, "tenant-1", role, "healthcare", []string{"healthcare", "travel", "realestate", "ecommerce", "consulting"})
+}
+
+func CreateTenantAccessToken(userID string, tenantID string, role string, currentBU string, allowedBUs []string) (string, error) {
 	expirationTime := time.Now().Add(15 * time.Minute)
 	claims := &Claims{
-		UserID:     userID,
-		Role:       role,
-		Type:       "access",
-		HospitalID: hospitalID,
-		PharmacyID: pharmacyID,
+		UserID:              userID,
+		Role:                role,
+		Type:                "access",
+		TenantID:            tenantID,
+		CurrentBusinessUnit: currentBU,
+		AllowedBusinessUnits: allowedBUs,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

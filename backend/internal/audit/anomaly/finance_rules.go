@@ -316,7 +316,7 @@ func negativeAssetBalanceRule() Rule {
 			}
 			var rows []row
 			if err := db.Table("ledger_account_v2").
-				Where("type = ? AND balance < 0", "asset").
+				Where("LOWER(type) = ? AND balance < 0", "asset").
 				Scan(&rows).Error; err != nil {
 				return nil, err
 			}

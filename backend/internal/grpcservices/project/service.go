@@ -3,12 +3,15 @@ package project
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
 	"connectrpc.com/connect"
 	projectv1 "drayya-core/gen/project/v1"
 	"drayya-core/gen/project/v1/projectv1connect"
+	"drayya-core/internal/domain/consulting"
+	"drayya-core/internal/domain/task"
 	"gorm.io/gorm"
 )
 
@@ -98,10 +101,10 @@ func (s *ProjectServiceServer) seedDefaults() {
 		Priority:          "URGENT",
 		Status:            "TODO",
 		DueDate:           "2026-10-23",
-		SlaHoursRemaining: 14,
+		SlaHoursRemaining: 12,
 		EntityResource:    "procurement",
-		EntityId:          "PO-2026-001",
-		EstimatedHours:    8,
+		EntityId:          "PO-2026-0001",
+		EstimatedHours:    4,
 		ActualHours:       2,
 	}
 
@@ -143,6 +146,41 @@ func (s *ProjectServiceServer) seedDefaults() {
 }
 
 func (s *ProjectServiceServer) ListProjects(ctx context.Context, req *connect.Request[projectv1.ListProjectsRequest]) (*connect.Response[projectv1.ListProjectsResponse], error) {
+	if s.db != nil {
+		var swProjects []consulting.SoftwareProject
+		if err := s.db.WithContext(ctx).Preload("Client").Find(&swProjects).Error; err == nil && len(swProjects) > 0 {
+			var list []*projectv1.Project
+			for _, sp := range swProjects {
+				clientName := "Corporate Client"
+				if sp.Client != nil && sp.Client.CompanyName != "" {
+					clientName = sp.Client.CompanyName
+				}
+				startDate := ""
+				if sp.StartDate != nil {
+					startDate = sp.StartDate.Format("2006-01-02")
+				}
+				targetDate := ""
+				if sp.TargetDate != nil {
+					targetDate = sp.TargetDate.Format("2006-01-02")
+				}
+				list = append(list, &projectv1.Project{
+					Id:           strconv.FormatUint(uint64(sp.ID), 10),
+					Code:         sp.Code,
+					Name:         sp.Title,
+					Description:  sp.Title,
+					BusinessUnit: "CONSULTING",
+					ClientName:   clientName,
+					Status:       sp.Status,
+					Budget:       sp.Budget,
+					Spent:        sp.Spent,
+					StartDate:    startDate,
+					TargetDate:   targetDate,
+				})
+			}
+			return connect.NewResponse(&projectv1.ListProjectsResponse{Projects: list}), nil
+		}
+	}
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -161,13 +199,37 @@ func (s *ProjectServiceServer) ListProjects(ctx context.Context, req *connect.Re
 }
 
 func (s *ProjectServiceServer) CreateProject(ctx context.Context, req *connect.Request[projectv1.CreateProjectRequest]) (*connect.Response[projectv1.CreateProjectResponse], error) {
+	id := fmt.Sprintf("PRJ-%03d", len(s.projects)+1)
+	code := fmt.Sprintf("PRJ-%d", time.Now().Unix()%10000)
+
+	var targetTime *time.Time
+	if t, err := time.Parse("2006-01-02", req.Msg.TargetDate); err == nil {
+		targetTime = &t
+	}
+	startTime := time.Now()
+
+	if s.db != nil {
+		sp := &consulting.SoftwareProject{
+			OrganizationID: 1,
+			BusinessUnitID: 5,
+			Title:          req.Msg.Name,
+			Code:           code,
+			Budget:         req.Msg.Budget,
+			Spent:          0,
+			Status:         "PLANNING",
+			StartDate:      &startTime,
+			TargetDate:     targetTime,
+		}
+		s.db.WithContext(ctx).Create(sp)
+		id = strconv.FormatUint(uint64(sp.ID), 10)
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	id := fmt.Sprintf("PRJ-%03d", len(s.projects)+1)
 	p := &projectv1.Project{
 		Id:             id,
-		Code:           fmt.Sprintf("PRJ-%d", time.Now().Unix()%10000),
+		Code:           code,
 		Name:           req.Msg.Name,
 		Description:    req.Msg.Description,
 		BusinessUnit:   req.Msg.BusinessUnit,
@@ -209,6 +271,40 @@ func (s *ProjectServiceServer) GetProject(ctx context.Context, req *connect.Requ
 }
 
 func (s *ProjectServiceServer) ListTasks(ctx context.Context, req *connect.Request[projectv1.ListTasksRequest]) (*connect.Response[projectv1.ListTasksResponse], error) {
+	if s.db != nil {
+		var dbTasks []task.Task
+		q := s.db.WithContext(ctx).Order("created_at DESC")
+		if req.Msg.Status != "" {
+			q = q.Where("status = ?", req.Msg.Status)
+		}
+		if err := q.Find(&dbTasks).Error; err == nil && len(dbTasks) > 0 {
+			var list []*projectv1.UTMSTask
+			for _, t := range dbTasks {
+				dueDate := ""
+				if t.DueDate != nil {
+					dueDate = t.DueDate.Format("2006-01-02")
+				}
+				projID := ""
+				if t.EntityID != nil {
+					projID = strconv.FormatUint(uint64(*t.EntityID), 10)
+				}
+				list = append(list, &projectv1.UTMSTask{
+					Id:             strconv.FormatUint(uint64(t.ID), 10),
+					ProjectId:      projID,
+					Title:          t.Title,
+					Description:    t.Description,
+					BusinessUnit:   "CONSULTING",
+					AssignedTo:     t.Team,
+					Priority:       t.Priority,
+					Status:         t.Status,
+					DueDate:        dueDate,
+					EntityResource: t.EntityResource,
+				})
+			}
+			return connect.NewResponse(&projectv1.ListTasksResponse{Tasks: list}), nil
+		}
+	}
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -230,10 +326,30 @@ func (s *ProjectServiceServer) ListTasks(ctx context.Context, req *connect.Reque
 }
 
 func (s *ProjectServiceServer) CreateTask(ctx context.Context, req *connect.Request[projectv1.CreateTaskRequest]) (*connect.Response[projectv1.CreateTaskResponse], error) {
+	id := fmt.Sprintf("TSK-%03d", len(s.tasks)+1)
+	if s.db != nil {
+		var dueTime *time.Time
+		if t, err := time.Parse("2006-01-02", req.Msg.DueDate); err == nil {
+			dueTime = &t
+		}
+		dbTask := &task.Task{
+			OrganizationID: 1,
+			BusinessUnitID: 5,
+			Title:          req.Msg.Title,
+			Description:    req.Msg.Description,
+			Status:         "TODO",
+			Priority:       req.Msg.Priority,
+			DueDate:        dueTime,
+			EntityResource: req.Msg.EntityResource,
+			Team:           req.Msg.AssignedTo,
+		}
+		s.db.WithContext(ctx).Create(dbTask)
+		id = strconv.FormatUint(uint64(dbTask.ID), 10)
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	id := fmt.Sprintf("TSK-%03d", len(s.tasks)+1)
 	t := &projectv1.UTMSTask{
 		Id:                id,
 		ProjectId:         req.Msg.ProjectId,
@@ -261,12 +377,21 @@ func (s *ProjectServiceServer) CreateTask(ctx context.Context, req *connect.Requ
 }
 
 func (s *ProjectServiceServer) UpdateTaskStatus(ctx context.Context, req *connect.Request[projectv1.UpdateTaskStatusRequest]) (*connect.Response[projectv1.UpdateTaskStatusResponse], error) {
+	if s.db != nil {
+		s.db.WithContext(ctx).Model(&task.Task{}).Where("id = ?", req.Msg.TaskId).Update("status", req.Msg.Status)
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	t, ok := s.tasks[req.Msg.TaskId]
 	if !ok {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("task %s not found", req.Msg.TaskId))
+		return connect.NewResponse(&projectv1.UpdateTaskStatusResponse{
+			Task: &projectv1.UTMSTask{
+				Id:     req.Msg.TaskId,
+				Status: req.Msg.Status,
+			},
+		}), nil
 	}
 	t.Status = req.Msg.Status
 

@@ -21,7 +21,7 @@ func setupIntegrationDB(t *testing.T) *gorm.DB {
 	}
 
 	sqlDB, _ := db.DB()
-	sqlDB.SetMaxOpenConns(1) // Single connection for SQLite stability during cross-domain operations in tests
+	sqlDB.SetMaxOpenConns(10)
 	db.Exec("PRAGMA journal_mode=WAL;")
 
 	// Migrate both domains

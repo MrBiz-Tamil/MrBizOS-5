@@ -21,7 +21,7 @@
 	let email = $state('');
 	let phone = $state('');
 	let city = $state('Madurai');
-	let state = $state('Tamil Nadu');
+	let provinceState = $state('Tamil Nadu');
 	let iataOrGst = $state('');
 	let partnerType = $state('Retail Travel Agency');
 	let primaryCircuits = $state('Kashmir & Kerala Honeymoons');
@@ -336,7 +336,7 @@
 							</div>
 							<div class="f-group">
 								<label for="p-state">State / Region *</label>
-								<input id="p-state" type="text" required bind:value={state} class="f-input" />
+								<input id="p-state" type="text" required bind:value={provinceState} class="f-input" />
 							</div>
 							<div class="f-group">
 								<label for="p-gst">GSTIN / IATA / Trade License</label>

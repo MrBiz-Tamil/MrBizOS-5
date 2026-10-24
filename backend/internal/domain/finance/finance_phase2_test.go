@@ -47,7 +47,7 @@ func TestTaxEngine(t *testing.T) {
 }
 
 func TestDynamicPricing(t *testing.T) {
-	repo := &financeRepository{} // Mock-ish
+	repo := NewRepository(setupTestDB(t))
 	svc := NewService(repo)
 
 	// Low demand

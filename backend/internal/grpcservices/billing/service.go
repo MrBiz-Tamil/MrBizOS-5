@@ -205,9 +205,18 @@ func (s *BillingServiceServer) ListInvoices(ctx context.Context, req *connect.Re
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
+	tenantID := req.Msg.TenantId
+	if tenantID == "" {
+		if val, ok := ctx.Value("tenant_id").(string); ok && val != "" {
+			tenantID = val
+		} else {
+			tenantID = "tenant-1"
+		}
+	}
+
 	var list []*billingv1.InvoiceProto
 	for _, inv := range s.invoices {
-		if req.Msg.TenantId == "" || inv.TenantId == req.Msg.TenantId {
+		if inv.TenantId == tenantID {
 			list = append(list, inv)
 		}
 	}
@@ -332,9 +341,18 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		custName = "Cash Walk-in Customer"
 	}
 
+	tenantID := req.Msg.TenantId
+	if tenantID == "" {
+		if val, ok := ctx.Value("tenant_id").(string); ok && val != "" {
+			tenantID = val
+		} else {
+			tenantID = "tenant-1"
+		}
+	}
+
 	templateId := req.Msg.TemplateId
 	if templateId == "" {
-		if t, ok := s.templates[req.Msg.TenantId]; ok && t.TemplateId != "" {
+		if t, ok := s.templates[tenantID]; ok && t.TemplateId != "" {
 			templateId = t.TemplateId
 		} else {
 			templateId = "1"
@@ -347,7 +365,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 
 	inv := &billingv1.InvoiceProto{
 		Id:                  invId,
-		TenantId:            req.Msg.TenantId,
+		TenantId:            tenantID,
 		InvoiceNumber:       invNum,
 		CustomerId:          req.Msg.CustomerId,
 		CustomerName:        custName,

@@ -108,6 +108,7 @@ func (m *mockRepo) CheckDoctorAvailability(doctorUserID uint, scheduledAt time.T
 // ─── Mock Finance Service ─────────────────────────────────────────────────────
 
 type mockFinance struct {
+	finance.Service
 	mock.Mock
 }
 
@@ -144,7 +145,7 @@ func (m *mockFinance) GetTransactions(accountID uuid.UUID, limit int) ([]finance
 func (m *mockFinance) GetTransactionDetails(id uuid.UUID) (*finance.LedgerTransaction, error) {
 	return nil, nil
 }
-func (m *mockFinance) GetDoctorFinancials(doctorID interface{}) (map[string]interface{}, error) {
+func (m *mockFinance) GetDoctorFinancials(doctorID uint) (map[string]interface{}, error) {
 	return nil, nil
 }
 func (m *mockFinance) GetOrCreateAccount(ctx context.Context, name string, accType finance.AccountType) (*finance.LedgerAccount, error) {

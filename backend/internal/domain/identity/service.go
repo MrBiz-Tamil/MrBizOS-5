@@ -805,8 +805,14 @@ func (s *service) SendVerificationEmail(userID uint) error {
 		ExpiresAt: time.Now().Add(24 * time.Hour),
 	}
 	// Upsert: delete old, insert new
-	database.DB.Where("user_id = ?", user.ID).Delete(&EmailVerificationToken{})
-	database.DB.Create(&evt)
+	db := s.repo.DB()
+	if db == nil {
+		db = database.DB
+	}
+	if db != nil {
+		db.Where("user_id = ?", user.ID).Delete(&EmailVerificationToken{})
+		db.Create(&evt)
+	}
 
 	appURL := os.Getenv("APP_URL")
 	if appURL == "" {
@@ -821,11 +827,18 @@ func (s *service) SendVerificationEmail(userID uint) error {
 
 func (s *service) VerifyEmail(token string) error {
 	var evt EmailVerificationToken
-	if err := database.DB.Where("token = ? AND expires_at > ?", token, time.Now()).First(&evt).Error; err != nil {
+	db := s.repo.DB()
+	if db == nil {
+		db = database.DB
+	}
+	if db == nil {
+		return errors.New("database not available")
+	}
+	if err := db.Where("token = ? AND expires_at > ?", token, time.Now()).First(&evt).Error; err != nil {
 		return errors.New("invalid or expired verification token")
 	}
 	s.repo.UpdateUser(evt.UserID, map[string]interface{}{"is_verified": true})
-	database.DB.Delete(&evt)
+	db.Delete(&evt)
 	return nil
 }
 

@@ -135,6 +135,7 @@ func Run(db *gorm.DB) {
 	identity.SeedDoctorTypes(db)
 	clinical.SeedAYUSHPods(db)
 	identity.SeedMockDoctors(db)
+	identity.SeedDefaultAdmin(db)
 	hospital.SeedIfEmpty(db)
 	finance.SeedTaxRules(db)
 	hr.BackfillEmploymentTypes(db)

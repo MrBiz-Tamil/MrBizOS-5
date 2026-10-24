@@ -1,6 +1,9 @@
 package finance
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -8,12 +11,14 @@ import (
 )
 
 // Account Types
+type AccountType = string
+
 const (
-	TypeAsset     = "ASSET"
-	TypeLiability = "LIABILITY"
-	TypeEquity    = "EQUITY"
-	TypeRevenue   = "REVENUE"
-	TypeExpense   = "EXPENSE"
+	TypeAsset     AccountType = "ASSET"
+	TypeLiability AccountType = "LIABILITY"
+	TypeEquity    AccountType = "EQUITY"
+	TypeRevenue   AccountType = "REVENUE"
+	TypeExpense   AccountType = "EXPENSE"
 )
 
 // Direction Constants
@@ -57,23 +62,24 @@ type RecurringExpense struct {
 }
 
 type Expense struct {
-	Description string
-	Amount      int64
-	Category    string
-	Department  string
-	SourceID    string
-	Status      string
-	CreatedBy   uint
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID                  uint           `gorm:"primaryKey" json:"id"`
+	Description         string         `gorm:"size:255;not null" json:"description"`
+	Amount              int64          `gorm:"not null" json:"amount"`
+	Category            string         `gorm:"size:64;index" json:"category"`
+	Department          string         `gorm:"size:64;index" json:"department"`
+	SourceID            string         `gorm:"size:128" json:"source_id"`
+	Status              string         `gorm:"size:32;default:'pending';index" json:"status"`
+	LedgerTransactionID *uuid.UUID     `gorm:"type:uuid" json:"ledger_transaction_id,omitempty"`
+	CreatedBy           uint           `json:"created_by"`
+	ApprovedBy          *uint          `json:"approved_by,omitempty"`
+	CreatedAt           time.Time      `json:"created_at"`
+	UpdatedAt           time.Time      `json:"updated_at"`
 }
 
 func RecurringExpenseComputeNextDue(frequency string, dom int, dow int) *time.Time {
 	now := time.Now()
 	return &now
 }
-
-
 
 type Investor struct {
 	ID        uint
@@ -95,14 +101,25 @@ const (
 
 // LedgerAccount represents a double-entry ledger account.
 type LedgerAccount struct {
-	ID        uuid.UUID      `gorm:"type:uuid;primaryKey" json:"id"`
-	Name      string         `gorm:"size:255;uniqueIndex;not null" json:"name"`
-	Type      string         `gorm:"size:32;not null" json:"type"`
-	Balance   int64          `gorm:"default:0" json:"balance"` // in paise/cents
-	Currency  string         `gorm:"size:8;default:'INR'" json:"currency"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	ID           uuid.UUID      `gorm:"type:uuid;primaryKey" json:"id"`
+	Name         string         `gorm:"size:255;uniqueIndex;not null" json:"name"`
+	Type         string         `gorm:"size:32;not null" json:"type"`
+	Balance      int64          `gorm:"default:0" json:"balance"` // in paise/cents
+	Currency     string         `gorm:"size:8;default:'INR'" json:"currency"`
+	LastChecksum string         `gorm:"size:64" json:"last_checksum,omitempty"`
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    time.Time      `json:"updated_at"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+func (a *LedgerAccount) CalculateChecksum(prev string) string {
+	h := sha256.New()
+	h.Write([]byte(fmt.Sprintf("%s:%s:%d:%s", a.ID.String(), a.Name, a.Balance, prev)))
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+func (LedgerAccount) TableName() string {
+	return "ledger_account_v2"
 }
 
 // LedgerTransaction represents a multi-entry transaction batch.
@@ -121,6 +138,10 @@ type LedgerTransaction struct {
 	Entries      []LedgerEntry  `gorm:"foreignKey:TransactionID" json:"entries,omitempty"`
 }
 
+func (LedgerTransaction) TableName() string {
+	return "ledger_transaction_v2"
+}
+
 // LedgerEntry represents a single debit/credit leg of a ledger transaction.
 type LedgerEntry struct {
 	ID            uuid.UUID      `gorm:"type:uuid;primaryKey" json:"id"`
@@ -136,10 +157,15 @@ type LedgerEntry struct {
 	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
+func (LedgerEntry) TableName() string {
+	return "ledger_entry_v2"
+}
+
 // PayoutRequest tracks doctor/vendor payout requests.
 type PayoutRequest struct {
 	ID        uint           `gorm:"primaryKey" json:"id"`
 	UserID    uint           `gorm:"index;not null" json:"user_id"`
+	DoctorID  uint           `gorm:"column:doctor_id;index" json:"doctor_id"`
 	Amount    int64          `gorm:"not null" json:"amount"`
 	Status    string         `gorm:"size:32;default:'PENDING';index" json:"status"`
 	CreatedAt time.Time      `json:"created_at"`

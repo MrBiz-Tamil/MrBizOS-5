@@ -2,16 +2,22 @@ package finance
 
 import (
 	"context"
+	"drayya-core/internal/database"
 	"gorm.io/gorm"
 )
 
 type Repository interface {
+	DB(ctx ...context.Context) *gorm.DB
 	CreateCostCenter(cc *CostCenter) error
 	ListCostCenters() ([]CostCenter, error)
 	CreateEntry(entry *FinancialLedgerEntry) error
 	ListEntries(buID uint) ([]FinancialLedgerEntry, error)
 	GetBUSummary(buID uint) (*BusinessUnitFinancialSummary, error)
 	GetAccountByName(ctx context.Context, name string) (*LedgerAccount, error)
+	CreateAccount(ctx context.Context, acct *LedgerAccount) error
+	SaveAccount(ctx context.Context, acct *LedgerAccount) error
+	CreateTaxRule(ctx context.Context, rule *TaxRule) error
+	GetTaxRule(ctx context.Context, region, category string) (*TaxRule, error)
 }
 
 type repository struct {
@@ -22,13 +28,55 @@ func NewRepository(db *gorm.DB) Repository {
 	return &repository{db: db}
 }
 
+func (r *repository) withTx(ctx context.Context) *gorm.DB {
+	if ctx != nil {
+		if tx, ok := ctx.Value(database.TxKey{}).(*gorm.DB); ok {
+			return tx
+		}
+		return r.db.WithContext(ctx)
+	}
+	return r.db
+}
+
+func (r *repository) DB(ctx ...context.Context) *gorm.DB {
+	if len(ctx) > 0 && ctx[0] != nil {
+		return r.withTx(ctx[0])
+	}
+	return r.db
+}
+
 func (r *repository) CreateCostCenter(cc *CostCenter) error {
 	return r.db.Create(cc).Error
 }
 
 func (r *repository) GetAccountByName(ctx context.Context, name string) (*LedgerAccount, error) {
-	// Dummy implementation for now
-	return &LedgerAccount{Name: name}, nil
+	var acct LedgerAccount
+	err := r.withTx(ctx).Where("name = ?", name).First(&acct).Error
+	if err != nil {
+		return nil, err
+	}
+	return &acct, nil
+}
+
+func (r *repository) CreateAccount(ctx context.Context, acct *LedgerAccount) error {
+	return r.withTx(ctx).Create(acct).Error
+}
+
+func (r *repository) SaveAccount(ctx context.Context, acct *LedgerAccount) error {
+	return r.withTx(ctx).Save(acct).Error
+}
+
+func (r *repository) CreateTaxRule(ctx context.Context, rule *TaxRule) error {
+	return r.withTx(ctx).Create(rule).Error
+}
+
+func (r *repository) GetTaxRule(ctx context.Context, region, category string) (*TaxRule, error) {
+	var rule TaxRule
+	err := r.withTx(ctx).Where("region = ? AND category = ?", region, category).First(&rule).Error
+	if err != nil {
+		return nil, err
+	}
+	return &rule, nil
 }
 
 func (r *repository) ListCostCenters() ([]CostCenter, error) {
