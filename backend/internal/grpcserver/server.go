@@ -17,6 +17,7 @@ type Server struct {
 	mux         *http.ServeMux
 	db          *gorm.DB
 	interceptor connect.UnaryInterceptorFunc
+	authz       connect.UnaryInterceptorFunc
 	httpServer  *http.Server
 }
 
@@ -34,6 +35,7 @@ func writeDemoDisabled(w http.ResponseWriter) {
 func NewServer(db *gorm.DB) *Server {
 	mux := http.NewServeMux()
 	interceptor := NewAuthInterceptor()
+	authz := NewAuthzInterceptor()
 
 	// Health check endpoint
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -217,6 +219,7 @@ func NewServer(db *gorm.DB) *Server {
 		mux:         mux,
 		db:          db,
 		interceptor: interceptor,
+		authz:       authz,
 	}
 }
 
@@ -225,9 +228,12 @@ func (s *Server) Mux() *http.ServeMux {
 	return s.mux
 }
 
-// Interceptor returns the unary interceptor to register with Connect service handlers
+// Interceptor returns the unary interceptors to register with Connect service
+// handlers: authentication first (proves identity + tenant/BU scope), then
+// authorization (enforces per-procedure permissions). Order matters — authz
+// reads the role the auth interceptor placed in the context.
 func (s *Server) Interceptor() connect.HandlerOption {
-	return connect.WithInterceptors(s.interceptor)
+	return connect.WithInterceptors(s.interceptor, s.authz)
 }
 
 // Handler returns the HTTP handler wrapped with CORS and H2C (HTTP/2 cleartext) support

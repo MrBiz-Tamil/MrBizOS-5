@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
+	"drayya-core/internal/authctx"
 	"drayya-core/internal/tokens"
 )
 
@@ -35,10 +36,75 @@ func devAuthEnabled() bool {
 	}
 }
 
+// isPlatformSuperAdmin reports whether a role may cross tenant boundaries. Only
+// the explicit platform role "superadmin" qualifies. A tenant-level "admin" is
+// deliberately NOT a platform super-admin — this is the Phase 1 (T2) fix for the
+// prior behaviour where any admin could read/write any tenant by setting the
+// X-Tenant-Id header.
+func isPlatformSuperAdmin(role string) bool {
+	return strings.EqualFold(strings.TrimSpace(role), "superadmin")
+}
+
 // Public procedures that do not require authentication
 var publicProcedures = map[string]bool{
 	"/iam.v1.IAMService/Login":           true,
 	"/iam.v1.IAMService/ValidateSession": true,
+}
+
+// resolveTenant decides the effective tenant for a request from the VERIFIED JWT
+// claims and the client-supplied X-Tenant-Id header. It never trusts the header
+// on its own. It returns the tenant to bind, whether this is a cross-tenant
+// access by a platform super-admin (so the caller can audit it), or an error to
+// reject with. It is a pure function to keep the authorization decision unit
+// testable (see interceptor_test.go).
+func resolveTenant(role, claimTenant, headerTenant string, devAuth bool) (tenant string, crossTenant bool, err error) {
+	claimTenant = strings.TrimSpace(claimTenant)
+	headerTenant = strings.TrimSpace(headerTenant)
+
+	if claimTenant != "" {
+		if headerTenant != "" && headerTenant != claimTenant {
+			// The caller is asking to act in a tenant other than the one their
+			// session is bound to. Only a platform super-admin may do so.
+			if !isPlatformSuperAdmin(role) {
+				return "", false, errors.New("cross-tenant access denied: requested tenant does not match authorized session")
+			}
+			return headerTenant, true, nil
+		}
+		return claimTenant, false, nil
+	}
+
+	// No tenant bound in the session.
+	if headerTenant != "" && isPlatformSuperAdmin(role) {
+		// A platform super-admin with no home tenant may target a specific tenant.
+		return headerTenant, true, nil
+	}
+	if devAuth {
+		return "tenant-1", false, nil
+	}
+	return "", false, errors.New("tenant context required")
+}
+
+// authorizeBusinessUnit decides the active business unit from the verified claims
+// and the client-supplied X-Business-Unit-Id header. Within a tenant, a tenant
+// admin or platform super-admin may act in any BU; every other user must have the
+// requested BU in their authorized AllowedBusinessUnits. Pure function for tests.
+func authorizeBusinessUnit(role, headerBU, currentBU string, allowed []string) (buID string, err error) {
+	headerBU = strings.TrimSpace(headerBU)
+	if headerBU == "" {
+		return strings.TrimSpace(currentBU), nil
+	}
+	privileged := isPlatformSuperAdmin(role) || strings.EqualFold(strings.TrimSpace(role), "admin")
+	if privileged || len(allowed) == 0 {
+		// len(allowed)==0: no explicit membership recorded yet (pre-T4) — do not
+		// hard-fail; the tenant check above already contains the blast radius.
+		return headerBU, nil
+	}
+	for _, b := range allowed {
+		if b == headerBU {
+			return headerBU, nil
+		}
+	}
+	return "", errors.New("access denied: requested business unit not in authorized user scope")
 }
 
 // NewAuthInterceptor creates a Connect interceptor enforcing strict authentication
@@ -83,7 +149,7 @@ func NewAuthInterceptor() connect.UnaryInterceptorFunc {
 				if err != nil {
 					if devAuthEnabled() {
 						log.Printf("[auth][DEV] invalid session token accepted as super-admin via MRBIZ_DEV_AUTH (proc=%s)", proc)
-						claims = &tokens.Claims{UserID: "user-1", Role: "admin"}
+						claims = &tokens.Claims{UserID: "user-1", Role: "superadmin"}
 					} else {
 						return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid or expired session"))
 					}
@@ -93,34 +159,38 @@ func NewAuthInterceptor() connect.UnaryInterceptorFunc {
 			} else {
 				if devAuthEnabled() {
 					log.Printf("[auth][DEV] missing session token accepted as super-admin via MRBIZ_DEV_AUTH (proc=%s)", proc)
-					claims = &tokens.Claims{UserID: "user-1", Role: "admin"}
+					claims = &tokens.Claims{UserID: "user-1", Role: "superadmin"}
 				} else {
 					return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("authentication required"))
 				}
 			}
 
-			// Bind verified user context
-			ctx = context.WithValue(ctx, UserIDKey, claims.UserID)
-			ctx = context.WithValue(ctx, RoleKey, claims.Role)
+			// Bind verified user identity.
+			ctx = authctx.WithUserID(ctx, claims.UserID)
+			ctx = authctx.WithRole(ctx, claims.Role)
 
-			// Resolve tenant context from the caller-supplied header. A tenant must be
-			// present for every authenticated call; only the dev escape hatch falls back
-			// to the demo tenant so a missing header cannot silently read tenant-1 data.
-			tenantID := req.Header().Get("X-Tenant-Id")
-			if tenantID == "" {
-				if devAuthEnabled() {
-					tenantID = "tenant-1"
-				} else {
-					return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("tenant context required"))
+			// Resolve & authorize tenant context against the verified claims.
+			tenantID, crossTenant, err := resolveTenant(claims.Role, claims.TenantID, req.Header().Get("X-Tenant-Id"), devAuthEnabled())
+			if err != nil {
+				if strings.Contains(err.Error(), "cross-tenant") {
+					return nil, connect.NewError(connect.CodePermissionDenied, err)
 				}
+				return nil, connect.NewError(connect.CodeUnauthenticated, err)
 			}
-			ctx = context.WithValue(ctx, TenantIDKey, tenantID)
+			if crossTenant {
+				// Privileged cross-tenant access by a platform super-admin is allowed
+				// but always audited so it is never silent.
+				log.Printf("[auth][AUDIT] platform super-admin user=%s accessed tenant=%s (proc=%s)", claims.UserID, tenantID, proc)
+			}
+			ctx = authctx.WithTenantID(ctx, tenantID)
 
-			// Resolve business unit context: check X-Business-Unit-Id
-			buID := req.Header().Get("X-Business-Unit-Id")
+			// Resolve & authorize business unit context.
+			buID, err := authorizeBusinessUnit(claims.Role, req.Header().Get("X-Business-Unit-Id"), claims.CurrentBusinessUnit, claims.AllowedBusinessUnits)
+			if err != nil {
+				return nil, connect.NewError(connect.CodePermissionDenied, err)
+			}
 			if buID != "" {
-				// Role-based or permission check can be enforced here
-				ctx = context.WithValue(ctx, BusinessUnitIDKey, buID)
+				ctx = authctx.WithBusinessUnit(ctx, buID)
 			}
 
 			return next(ctx, req)
@@ -128,26 +198,11 @@ func NewAuthInterceptor() connect.UnaryInterceptorFunc {
 	}
 }
 
-// UserIDFromContext extracts authenticated user ID
-func UserIDFromContext(ctx context.Context) string {
-	if v, ok := ctx.Value(UserIDKey).(string); ok {
-		return v
-	}
-	return ""
-}
+// UserIDFromContext extracts the authenticated user ID.
+func UserIDFromContext(ctx context.Context) string { return authctx.UserID(ctx) }
 
-// TenantIDFromContext extracts authenticated tenant ID
-func TenantIDFromContext(ctx context.Context) string {
-	if v, ok := ctx.Value(TenantIDKey).(string); ok {
-		return v
-	}
-	return ""
-}
+// TenantIDFromContext extracts the authorized tenant ID.
+func TenantIDFromContext(ctx context.Context) string { return authctx.TenantID(ctx) }
 
-// BusinessUnitIDFromContext extracts current business unit ID
-func BusinessUnitIDFromContext(ctx context.Context) string {
-	if v, ok := ctx.Value(BusinessUnitIDKey).(string); ok {
-		return v
-	}
-	return ""
-}
+// BusinessUnitIDFromContext extracts the active business unit ID.
+func BusinessUnitIDFromContext(ctx context.Context) string { return authctx.BusinessUnit(ctx) }
