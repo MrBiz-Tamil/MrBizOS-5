@@ -22,7 +22,9 @@ type Destination struct {
 
 // TourPackage represents a curated tour itinerary.
 type TourPackage struct {
-	ID            uint           `gorm:"primaryKey" json:"id"`
+	ID             uint          `gorm:"primaryKey" json:"id"`
+	OrganizationID uint          `gorm:"index;default:1" json:"organization_id"`  // tenant owner (T3 tenant scoping)
+	BusinessUnitID uint          `gorm:"index;default:1" json:"business_unit_id"` // 1: Travel
 	DestinationID uint           `gorm:"index;not null" json:"destination_id"`
 	Destination   *Destination   `gorm:"foreignKey:DestinationID" json:"destination,omitempty"`
 	Title         string         `gorm:"size:255;not null" json:"title"`
